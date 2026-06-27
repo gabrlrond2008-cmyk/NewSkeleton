@@ -438,16 +438,6 @@
     50% { opacity: 0.6; }
 }
 
-.inputBar {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 10px 12px;
-    background: #fff;
-    border-top: 1px solid #e8e8e8;
-    flex-shrink: 0;
-}
-
 .input {
     flex: 1;
     padding: 10px 14px;
@@ -509,4 +499,70 @@
 @keyframes cursorBlink {
     0%, 100% { opacity: 1; }
     50% { opacity: 0; }
+}
+
+.suggestionDropdown {
+    position: absolute;
+    bottom: 100%;
+    left: 0;
+    right: 0;
+    max-height: 240px;
+    overflow-y: auto;
+    background: #fff;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px 8px 0 0;
+    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    z-index: 10;
+    margin: 0 12px;
+}
+
+.suggestionItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    cursor: pointer;
+    font-size: 0.78rem;
+    color: #444;
+    transition: background 0.1s;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.suggestionItem:last-child {
+    border-bottom: none;
+}
+
+.suggestionItem:hover,
+.suggestionSelected {
+    background: #f3eefb;
+}
+
+.suggestionCat {
+    flex-shrink: 0;
+    font-size: 0.6rem;
+    text-transform: uppercase;
+    color: #999;
+    background: #f0f0f0;
+    padding: 1px 5px;
+    border-radius: 3px;
+    min-width: 36px;
+    text-align: center;
+}
+
+.suggestionDesc {
+    flex: 1;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.inputBar {
+    position: relative;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 10px 12px;
+    background: #fff;
+    border-top: 1px solid #e8e8e8;
+    flex-shrink: 0;
 }

@@ -38,8 +38,11 @@ import {
     activateTab,
     setSecondaryTab,
     showSplitMenu,
-    SOUNDS_TAB_INDEX
+    SOUNDS_TAB_INDEX,
+    AI_TAB_INDEX
 } from '../reducers/editor-tab';
+import {readWorkspace} from '../lib/ai-workspace-reader.js';
+import {setPendingExplain} from '../lib/explain-queue.js';
 
 const addFunctionListener = (object, property, callback) => {
     const oldFn = object[property];
@@ -303,6 +306,29 @@ class Blocks extends React.Component {
                     });
                 }
             }
+
+            // Explain project
+            menuOptions.push({
+                text: '──────────',
+                enabled: false,
+                callback: function () {}
+            });
+            menuOptions.push({
+                text: 'Explain project',
+                enabled: true,
+                callback: function () {
+                    SB.ContextMenu.hide();
+                    if (blocksThis.props.onActivateTab) {
+                        try {
+                            var workspaceData = readWorkspace(blocksThis.props.vm);
+                            if (workspaceData) {
+                                setPendingExplain(workspaceData);
+                                blocksThis.props.onActivateTab(AI_TAB_INDEX);
+                            }
+                        } catch (_e) {}
+                    }
+                }
+            });
 
             SB.ContextMenu.show(e, menuOptions, this.RTL);
         };
@@ -913,6 +939,7 @@ class Blocks extends React.Component {
             onShowSplitMenu,
             onSetSecondaryTab,
             splitMode,
+            onActivateTab,
             onWorkspaceReady,
             ...props
         } = this.props;
@@ -1006,6 +1033,7 @@ Blocks.propTypes = {
     splitMode: PropTypes.bool,
     onShowSplitMenu: PropTypes.func,
     onSetSecondaryTab: PropTypes.func,
+    onActivateTab: PropTypes.func,
     onWorkspaceReady: PropTypes.func
 };
 
@@ -1072,7 +1100,8 @@ const mapDispatchToProps = dispatch => ({
         dispatch(updateMetrics(metrics));
     },
     onShowSplitMenu: position => dispatch(showSplitMenu(position)),
-    onSetSecondaryTab: tabIndex => dispatch(setSecondaryTab(tabIndex))
+    onSetSecondaryTab: tabIndex => dispatch(setSecondaryTab(tabIndex)),
+    onActivateTab: tabIndex => dispatch(activateTab(tabIndex))
 });
 
 export default errorBoundaryHOC('Blocks')(

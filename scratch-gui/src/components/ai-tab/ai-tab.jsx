@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {markdownToHtml} from '../../lib/markdown.js';
+import {BLOCKS} from '../../lib/ai-block-library';
 import styles from './ai-tab.css';
 
 function hasBlockDescriptor(text) {
@@ -12,9 +13,13 @@ var AiTabComponent = function (props) {
     var {messages, sending, verifyingIndex, typingData, creatingIndex, createStatus, trainingEnabled,
         onSend, onVerify, onCreateBlocks, onTrain} = props;
     var [input, setInput] = useState('');
+    var [suggestions, setSuggestions] = useState([]);
+    var [selectedSuggestionIdx, setSelectedSuggestionIdx] = useState(-1);
+    var [showSuggestions, setShowSuggestions] = useState(false);
     var inputRef = useRef(null);
     var listRef = useRef(null);
     var nearBottomRef = useRef(true);
+    var debounceRef = useRef(null);
 
     useEffect(function () {
         if (listRef.current) {
@@ -24,6 +29,9 @@ var AiTabComponent = function (props) {
                 el.scrollTop = el.scrollHeight;
             }
         }
+        return function () {
+            if (debounceRef.current) clearTimeout(debounceRef.current);
+        };
     }, [messages, typingData]);
 
     var handleScroll = useCallback(function () {
@@ -38,14 +46,90 @@ var AiTabComponent = function (props) {
         if (!text || sending) return;
         onSend(text);
         setInput('');
+        setShowSuggestions(false);
+        setSuggestions([]);
     }, [input, sending, onSend]);
 
+    var insertSuggestion = useCallback(function (suggestion) {
+        var text = input.trim();
+        var words = text.split(/\s+/);
+        var lastWord = words.length > 0 ? words[words.length - 1] : '';
+        var prefix = text.substring(0, text.length - lastWord.length);
+        setInput(prefix + suggestion.desc + ' ');
+        setShowSuggestions(false);
+        setSuggestions([]);
+        setSelectedSuggestionIdx(-1);
+        if (inputRef.current) inputRef.current.focus();
+    }, [input]);
+
+    var handleInputChange = useCallback(function (e) {
+        var val = e.target.value;
+        setInput(val);
+
+        if (debounceRef.current) clearTimeout(debounceRef.current);
+
+        var trimmed = val.trim();
+        if (trimmed.length < 1) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        debounceRef.current = setTimeout(function () {
+            var q = trimmed.toLowerCase();
+            var results = [];
+            for (var op in BLOCKS) {
+                if (!Object.prototype.hasOwnProperty.call(BLOCKS, op)) continue;
+                if (BLOCKS[op].c === 'internal') continue;
+                if (op.toLowerCase().indexOf(q) !== -1 || BLOCKS[op].d.toLowerCase().indexOf(q) !== -1) {
+                    results.push({opcode: op, desc: BLOCKS[op].d, type: BLOCKS[op].t, cat: BLOCKS[op].c});
+                }
+            }
+            results.sort(function (a, b) {
+                var aStarts = a.desc.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+                var bStarts = b.desc.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+                if (aStarts !== bStarts) return aStarts - bStarts;
+                return a.desc.length - b.desc.length;
+            });
+            setSuggestions(results.slice(0, 8));
+            setShowSuggestions(results.length > 0);
+            setSelectedSuggestionIdx(-1);
+        }, 80);
+    }, []);
+
     var handleKeyDown = useCallback(function (e) {
+        if (showSuggestions && suggestions.length > 0) {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                setSelectedSuggestionIdx(function (prev) {
+                    return prev < suggestions.length - 1 ? prev + 1 : 0;
+                });
+                return;
+            }
+            if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                setSelectedSuggestionIdx(function (prev) {
+                    return prev > 0 ? prev - 1 : suggestions.length - 1;
+                });
+                return;
+            }
+            if (e.key === 'Enter' && selectedSuggestionIdx >= 0) {
+                e.preventDefault();
+                insertSuggestion(suggestions[selectedSuggestionIdx]);
+                return;
+            }
+            if (e.key === 'Escape') {
+                setShowSuggestions(false);
+                setSuggestions([]);
+                setSelectedSuggestionIdx(-1);
+                return;
+            }
+        }
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             handleSend();
         }
-    }, [handleSend]);
+    }, [handleSend, showSuggestions, suggestions, selectedSuggestionIdx, insertSuggestion]);
 
     var getContent = useCallback(function (msg, i) {
         if (msg.role === 'assistant' && typingData && typingData.msgIndex === i) {
@@ -237,13 +321,33 @@ var AiTabComponent = function (props) {
                 )}
             </div>
             <div className={styles.inputBar}>
+                {showSuggestions && suggestions.length > 0 && (
+                    <div className={styles.suggestionDropdown}>
+                        {suggestions.map(function (s, i) {
+                            return (
+                                <div
+                                    key={s.opcode}
+                                    className={
+                                        styles.suggestionItem +
+                                        (i === selectedSuggestionIdx ? ' ' + styles.suggestionSelected : '')
+                                    }
+                                    onMouseDown={function (e) { e.preventDefault(); insertSuggestion(s); }}
+                                    onMouseEnter={function () { setSelectedSuggestionIdx(i); }}
+                                >
+                                    <span className={styles.suggestionCat}>{s.cat}</span>
+                                    <span className={styles.suggestionDesc}>{s.desc}</span>
+                                </div>
+                            );
+                        })}
+                    </div>
+                )}
                 <input
                     ref={inputRef}
                     className={styles.input}
                     type="text"
                     placeholder="Escribí tu pregunta..."
                     value={input}
-                    onChange={function (e) { setInput(e.target.value); }}
+                    onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
                 />
                 <button
