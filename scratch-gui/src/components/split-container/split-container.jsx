@@ -94,16 +94,11 @@ const SplitContainer = ({
                 }}
             >
                 <div className={styles.panelStack}>
-                    {panels.map((panel, i) => (
-                        <div
-                            key={i}
-                            className={classNames(styles.panelItem, {
-                                [styles.panelActive]: i === secondaryIndex
-                            })}
-                        >
-                            {panel}
+                    {hasSecondary && secondaryIndex != null && secondaryIndex >= 0 && secondaryIndex < panels.length && (
+                        <div className={classNames(styles.panelItem, styles.panelActive)}>
+                            {panels[secondaryIndex]}
                         </div>
-                    ))}
+                    )}
                 </div>
                 {hasSecondary && (
                     <button

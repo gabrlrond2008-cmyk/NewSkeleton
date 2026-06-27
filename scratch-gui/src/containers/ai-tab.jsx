@@ -17,6 +17,7 @@ var LS_API_KEY = function (p) { return p + '_api_key'; };
 var LS_MODEL = function (p) { return p + '_model'; };
 var LS_TRAINING = 'ai_training_data';
 var LS_SESSION = 'ai_session';
+var LS_MESSAGES = 'ai_messages';
 
 function getTypingSpeed(len) {
     if (len > 1000) return 3;
@@ -165,7 +166,26 @@ var AiTab = function (props) {
                 }
             }
         } catch (e) {}
+        // Restore messages from localStorage (shares state across split instances)
+        try {
+            var savedMessages = localStorage.getItem(LS_MESSAGES);
+            if (savedMessages) {
+                var parsed = JSON.parse(savedMessages);
+                if (Array.isArray(parsed) && parsed.length > 0) {
+                    setMessages(parsed);
+                }
+            }
+        } catch (e) {}
     }, [loadTrainingFromStorage]);
+
+    // Persist messages to localStorage (shares state across split instances)
+    useEffect(function () {
+        if (messages.length > 0) {
+            try {
+                localStorage.setItem(LS_MESSAGES, JSON.stringify(messages));
+            } catch (e) {}
+        }
+    }, [messages]);
 
     // Auto-explain: detect pending explain from right-click context menu
     useEffect(function () {
