@@ -10,7 +10,7 @@ function hasBlockDescriptor(text) {
 
 var AiTabComponent = function (props) {
     var {messages, sending, verifyingIndex, typingData, creatingIndex, createStatus, trainingEnabled,
-        onSend, onVerify, onCreateBlocks, onTrain, onTrainingFileLoad} = props;
+        onSend, onVerify, onCreateBlocks, onTrain} = props;
     var [input, setInput] = useState('');
     var inputRef = useRef(null);
     var listRef = useRef(null);
@@ -61,12 +61,6 @@ var AiTabComponent = function (props) {
     var isTypingDone = useCallback(function (msg, i) {
         return !msg.typing || (typingData && typingData.msgIndex === i && typingData.text.length >= typingData.full.length);
     }, [typingData]);
-
-    var trainFileRef = useRef(null);
-
-    var handleTrainFileClick = useCallback(function () {
-        if (trainFileRef.current) trainFileRef.current.click();
-    }, []);
 
     return (
         <div className={styles.container}>
@@ -252,33 +246,6 @@ var AiTabComponent = function (props) {
                     onChange={function (e) { setInput(e.target.value); }}
                     onKeyDown={handleKeyDown}
                 />
-                {trainingEnabled !== false && (
-                    <button
-                        className={styles.trainFileBtn}
-                        onClick={handleTrainFileClick}
-                        title="Cargar archivo de entrenamiento"
-                    >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/>
-                            <polyline points="14,2 14,8 20,8"/>
-                            <line x1="16" y1="13" x2="8" y2="13"/>
-                            <line x1="16" y1="17" x2="8" y2="17"/>
-                            <polyline points="10,9 9,9 8,9"/>
-                        </svg>
-                    </button>
-                )}
-                <input
-                    ref={trainFileRef}
-                    type="file"
-                    accept=".json,.flynt"
-                    style={{display: 'none'}}
-                    onChange={function (e) {
-                        if (e.target.files && e.target.files[0]) {
-                            onTrainingFileLoad(e.target.files[0]);
-                        }
-                        e.target.value = '';
-                    }}
-                />
                 <button
                     className={styles.sendButton + (sending ? ' ' + styles.sending : '')}
                     onClick={handleSend}
@@ -332,7 +299,6 @@ AiTabComponent.propTypes = {
     onVerify: PropTypes.func,
     onCreateBlocks: PropTypes.func,
     onTrain: PropTypes.func,
-    onTrainingFileLoad: PropTypes.func,
     vm: PropTypes.object
 };
 

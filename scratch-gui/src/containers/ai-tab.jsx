@@ -536,37 +536,6 @@ var AiTab = function (props) {
         URL.revokeObjectURL(url);
     }, [messages, getPrecedingUserMsg, isTrainingEnabled]);
 
-    var handleTrainingFileLoad = useCallback(function (file) {
-        if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function (e) {
-            try {
-                var data = JSON.parse(e.target.result);
-                if (data && data.format === 'flynt') {
-                    if (trainEngineRef.current) {
-                        trainEngineRef.current.importFlynt(data);
-                    }
-                    var entries = data.entries || [];
-                    setTrainingData(entries);
-                    localStorage.setItem(LS_TRAINING, JSON.stringify({version: 1, entries: entries}));
-                    if (serviceRef.current) {
-                        serviceRef.current.setTrainingData(entries);
-                    }
-                } else if (data && data.entries && Array.isArray(data.entries)) {
-                    if (trainEngineRef.current) {
-                        trainEngineRef.current.loadFromStorage(data.entries);
-                    }
-                    setTrainingData(data.entries);
-                    localStorage.setItem(LS_TRAINING, JSON.stringify(data));
-                    if (serviceRef.current) {
-                        serviceRef.current.setTrainingData(data.entries);
-                    }
-                }
-            } catch (err) {}
-        };
-        reader.readAsText(file);
-    }, []);
-
     var trainingEnabled = typeof window !== 'undefined' ? localStorage.getItem('ai_training_enabled') !== 'false' : true;
 
     return (
@@ -584,7 +553,6 @@ var AiTab = function (props) {
             onVerify={handleVerify}
             onCreateBlocks={handleCreateBlocks}
             onTrain={handleTrain}
-            onTrainingFileLoad={handleTrainingFileLoad}
         />
     );
 };

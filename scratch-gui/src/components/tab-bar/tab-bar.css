@@ -172,12 +172,13 @@
     margin-right: 0;
 }
 
-.tab:nth-child(1) { z-index: 3; }
-.tab:nth-child(2) { z-index: 2; }
-.tab:nth-child(3) { z-index: 1; }
+.tab:nth-child(1) { z-index: 4; }
+.tab:nth-child(2) { z-index: 3; }
+.tab:nth-child(3) { z-index: 2; }
+.tab:nth-child(4) { z-index: 1; }
 
-.tab.selected { z-index: 4; }
-.fusedTab { z-index: 4; }
+.tab.selected { z-index: 5; }
+.fusedTab { z-index: 5; }
 
 @media (max-width: 1023px) {
     .tabList {
@@ -185,13 +186,20 @@
     }
 
     .tab {
-        padding: 0.125rem 0.5rem 0;
-        font-size: 0.65rem;
+        padding: 0.125rem 0.25rem 0;
+        font-size: 0.6rem;
     }
 
     .tabIcon {
-        width: 1.1rem;
-        margin-right: 0.1rem;
+        width: 1rem;
+        margin-right: 0.05rem;
+    }
+
+    .tab:nth-child(1),
+    .tab:nth-child(2),
+    .tab:nth-child(3),
+    .tab:nth-child(4) {
+        /* ensure stable z-index stacking in compressed layout */
     }
 
     .tab.selected {
