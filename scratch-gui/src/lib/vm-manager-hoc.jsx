@@ -61,6 +61,7 @@ const vmManagerHOC = function (WrappedComponent) {
             }
         }
         loadProject () {
+            try { localStorage.removeItem('ai_messages'); } catch (e) {}
             return this.props.vm.loadProject(this.props.projectData)
                 .then(() => {
                     this.props.onLoadedProject(this.props.loadingState, this.props.canSave);

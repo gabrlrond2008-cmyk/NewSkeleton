@@ -11,13 +11,13 @@ import {verifyBlocks} from '../lib/ai-block-verifier.js';
 import {validate} from '../lib/ai-block-validator.js';
 import {getDetailedBlockInfo} from '../lib/ai-block-library';
 import {TrainingEngine, extractOpcodes, categorizeOpcodes, descriptorToStructure, compressExamples} from '../lib/ai-training-engine';
+import {getSharedMessages, setSharedMessages, clearSharedMessages} from '../lib/ai-shared-state';
 
 var LS_PROVIDER = 'ai_provider';
 var LS_API_KEY = function (p) { return p + '_api_key'; };
 var LS_MODEL = function (p) { return p + '_model'; };
 var LS_TRAINING = 'ai_training_data';
 var LS_SESSION = 'ai_session';
-var LS_MESSAGES = 'ai_messages';
 
 function getTypingSpeed(len) {
     if (len > 1000) return 3;
@@ -71,6 +71,7 @@ var AiTab = function (props) {
     var serviceRef = useRef(null);
     var sessionRef = useRef([]);
     var trainEngineRef = useRef(null);
+    var prevProjectKeyRef = useRef(null);
 
     if (!trainEngineRef.current) {
         trainEngineRef.current = new TrainingEngine();
@@ -166,24 +167,26 @@ var AiTab = function (props) {
                 }
             }
         } catch (e) {}
-        // Restore messages from localStorage (shares state across split instances)
-        try {
-            var savedMessages = localStorage.getItem(LS_MESSAGES);
-            if (savedMessages) {
-                var parsed = JSON.parse(savedMessages);
-                if (Array.isArray(parsed) && parsed.length > 0) {
-                    setMessages(parsed);
-                }
-            }
-        } catch (e) {}
+        // Restore messages from shared state (syncs across split instances)
+        var prev = getSharedMessages();
+        if (prev.length > 0) {
+            setMessages(prev.slice());
+        }
     }, [loadTrainingFromStorage]);
 
-    // Persist messages to localStorage (shares state across split instances)
+    // Clear conversation when a new project is loaded (skip initial mount)
+    useEffect(function () {
+        if (props.projectKey > 0 && prevProjectKeyRef.current !== null) {
+            setMessages([]);
+            clearSharedMessages();
+        }
+        prevProjectKeyRef.current = props.projectKey;
+    }, [props.projectKey]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    // Sync messages to shared state (keeps split instances in sync)
     useEffect(function () {
         if (messages.length > 0) {
-            try {
-                localStorage.setItem(LS_MESSAGES, JSON.stringify(messages));
-            } catch (e) {}
+            setSharedMessages(messages);
         }
     }, [messages]);
 
@@ -594,6 +597,7 @@ var AiTab = function (props) {
 AiTab.propTypes = {
     vm: PropTypes.instanceOf(VM).isRequired,
     pendingExplain: PropTypes.string,
+    projectKey: PropTypes.number,
     onClearExplain: PropTypes.func
 };
 

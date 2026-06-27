@@ -166,6 +166,7 @@ const SBFileUploaderHOC = function (WrappedComponent) {
 
                 aiDataPromise.then(function (aiData) {
                     self.props.onLoadingStarted();
+                    try { localStorage.removeItem('ai_messages'); } catch (e) {}
                     var loadingSuccess = false;
                     self.props.vm.loadProject(buffer)
                         .then(function () {

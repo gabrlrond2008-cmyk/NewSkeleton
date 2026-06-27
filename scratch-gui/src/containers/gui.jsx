@@ -20,7 +20,8 @@ import {
     BLOCKS_TAB_INDEX,
     COSTUMES_TAB_INDEX,
     SOUNDS_TAB_INDEX,
-    setExplainPending
+    setExplainPending,
+    setProjectKey
 } from '../reducers/editor-tab';
 
 import {
@@ -79,6 +80,7 @@ class GUI extends React.Component {
             // this only notifies container when a project changes from not yet loaded to loaded
             // At this time the project view in www doesn't need to know when a project is unloaded
             this.props.onProjectLoaded();
+            this.props.onSetProjectKey(Date.now());
         }
         if (this.props.shouldStopProject && !prevProps.shouldStopProject) {
             this.props.vm.stopAll();
@@ -190,7 +192,8 @@ const mapStateToProps = state => {
         tipsLibraryVisible: state.scratchGui.modals.tipsLibrary,
         deviceLibraryVisible: state.scratchGui.modals.deviceLibrary,
         vm: state.scratchGui.vm,
-        pendingExplain: state.scratchGui.editorTab.pendingExplain
+        pendingExplain: state.scratchGui.editorTab.pendingExplain,
+        projectKey: state.scratchGui.editorTab.projectKey
     };
 };
 
@@ -209,7 +212,8 @@ const mapDispatchToProps = dispatch => ({
     onSetSplitRatio: ratio => dispatch(setSplitRatio(ratio)),
     onShowSplitMenu: position => dispatch(showSplitMenu(position)),
     onHideSplitMenu: () => dispatch(hideSplitMenu()),
-    onClearExplain: () => dispatch(setExplainPending(null))
+    onClearExplain: () => dispatch(setExplainPending(null)),
+    onSetProjectKey: key => dispatch(setProjectKey(key))
 });
 
 const ConnectedGUI = injectIntl(connect(
