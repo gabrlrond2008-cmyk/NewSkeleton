@@ -1,0 +1,96 @@
+/* ── SCSS Variables (legacy) ── */
+
+$ui-primary: hsla(224, 100%, 95%, 1); /* #e4ecff */
+$ui-secondary: hsla(224, 80%, 95%, 1);  /* ~#e6edfe */
+$ui-tertiary: hsla(224, 60%, 90%, 1);   /* ~#dce5fb */
+
+$ui-modal-overlay: hsla(239, 100%, 50%, 0.15); /* 15% transparent version of tertiary */
+
+$ui-white: hsla(0, 100%, 100%, 1); /* #FFFFFF */
+$ui-white-dim: hsla(0, 100%, 100%, 0.75); /* 25% transparent version of ui-white */
+$ui-white-transparent: hsla(0, 100%, 100%, 0.25); /* 75% transparent version of ui-white */
+$ui-transparent: hsla(0, 100%, 100%, 0); /* Fully transparent */
+
+$ui-black-transparent: hsla(0, 0%, 0%, 0.15); /* 15% transparent version of black */
+$ui-black-transparent-10: hsla(0, 0%, 0%, 0.10); /* 10% transparent version of black */
+
+$ui-green: hsla(163, 85%, 35%, 1); /* #0DA57A */
+$ui-green-2: hsla(163, 85%, 40%, 1); /* #0FBD8C */
+
+$text-primary: hsla(225, 15%, 40%, 1); /* #575E75 */
+$text-primary-transparent: hsla(225, 15%, 40%, 0.75);
+
+$motion-primary: hsla(225, 100%, 73%, 1); /* #7495ff */
+$motion-tertiary: hsla(225, 80%, 52%, 1); /* #3d6bcc */
+
+$looks-secondary: hsla(210, 100%, 24%, 1); /* #00357a */
+$looks-transparent: hsla(210, 100%, 24%, 0.35); /* 35% transparent version of looks-secondary */
+$looks-light-transparent: hsla(210, 100%, 24%, 0.15); /* 15% transparent version of looks-secondary */
+$looks-secondary-dark: hsla(210, 100%, 18%, 1); /* #002859 */
+
+$red-primary: hsla(20, 100%, 55%, 1); /* #FF661A */
+$red-tertiary: hsla(20, 100%, 45%, 1); /* #E64D00 */
+
+$sound-primary: hsla(300, 53%, 60%, 1); /* #CF63CF */
+$sound-tertiary: hsla(300, 48%, 50%, 1); /* #BD42BD */
+
+$control-primary: hsla(38, 100%, 55%, 1); /* #FFAB19 */
+
+$data-primary: hsla(30, 100%, 55%, 1); /* #FF8C1A */
+
+$pen-primary: hsla(163, 85%, 40%, 1); /* #0FBD8C */
+$pen-transparent: hsla(163, 85%, 40%, 0.25); /* #0FBD8C */
+$pen-tertiary: hsla(163, 86%, 30%, 1); /* #0B8E69 */
+
+$error-primary: hsla(30, 100%, 55%, 1); /* #FF8C1A */
+$error-light: hsla(30, 100%, 70%, 1); /* #FFB366 */
+$error-transparent: hsla(30, 100%, 55%, 0.25); /* #FF8C1A */
+
+$extensions-primary: hsla(163, 85%, 40%, 1); /* #0FBD8C */
+$extensions-tertiary: hsla(163, 85%, 30%, 1); /* #0B8E69 */
+$extensions-transparent: hsla(163, 85%, 40%, 0.35); /* 35% transparent version of extensions-primary */
+$extensions-light: hsla(163, 57%, 85%, 1); /* opaque version of extensions-transparent, on white bg */
+
+$drop-highlight: hsla(215, 100%, 77%, 1); /* lighter than motion-primary */
+
+
+/* ── CSS Custom Properties (design tokens) ── */
+/* Use these in any .css file with var(--color-*) for consistent theming */
+
+:root {
+  /* ── Brand (Bar / Header surface) ── */
+  --color-primary: hsla(210, 100%, 24%, 1);        /* #00357a — menu bar background */
+  --color-primary-dark: hsla(210, 100%, 18%, 1);   /* #002859 — hover/active */
+  --color-primary-transparent: hsla(210, 100%, 24%, 0.35);
+  --color-primary-light: hsla(210, 100%, 24%, 0.15);
+
+  /* ── Surface / background hierarchy ── */
+  --bg-primary: hsla(224, 100%, 95%, 1);          /* #e4ecff — main body bg */
+  --bg-secondary: hsla(224, 80%, 95%, 1);         /* ~#e6edfe — secondary bg */
+  --bg-tertiary: hsla(224, 60%, 90%, 1);          /* ~#dce5fb — tab bg, etc. */
+  --bg-white: hsla(0, 100%, 100%, 1);              /* #FFFFFF — card / modal bg */
+
+  /* ── Text ── */
+  --text-primary: hsla(225, 15%, 40%, 1);          /* #575E75 — body text */
+  --text-primary-transparent: hsla(225, 15%, 40%, 0.75);
+  --text-on-primary: hsla(0, 100%, 100%, 1);       /* #FFFFFF — text on brand bg */
+
+  /* ── Border / Divider ── */
+  --border-light: hsla(0, 0%, 0%, 0.15);           /* 15% black */
+  --border-lighter: hsla(0, 0%, 0%, 0.10);         /* 10% black */
+
+  /* ── Interactive / Accent ── */
+  --color-tertiary: hsla(239, 100%, 50%, 1);       /* #0002ff — accent */
+  --accent-blue: hsla(225, 100%, 73%, 1);          /* #7495ff — primary button */
+  --accent-blue-dark: hsla(225, 80%, 52%, 1);      /* #3d6bcc */
+  --accent-green: hsla(163, 85%, 35%, 1);          /* #0DA57A */
+  --accent-green-hover: hsla(163, 85%, 40%, 1);    /* #0FBD8C */
+
+  /* ── Overlay ── */
+  --modal-overlay: hsla(239, 100%, 50%, 0.15);     /* 15% tertiary — modal backdrop */
+
+  /* ── Status ── */
+  --error-primary: hsla(30, 100%, 55%, 1);         /* #FF8C1A */
+  --error-light: hsla(30, 100%, 70%, 1);           /* #FFB366 */
+  --error-transparent: hsla(30, 100%, 55%, 0.25);
+}

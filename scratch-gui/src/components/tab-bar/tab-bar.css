@@ -1,0 +1,200 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+
+.tabList {
+    height: $stage-menu-height;
+    width: 250px;
+    display: flex;
+    align-items: flex-end;
+    flex-shrink: 0;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    font-weight: 500;
+    font-size: 0.80rem;
+    margin: 0;
+    border-bottom: 0;
+    contain: layout style;
+}
+
+.tab {
+    flex-grow: 1;
+    height: 80%;
+    margin-bottom: 0;
+    border-radius: 1rem 1rem 0 0;
+    border: 1px solid $ui-black-transparent;
+    padding: 0.125rem 1.25rem 0;
+    font-size: 0.75rem;
+    font-family: inherit;
+    font-weight: inherit;
+    background-color: $ui-tertiary;
+    color: $text-primary-transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    user-select: none;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+    outline: none;
+    position: relative;
+}
+
+.tab:hover {
+    background-color: $ui-primary;
+}
+
+.tab.selected {
+    height: 90%;
+    color: $looks-secondary;
+    background-color: $ui-white;
+    z-index: 4;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Combined fused tab — both split tabs rendered as one element */
+.fusedTab {
+    flex-grow: 2;
+    height: 100%;
+    margin-bottom: -1px;
+    border: 1px solid $ui-black-transparent;
+    border-bottom: none;
+    border-radius: 0.75rem 0.75rem 0 0;
+    background-color: $ui-white;
+    color: $looks-secondary;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0;
+    cursor: pointer;
+    outline: none;
+    z-index: 4;
+    padding: 0.125rem 0.5rem 0;
+    position: relative;
+    animation: fuseIn 0.22s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+}
+
+.fusedDimmed {
+    opacity: 0.45;
+}
+
+.fusedExit {
+    animation: fuseOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+/* Each side of the fused tab (one icon per side) */
+.fusedPart {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: 0.25rem 0;
+}
+
+/* Vertical divider between the two icons */
+.fusedDivider {
+    width: 1px;
+    height: 1.25rem;
+    background-color: $ui-black-transparent;
+    flex-shrink: 0;
+}
+
+/* Icons inside the fused tab */
+.fusedIcon {
+    width: 1.25rem;
+    height: 1.25rem;
+    filter: none;
+}
+
+/* Dimmed tab (the one not in the split pair) */
+.dimmed {
+    opacity: 0.5;
+    height: 80%;
+    z-index: 1;
+}
+
+.dimmed:hover {
+    opacity: 0.75;
+}
+
+@keyframes fuseIn {
+    from {
+        opacity: 0;
+        transform: scale(0.92) translateY(4px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+}
+
+@keyframes fuseOut {
+    from {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
+    to {
+        opacity: 0;
+        transform: scale(0.92) translateY(4px);
+    }
+}
+
+.tabIcon {
+    width: 1.375rem;
+    filter: grayscale(100%);
+}
+
+.tab.selected .tabIcon {
+    filter: none;
+}
+
+[dir="ltr"] .tabIcon {
+    margin-right: 0.125rem;
+}
+
+[dir="rtl"] .tabIcon {
+    margin-left: 0.125rem;
+}
+
+[dir="ltr"] .tab {
+    margin-left: -0.5rem;
+}
+
+[dir="rtl"] .tab {
+    margin-right: -0.5rem;
+}
+
+[dir="ltr"] .tab:first-child {
+    margin-left: 0;
+}
+
+[dir="rtl"] .tab:first-child {
+    margin-right: 0;
+}
+
+.tab:nth-child(1) { z-index: 3; }
+.tab:nth-child(2) { z-index: 2; }
+.tab:nth-child(3) { z-index: 1; }
+
+.tab.selected { z-index: 4; }
+.fusedTab { z-index: 4; }
+
+@media (max-width: 1023px) {
+    .tabList {
+        width: 100%;
+    }
+
+    .tab {
+        padding: 0.125rem 0.5rem 0;
+        font-size: 0.65rem;
+    }
+
+    .tabIcon {
+        width: 1.1rem;
+        margin-right: 0.1rem;
+    }
+
+    .tab.selected {
+        height: 85%;
+    }
+}

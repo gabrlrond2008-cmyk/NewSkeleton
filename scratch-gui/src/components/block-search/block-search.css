@@ -1,0 +1,94 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+@import "../../css/z-index.css";
+
+.wrapper {
+    flex-shrink: 0;
+    position: relative;
+    display: flex;
+    justify-content: center;
+    padding: 2px 0;
+    z-index: 1;
+}
+
+.inputWrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: .4rem .5rem;
+    border: 1px dashed $ui-black-transparent;
+    border-radius: $form-radius;
+    background-color: $ui-white-transparent;
+    background-clip: padding-box;
+    transition: background-color 0.15s ease, box-shadow 0.15s ease;
+    width: auto;
+}
+
+.inputWrapper:hover {
+    background-color: hsla(0, 100%, 100%, 0.5);
+}
+
+.inputWrapper:focus-within {
+    outline: none;
+    border: 1px solid transparent;
+    box-shadow: 0 0 0 calc($space * .5) $ui-white-transparent;
+    background-color: $ui-white;
+}
+
+.icon {
+    flex-shrink: 0;
+    color: $text-primary-transparent;
+    width: 12px;
+    height: 12px;
+}
+
+.input {
+    flex: 1;
+    border: none;
+    outline: none;
+    font-size: .8rem;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    background: transparent;
+    color: $text-primary;
+    font-weight: bold;
+    min-width: 0;
+    max-width: 140px;
+}
+
+.input::placeholder {
+    color: $text-primary-transparent;
+    font-weight: normal;
+    font-size: .8rem;
+    font-style: italic;
+}
+
+.clear {
+    flex-shrink: 0;
+    border: none;
+    background: none;
+    cursor: pointer;
+    color: $text-primary-transparent;
+    font-size: .8rem;
+    line-height: 1;
+    padding: 0;
+}
+
+.clear:hover {
+    color: $text-primary;
+}
+
+@media (max-width: 599px) {
+    .wrapper {
+        padding: 2px 4px;
+    }
+
+    .inputWrapper {
+        width: 100%;
+        padding: .35rem .4rem;
+    }
+
+    .input {
+        max-width: none;
+        font-size: .75rem;
+    }
+}

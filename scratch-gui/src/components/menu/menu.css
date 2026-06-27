@@ -1,0 +1,119 @@
+@import "../../css/colors.css";
+
+.menu {
+    position: absolute;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 0 0 8px 8px;
+    background-color: $looks-secondary;
+    padding: 0;
+    margin: 0;
+    min-width: 186px;
+    max-width: 260px;
+    overflow: visible;
+    color: $ui-white;
+    box-shadow: 0 8px 8px 0 $ui-black-transparent;
+
+    transform-origin: top center;
+    opacity: 0;
+    transform: scaleY(0);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.menu.open {
+    opacity: 1;
+    transform: scaleY(1);
+    pointer-events: auto;
+}
+
+.menu.left {
+    right: 0;
+}
+
+.menu.right {
+    left: 0;
+}
+
+.menu-item {
+    display: block;
+    line-height: 34px;
+    white-space: nowrap;
+    padding: 0 10px;
+    font-size: .75rem;
+    margin: 0;
+    font-weight: bold;
+    position: relative;
+}
+
+.menu-item:hover,
+.menu-item.expanded {
+    background-color: $ui-black-transparent;
+}
+
+.menu-item.hoverable {
+    cursor: pointer;
+}
+
+.menu-section {
+    border-top: 1px solid $ui-black-transparent;
+}
+
+.submenu {
+    position: absolute;
+    top: -1px;
+    min-width: 186px;
+    max-width: 260px;
+    height: max-content;
+    overflow: hidden;
+    border-radius: 8px;
+    opacity: 0;
+    transform: scaleX(0);
+    transition: opacity 0.2s cubic-bezier(0.4, 0, 0.2, 1),
+                transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+}
+
+.submenu.right {
+    left: 100%;
+    transform-origin: left center;
+}
+
+.submenu.left {
+    right: 100%;
+    transform-origin: right center;
+}
+
+.submenu > .menu {
+    position: relative;
+    overflow-y: auto;
+    overflow-x: hidden;
+    scrollbar-color: $ui-black-transparent $looks-secondary;
+    border-radius: 8px;
+    opacity: 1;
+    transform: scaleY(1);
+    pointer-events: auto;
+}
+
+.menu-item.expanded > .submenu,
+:not(:has(> .menu-item.expanded)) > .menu-item:hover > .submenu {
+    opacity: 1;
+    transform: scaleX(1);
+    pointer-events: auto;
+}
+
+/* Fallback styling for webkit browsers that don't support scrollbar-color */
+
+.submenu > .menu::-webkit-scrollbar {
+    width: 12px;
+}
+
+.submenu > .menu::-webkit-scrollbar-track {
+    background: $looks-secondary;
+}
+
+.submenu > .menu::-webkit-scrollbar-thumb {
+    background-color: $ui-black-transparent;
+    border-radius: 12px;
+    border: 3px solid $looks-secondary;
+}

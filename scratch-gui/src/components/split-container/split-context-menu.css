@@ -1,0 +1,59 @@
+@import "../../css/units.css";
+@import "../../css/colors.css";
+@import "../../css/z-index.css";
+
+.overlay {
+    z-index: $z-index-context-menu;
+}
+
+.menu {
+    min-width: 160px;
+    padding: 4px 0;
+    background: $ui-white;
+    border: 1px solid $ui-black-transparent;
+    border-radius: calc($space / 2);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    overflow: hidden;
+}
+
+.menuItem {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    padding: 10px 16px;
+    border: none;
+    background: none;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    color: $text-primary;
+    text-align: left;
+    transition: background-color 0.15s ease, transform 0.1s ease;
+    outline: none;
+}
+
+.menuItem:hover:not(:disabled) {
+    background-color: $looks-secondary;
+    color: white;
+    transform: translateX(2px);
+}
+
+.menuItem:active:not(:disabled) {
+    transform: translateX(0) scale(0.98);
+}
+
+.menuItemDisabled {
+    opacity: 0.4;
+    cursor: default;
+}
+
+.menuItemIcon {
+    font-size: 1.1rem;
+    line-height: 1;
+    flex-shrink: 0;
+}
+
+.menuItemLabel {
+    white-space: nowrap;
+}

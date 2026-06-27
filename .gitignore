@@ -1,0 +1,12 @@
+node_modules/
+target/
+dist/
+build/
+.DS_Store
+Thumbs.db
+*.log
+.env
+.env.local
+scratch-gui/.env
+scratch-gui/.env.local
+scratch-vm/.env

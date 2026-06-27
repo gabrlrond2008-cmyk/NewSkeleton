@@ -1,0 +1,22 @@
+.handle {
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    background: transparent;
+    transition: background-color 0.15s ease;
+}
+
+.handle:hover,
+.handle:active {
+    background-color: rgba(0, 53, 122, 0.15);
+}
+
+.horizontal {
+    width: 5px;
+    cursor: col-resize;
+}
+
+.vertical {
+    height: 5px;
+    cursor: row-resize;
+}
