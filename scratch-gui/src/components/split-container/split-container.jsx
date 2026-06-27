@@ -36,9 +36,7 @@ const SplitContainer = ({
     }, [onRatioChange]);
 
     useEffect(() => {
-        if (splitMode) {
-            window.dispatchEvent(new Event('resize'));
-        }
+        window.dispatchEvent(new Event('resize'));
     }, [splitMode]);
 
     useEffect(() => {
