@@ -216,6 +216,45 @@ TrainingEngine.prototype.loadFromStorage = function(entries) {
     }
 };
 
+TrainingEngine.prototype.exportFlynt = function(name) {
+    var self = this;
+    var stats = {
+        totalExamples: this.examples.length,
+        categories: Object.keys(this.catCounts),
+        topOpcodes: Object.keys(this.opFreq).sort(function(a, b) { return self.opFreq[b] - self.opFreq[a]; }).slice(0, 10)
+    };
+    return {
+        version: 1,
+        format: 'flynt',
+        name: name || 'entrenamiento-ia-scratch',
+        created: new Date().toISOString(),
+        entries: this.examples.slice(),
+        patterns: {
+            opFreq: this.opFreq,
+            catCounts: this.catCounts
+        },
+        stats: stats
+    };
+};
+
+TrainingEngine.prototype.importFlynt = function(bundle) {
+    if (!bundle || bundle.format !== 'flynt' || !bundle.entries) return false;
+    this.examples = bundle.entries.slice();
+    this.opFreq = bundle.patterns && bundle.patterns.opFreq ? Object.assign({}, bundle.patterns.opFreq) : {};
+    this.catCounts = bundle.patterns && bundle.patterns.catCounts ? Object.assign({}, bundle.patterns.catCounts) : {};
+    for (var i = 0; i < bundle.entries.length; i++) {
+        var opcodes = extractOpcodes(bundle.entries[i].desc || '');
+        for (var j = 0; j < opcodes.length; j++) {
+            this.opFreq[opcodes[j]] = (this.opFreq[opcodes[j]] || 0) + 1;
+        }
+        var cats = categorizeOpcodes(opcodes);
+        for (var cat in cats) {
+            this.catCounts[cat] = (this.catCounts[cat] || 0) + cats[cat];
+        }
+    }
+    return true;
+};
+
 export {
     TrainingEngine,
     extractOpcodes, categorizeOpcodes, descriptorToStructure,

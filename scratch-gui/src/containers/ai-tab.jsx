@@ -96,11 +96,12 @@ var AiTab = function (props) {
         var provider = localStorage.getItem(LS_PROVIDER) || 'groq';
         var apiKey = localStorage.getItem(LS_API_KEY(provider));
         var model = localStorage.getItem(LS_MODEL(provider));
+        var trainingOn = localStorage.getItem('ai_training_enabled') !== 'false';
 
         if (!apiKey) return null;
         if (!model) return null;
 
-        var td = trainingData || loadTrainingFromStorage();
+        var td = trainingOn ? (trainingData || loadTrainingFromStorage()) : null;
 
         if (!serviceRef.current ||
             serviceRef.current.provider !== provider ||
@@ -466,7 +467,17 @@ var AiTab = function (props) {
         setTimeout(function () { doCreate(assistantMsg.content); }, 0);
     }, [props.vm, messages, creatingIndex]);
 
+    var isTrainingEnabled = useCallback(function () {
+        try {
+            return localStorage.getItem('ai_training_enabled') !== 'false';
+        } catch (e) {
+            return true;
+        }
+    }, []);
+
     var handleTrain = useCallback(function (msgIndex) {
+        if (!isTrainingEnabled()) return;
+
         var assistantMsg = messages[msgIndex];
         if (assistantMsg.role !== 'assistant') return;
 
@@ -478,12 +489,6 @@ var AiTab = function (props) {
         if (descMatch) {
             descriptor = descMatch[0].trim();
         }
-
-        var entry = {
-            user: userMsg,
-            desc: descriptor || '(sin estructura @bloques)',
-            date: new Date().toISOString()
-        };
 
         if (trainEngineRef.current) {
             trainEngineRef.current.addExample(userMsg, descriptor, false);
@@ -501,7 +506,11 @@ var AiTab = function (props) {
             }
         } catch (e) {}
 
-        allData.entries.push(entry);
+        allData.entries.push({
+            user: userMsg,
+            desc: descriptor || '(sin estructura @bloques)',
+            date: new Date().toISOString()
+        });
 
         var compressed = compressExamples(allData.entries, 15);
         var saveData = {version: 1, entries: compressed};
@@ -512,16 +521,20 @@ var AiTab = function (props) {
 
         setTrainingData(compressed);
 
-        var blob = new Blob([JSON.stringify(saveData, null, 2)], {type: 'application/json'});
+        var flynt = trainEngineRef.current ? trainEngineRef.current.exportFlynt() : null;
+        var outData = flynt || saveData;
+        var ext = flynt ? 'flynt' : 'json';
+
+        var blob = new Blob([JSON.stringify(outData, null, 2)], {type: 'application/json'});
         var url = URL.createObjectURL(blob);
         var a = document.createElement('a');
         a.href = url;
-        a.download = 'entrenamiento-ia-scratch.json';
+        a.download = 'entrenamiento-ia-scratch.' + ext;
         document.body.appendChild(a);
         a.click();
         document.body.removeChild(a);
         URL.revokeObjectURL(url);
-    }, [messages, getPrecedingUserMsg]);
+    }, [messages, getPrecedingUserMsg, isTrainingEnabled]);
 
     var handleTrainingFileLoad = useCallback(function (file) {
         if (!file) return;
@@ -529,7 +542,17 @@ var AiTab = function (props) {
         reader.onload = function (e) {
             try {
                 var data = JSON.parse(e.target.result);
-                if (data && data.entries && Array.isArray(data.entries)) {
+                if (data && data.format === 'flynt') {
+                    if (trainEngineRef.current) {
+                        trainEngineRef.current.importFlynt(data);
+                    }
+                    var entries = data.entries || [];
+                    setTrainingData(entries);
+                    localStorage.setItem(LS_TRAINING, JSON.stringify({version: 1, entries: entries}));
+                    if (serviceRef.current) {
+                        serviceRef.current.setTrainingData(entries);
+                    }
+                } else if (data && data.entries && Array.isArray(data.entries)) {
                     if (trainEngineRef.current) {
                         trainEngineRef.current.loadFromStorage(data.entries);
                     }
@@ -544,6 +567,8 @@ var AiTab = function (props) {
         reader.readAsText(file);
     }, []);
 
+    var trainingEnabled = typeof window !== 'undefined' ? localStorage.getItem('ai_training_enabled') !== 'false' : true;
+
     return (
         <AiTabComponent
             vm={props.vm}
@@ -554,6 +579,7 @@ var AiTab = function (props) {
             creatingIndex={creatingIndex}
             createStatus={createStatus}
             trainingData={trainingData}
+            trainingEnabled={trainingEnabled}
             onSend={handleSend}
             onVerify={handleVerify}
             onCreateBlocks={handleCreateBlocks}

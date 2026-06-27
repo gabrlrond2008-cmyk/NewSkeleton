@@ -56,6 +56,52 @@ var FALLBACK_MODELS = {
 var LS_PROVIDER = 'ai_provider';
 var LS_API_KEY = function (p) { return p + '_api_key'; };
 var LS_MODEL = function (p) { return p + '_model'; };
+var LS_TRAINING_ENABLED = 'ai_training_enabled';
+
+var toggleStyle = {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    padding: '6px 0'
+};
+
+var toggleLabelStyle = {
+    fontSize: '0.72rem',
+    fontWeight: 600,
+    color: '#fff',
+    textTransform: 'uppercase',
+    letterSpacing: '0.3px'
+};
+
+var toggleSwitchStyle = function(on) {
+    return {
+        position: 'relative',
+        width: 36,
+        height: 20,
+        background: on ? '#4caf50' : 'rgba(255,255,255,0.2)',
+        borderRadius: 10,
+        cursor: 'pointer',
+        transition: 'background 0.2s',
+        flexShrink: 0,
+        border: 'none',
+        outline: 'none',
+        padding: 0
+    };
+};
+
+var toggleKnobStyle = function(on) {
+    return {
+        position: 'absolute',
+        top: 2,
+        left: on ? 18 : 2,
+        width: 16,
+        height: 16,
+        background: '#fff',
+        borderRadius: '50%',
+        transition: 'left 0.2s',
+        pointerEvents: 'none'
+    };
+};
 
 var labelStyle = {
     display: 'block',
@@ -159,6 +205,7 @@ class AiMenu extends React.PureComponent {
             'handleProviderChange',
             'handleKeyChange',
             'handleModelChange',
+            'handleTrainingToggle',
             'loadModels'
         ]);
         var savedProvider = typeof window !== 'undefined' ? localStorage.getItem(LS_PROVIDER) || 'groq' : 'groq';
@@ -167,7 +214,8 @@ class AiMenu extends React.PureComponent {
             apiKey: typeof window !== 'undefined' ? localStorage.getItem(LS_API_KEY(savedProvider)) || '' : '',
             model: typeof window !== 'undefined' ? localStorage.getItem(LS_MODEL(savedProvider)) || '' : '',
             models: [],
-            loading: false
+            loading: false,
+            trainingEnabled: typeof window !== 'undefined' ? localStorage.getItem(LS_TRAINING_ENABLED) !== 'false' : true
         };
     }
 
@@ -242,6 +290,12 @@ class AiMenu extends React.PureComponent {
         localStorage.setItem(LS_MODEL(this.state.provider), newModel);
     }
 
+    handleTrainingToggle () {
+        var newVal = !this.state.trainingEnabled;
+        this.setState({trainingEnabled: newVal});
+        localStorage.setItem(LS_TRAINING_ENABLED, newVal);
+    }
+
     render () {
         var models = this.state.models;
         var providerOptions = Object.keys(PROVIDER_META).map(function (id) {
@@ -310,6 +364,17 @@ class AiMenu extends React.PureComponent {
                                     placeholder="Seleccionar modelo..."
                                 />
                             )}
+                        </div>
+                        <div style={toggleStyle}>
+                            <span style={toggleLabelStyle}>Entrenamiento</span>
+                            <button
+                                style={toggleSwitchStyle(this.state.trainingEnabled)}
+                                onClick={this.handleTrainingToggle}
+                                type="button"
+                                title={this.state.trainingEnabled ? 'Entrenamiento activado' : 'Entrenamiento desactivado'}
+                            >
+                                <div style={toggleKnobStyle(this.state.trainingEnabled)} />
+                            </button>
                         </div>
                     </div>
                 </Submenu>

@@ -25,8 +25,14 @@ var PROVIDER_CONFIG = {
     }
 };
 
+function isTrainingEnabled() {
+    if (typeof window === 'undefined') return false;
+    return window.localStorage.getItem('ai_training_enabled') !== 'false';
+}
+
 function buildTrainingPrompt(examples) {
     if (!examples || examples.length === 0) return '';
+    if (!isTrainingEnabled()) return '';
     return generateOptimizedPrompt(examples);
 }
 
