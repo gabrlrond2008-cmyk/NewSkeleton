@@ -83,6 +83,7 @@ class Blocks extends React.Component {
             'onVisualReport',
             'onWorkspaceUpdate',
             'onWorkspaceMetricsChange',
+            'recalcWrapperWidth',
             'setBlocks',
             'setLocale'
         ]);
@@ -147,6 +148,8 @@ class Blocks extends React.Component {
                 });
             }
         }
+
+        window.addEventListener('resize', this.recalcWrapperWidth);
 
         // Register buttons under new callback keys for creating variables,
         // lists, and procedures from extensions.
@@ -443,12 +446,35 @@ class Blocks extends React.Component {
         }
     }
     componentWillUnmount () {
+        window.removeEventListener('resize', this.recalcWrapperWidth);
         this.detachVM();
         this.workspace.dispose();
         clearTimeout(this.toolboxUpdateTimeout);
 
         // Clear the flyout blocks so that they can be recreated on mount.
         this.props.vm.clearFlyoutBlocks();
+    }
+
+    recalcWrapperWidth () {
+        if (!this.flyoutWrapper) return;
+        const injectionDiv = this.blocks.querySelector('.injectionDiv');
+        if (!injectionDiv) return;
+        const toolboxDiv = injectionDiv.querySelector('.blocklyToolboxDiv');
+        const flyoutSvg = injectionDiv.querySelector('.blocklyFlyout');
+        if (!toolboxDiv || !flyoutSvg) return;
+        const tbRect = toolboxDiv.getBoundingClientRect();
+        const flyRect = flyoutSvg.getBoundingClientRect();
+        const wrapperRect = this.flyoutWrapper.getBoundingClientRect();
+        const combinedWidth = Math.max(
+            flyRect.right - wrapperRect.left,
+            tbRect.right - wrapperRect.left
+        );
+        if (combinedWidth > 0) {
+            this.flyoutWrapper.style.width = combinedWidth + 'px';
+            if (this.toolboxHeader) {
+                this.toolboxHeader.style.width = '';
+            }
+        }
     }
 
     requestToolboxUpdate () {

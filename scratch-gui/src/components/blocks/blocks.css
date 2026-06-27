@@ -35,15 +35,16 @@
     box-sizing: content-box;
     height: 100%;
     -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.blocks :global(.blocklyToolboxDiv::-webkit-scrollbar) {
+    display: none;
 }
 
 [dir="rtl"] .blocks :global(.blocklyToolboxDiv) {
     border-right: none;
     border-left: 1px solid $ui-black-transparent;
-}
-
-.blocks :global(.blocklyToolboxDiv::-webkit-scrollbar) {
-    display: none;
 }
 
 .blocks :global(.blocklyToolboxWrapper) {
@@ -72,6 +73,12 @@
 .blocks :global(.blocklyFlyout) {
     border-right: 1px solid $ui-black-transparent;
     box-sizing: content-box;
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+}
+
+.blocks :global(.blocklyFlyout::-webkit-scrollbar) {
+    display: none;
 }
 
 [dir="rtl"] .blocks :global(.blocklyFlyout) {
@@ -172,6 +179,11 @@
 
     .blocks :global(.blocklyToolboxWrapper) {
         bottom: 3.25rem;
+        width: 238px !important; /* 56px toolbox + 1px border + 180px flyout + 1px border */
+    }
+
+    .blocks :global(.blocklyToolboxHeader) {
+        width: 238px !important;
     }
 
     .blocks :global(.blocklyFlyout) {
