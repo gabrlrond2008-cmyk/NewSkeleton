@@ -76,7 +76,7 @@ const SBFileUploaderHOC = function (WrappedComponent) {
             this.fileReader.onload = this.onload;
             // create <input> element and add it to DOM
             this.inputElement = document.createElement('input');
-            this.inputElement.accept = '.sb,.sb2,.sb3';
+            this.inputElement.accept = '.sb,.sb2,.sb3,.flynt';
             this.inputElement.style = 'display: none;';
             this.inputElement.type = 'file';
             this.inputElement.onchange = this.handleChange; // connects to step 3
@@ -137,8 +137,8 @@ const SBFileUploaderHOC = function (WrappedComponent) {
         getProjectTitleFromFilename (fileInputFilename) {
             if (!fileInputFilename) return '';
             // only parse title with valid scratch project extensions
-            // (.sb, .sb2, and .sb3)
-            const matches = fileInputFilename.match(/^(.*)\.sb[23]?$/);
+            // (.sb, .sb2, .sb3, and .flynt)
+            const matches = fileInputFilename.match(/^(.*)\.(?:sb[23]?|flynt)$/);
             if (!matches) return '';
             return matches[1].substring(0, 100); // truncate project title to max 100 chars
         }
@@ -146,27 +146,76 @@ const SBFileUploaderHOC = function (WrappedComponent) {
         // file upload raw data is available in the reader
         onload () {
             if (this.fileReader) {
-                this.props.onLoadingStarted();
-                const filename = this.fileToUpload && this.fileToUpload.name;
-                let loadingSuccess = false;
-                this.props.vm.loadProject(this.fileReader.result)
-                    .then(() => {
-                        if (filename) {
-                            const uploadedProjectTitle = this.getProjectTitleFromFilename(filename);
-                            this.props.onSetProjectTitle(uploadedProjectTitle);
-                        }
-                        loadingSuccess = true;
-                    })
-                    .catch(error => {
-                        log.warn(error);
-                        alert(this.props.intl.formatMessage(messages.loadError)); // eslint-disable-line no-alert
-                    })
-                    .then(() => {
-                        this.props.onLoadingFinished(this.props.loadingState, loadingSuccess);
-                        // go back to step 7: whether project loading succeeded
-                        // or failed, reset file objects
-                        this.removeFileObjects();
-                    });
+                var self = this;
+                var buffer = this.fileReader.result;
+                var filename = this.fileToUpload && this.fileToUpload.name;
+
+                // Check if .flynt format and extract AI data before loading project
+                var aiDataPromise = Promise.resolve(null);
+                if (buffer && typeof buffer === 'object') {
+                    var VMClass = self.props.vm && self.props.vm.constructor;
+                    if (VMClass && VMClass.isFlynt) {
+                        aiDataPromise = VMClass.isFlynt(buffer).then(function (isFlynt) {
+                            if (isFlynt && VMClass.extractFlyntAiData) {
+                                return VMClass.extractFlyntAiData(buffer);
+                            }
+                            return null;
+                        });
+                    }
+                }
+
+                aiDataPromise.then(function (aiData) {
+                    self.props.onLoadingStarted();
+                    var loadingSuccess = false;
+                    self.props.vm.loadProject(buffer)
+                        .then(function () {
+                            if (filename) {
+                                var uploadedProjectTitle = self.getProjectTitleFromFilename(filename);
+                                self.props.onSetProjectTitle(uploadedProjectTitle);
+                            }
+                            loadingSuccess = true;
+
+                            // Restore AI data from .flynt to localStorage
+                            if (aiData) {
+                                try {
+                                    if (aiData.training) {
+                                        localStorage.setItem('ai_training_data',
+                                            typeof aiData.training === 'string' ?
+                                                aiData.training : JSON.stringify(aiData.training));
+                                    }
+                                    if (aiData.session) {
+                                        localStorage.setItem('ai_session',
+                                            typeof aiData.session === 'string' ?
+                                                aiData.session : JSON.stringify(aiData.session));
+                                    }
+                                    if (aiData.settings) {
+                                        if (aiData.settings.provider) {
+                                            localStorage.setItem('ai_provider', aiData.settings.provider);
+                                        }
+                                        if (aiData.settings.model) {
+                                            localStorage.setItem(
+                                                aiData.settings.provider + '_model',
+                                                aiData.settings.model);
+                                        }
+                                        if (aiData.settings.trainingEnabled !== undefined) {
+                                            localStorage.setItem('ai_training_enabled',
+                                                aiData.settings.trainingEnabled);
+                                        }
+                                    }
+                                } catch (_) {}
+                            }
+                        })
+                        .catch(function (error) {
+                            log.warn(error);
+                            alert(self.props.intl.formatMessage(messages.loadError)); // eslint-disable-line no-alert
+                        })
+                        .then(function () {
+                            self.props.onLoadingFinished(self.props.loadingState, loadingSuccess);
+                            // go back to step 7: whether project loading succeeded
+                            // or failed, reset file objects
+                            self.removeFileObjects();
+                        });
+                });
             }
         }
         // step 7: remove the <input> element from the DOM and clear reader and

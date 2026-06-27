@@ -179,7 +179,22 @@ class MenuBar extends React.Component {
     async handleSaveToComputer () {
         this.props.onRequestCloseFile();
         try {
-            const content = await this.props.vm.saveProjectSb3();
+            // Gather AI data from localStorage for .flynt bundle
+            var aiData = {};
+            try {
+                var trainingRaw = localStorage.getItem('ai_training_data');
+                if (trainingRaw) aiData.training = JSON.parse(trainingRaw);
+                var sessionRaw = localStorage.getItem('ai_session');
+                if (sessionRaw) aiData.session = JSON.parse(sessionRaw);
+                var prov = localStorage.getItem('ai_provider') || '';
+                aiData.settings = {
+                    provider: prov,
+                    model: localStorage.getItem(prov + '_model') || '',
+                    trainingEnabled: localStorage.getItem('ai_training_enabled')
+                };
+            } catch (_) {}
+
+            const content = await this.props.vm.saveProjectFlynt(aiData);
             const filename = this.getProjectFilename();
 
             const defaultPath = localStorage.getItem('scratchDefaultPath');
@@ -191,7 +206,7 @@ class MenuBar extends React.Component {
             } else {
                 const filePath = await save({
                     defaultPath: filename,
-                    filters: [{ name: 'Scratch Project', extensions: ['sb3'] }]
+                    filters: [{ name: 'Flynt Project', extensions: ['flynt'] }]
                 });
                 if (filePath) {
                     await invoke('save_file', { path: filePath, content: Array.from(new Uint8Array(content)) });
@@ -216,7 +231,7 @@ class MenuBar extends React.Component {
         if (!filenameTitle || filenameTitle.length === 0) {
             filenameTitle = 'Scratch Project';
         }
-        return `${filenameTitle.substring(0, 100)}.sb3`;
+        return `${filenameTitle.substring(0, 100)}.flynt`;
     }
     buildAboutMenu (onClickAbout) {
         if (!onClickAbout) {

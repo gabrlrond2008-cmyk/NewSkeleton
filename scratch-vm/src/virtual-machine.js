@@ -407,6 +407,56 @@ class VirtualMachine extends EventEmitter {
         });
     }
 
+    /**
+     * Save a project as .flynt — wraps .sb3 contents + AI data in a single zip.
+     * @param {object} aiData Optional AI data: {training, session, settings}
+     * @return {!Promise} Promise that resolves with a Blob of the .flynt zip.
+     */
+    saveProjectFlynt (aiData) {
+        const soundDescs = serializeSounds(this.runtime);
+        const costumeDescs = serializeCostumes(this.runtime);
+        const projectJson = this.toJSON();
+
+        const zip = new JSZip();
+
+        // Standard project files (same as .sb3)
+        zip.file('project.json', projectJson);
+        this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
+
+        // Flynt metadata
+        zip.file('flynt.json', JSON.stringify({
+            version: 1,
+            format: 'flynt',
+            created: new Date().toISOString(),
+            generator: 'scratch-vm'
+        }, null, 2));
+
+        // AI data
+        if (aiData) {
+            if (aiData.training) {
+                zip.file('ai/training.json', typeof aiData.training === 'string' ?
+                    aiData.training : JSON.stringify(aiData.training, null, 2));
+            }
+            if (aiData.session) {
+                zip.file('ai/session.json', typeof aiData.session === 'string' ?
+                    aiData.session : JSON.stringify(aiData.session, null, 2));
+            }
+            if (aiData.settings) {
+                zip.file('ai/settings.json', typeof aiData.settings === 'string' ?
+                    aiData.settings : JSON.stringify(aiData.settings, null, 2));
+            }
+        }
+
+        return zip.generateAsync({
+            type: 'blob',
+            mimeType: 'application/x.scratch.flynt',
+            compression: 'DEFLATE',
+            compressionOptions: {
+                level: 6
+            }
+        });
+    }
+
     /*
      * @type {Array<object>} Array of all costumes and sounds currently in the runtime
      */
@@ -1580,6 +1630,55 @@ class VirtualMachine extends EventEmitter {
      */
     configureScratchLinkSocketFactory (factory) {
         this.runtime.configureScratchLinkSocketFactory(factory);
+    }
+
+    /**
+     * Check if an ArrayBuffer is a .flynt project by looking for flynt.json.
+     * @param {ArrayBuffer} buffer The zip content to inspect.
+     * @return {!Promise<boolean>} Whether the zip contains flynt.json.
+     */
+    static isFlynt (buffer) {
+        return JSZip.loadAsync(buffer).then(function (zip) {
+            return !!zip.files['flynt.json'];
+        }).catch(function () {
+            return false;
+        });
+    }
+
+    /**
+     * Extract AI data from a .flynt zip.
+     * @param {ArrayBuffer} buffer The .flynt zip content.
+     * @return {!Promise<object|null>} AI data object: {training, session, settings} or null.
+     */
+    static extractFlyntAiData (buffer) {
+        return JSZip.loadAsync(buffer).then(function (zip) {
+            var aiData = {};
+            var promises = [];
+
+            function readFile(name, key) {
+                var file = zip.files[name];
+                if (file && !file.dir) {
+                    promises.push(file.async('string').then(function (text) {
+                        try {
+                            aiData[key] = JSON.parse(text);
+                        } catch (e) {
+                            aiData[key] = text;
+                        }
+                    }));
+                }
+            }
+
+            readFile('ai/training.json', 'training');
+            readFile('ai/session.json', 'session');
+            readFile('ai/settings.json', 'settings');
+
+            if (promises.length === 0) return null;
+            return Promise.all(promises).then(function () {
+                return aiData;
+            });
+        }).catch(function () {
+            return null;
+        });
     }
 }
 
