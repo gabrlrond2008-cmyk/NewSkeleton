@@ -240,8 +240,8 @@ TrainingEngine.prototype.exportFlynt = function(name) {
 TrainingEngine.prototype.importFlynt = function(bundle) {
     if (!bundle || bundle.format !== 'flynt' || !bundle.entries) return false;
     this.examples = bundle.entries.slice();
-    this.opFreq = bundle.patterns && bundle.patterns.opFreq ? Object.assign({}, bundle.patterns.opFreq) : {};
-    this.catCounts = bundle.patterns && bundle.patterns.catCounts ? Object.assign({}, bundle.patterns.catCounts) : {};
+    this.opFreq = {};
+    this.catCounts = {};
     for (var i = 0; i < bundle.entries.length; i++) {
         var opcodes = extractOpcodes(bundle.entries[i].desc || '');
         for (var j = 0; j < opcodes.length; j++) {
