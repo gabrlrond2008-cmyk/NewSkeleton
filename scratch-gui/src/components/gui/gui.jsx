@@ -145,10 +145,12 @@ const GUIComponent = props => {
         tipsLibraryVisible,
         toolboxXML,
         vm,
+        pendingExplain,
         onSetSecondaryTab,
         onSetSplitRatio,
         onShowSplitMenu,
         onHideSplitMenu,
+        onClearExplain,
         ...componentProps
     } = omit(props, 'dispatch');
     if (children) {
@@ -213,7 +215,7 @@ const GUIComponent = props => {
 
     const costumePanel = useMemo(() => <CostumeTab vm={vm} />, [vm]);
     const soundPanel = useMemo(() => <SoundTab vm={vm} />, [vm]);
-    const aiPanel = useMemo(() => <AiTab vm={vm} />, [vm]);
+    const aiPanel = useMemo(() => <AiTab vm={vm} pendingExplain={pendingExplain} onClearExplain={onClearExplain} />, [vm, pendingExplain, onClearExplain]);
 
     const panels = useMemo(() => [codePanel, costumePanel, soundPanel, aiPanel],
         [codePanel, costumePanel, soundPanel, aiPanel]);

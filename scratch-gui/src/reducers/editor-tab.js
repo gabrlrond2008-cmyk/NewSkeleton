@@ -3,6 +3,7 @@ const SET_SECONDARY_TAB = 'scratch-gui/navigation/SET_SECONDARY_TAB';
 const SET_SPLIT_RATIO = 'scratch-gui/navigation/SET_SPLIT_RATIO';
 const SHOW_SPLIT_MENU = 'scratch-gui/navigation/SHOW_SPLIT_MENU';
 const HIDE_SPLIT_MENU = 'scratch-gui/navigation/HIDE_SPLIT_MENU';
+const SET_EXPLAIN_PENDING = 'scratch-gui/navigation/SET_EXPLAIN_PENDING';
 
 const BLOCKS_TAB_INDEX = 0;
 const COSTUMES_TAB_INDEX = 1;
@@ -15,7 +16,8 @@ const initialState = {
     splitPrimaryIndex: null,
     splitRatio: 0.5,
     splitMenuVisible: false,
-    splitMenuPosition: null
+    splitMenuPosition: null,
+    pendingExplain: null
 };
 
 const reducer = function (state, action) {
@@ -43,6 +45,10 @@ const reducer = function (state, action) {
         return Object.assign({}, state, {
             splitMenuVisible: false,
             splitMenuPosition: null
+        });
+    case SET_EXPLAIN_PENDING:
+        return Object.assign({}, state, {
+            pendingExplain: action.data
         });
     default:
         return state;
@@ -83,6 +89,13 @@ const hideSplitMenu = function () {
     };
 };
 
+const setExplainPending = function (data) {
+    return {
+        type: SET_EXPLAIN_PENDING,
+        data: data
+    };
+};
+
 export {
     reducer as default,
     initialState as editorTabInitialState,
@@ -91,6 +104,7 @@ export {
     setSplitRatio,
     showSplitMenu,
     hideSplitMenu,
+    setExplainPending,
     BLOCKS_TAB_INDEX,
     COSTUMES_TAB_INDEX,
     SOUNDS_TAB_INDEX,

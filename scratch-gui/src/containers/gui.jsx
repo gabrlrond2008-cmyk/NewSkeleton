@@ -19,7 +19,8 @@ import {
     hideSplitMenu,
     BLOCKS_TAB_INDEX,
     COSTUMES_TAB_INDEX,
-    SOUNDS_TAB_INDEX
+    SOUNDS_TAB_INDEX,
+    setExplainPending
 } from '../reducers/editor-tab';
 
 import {
@@ -188,7 +189,8 @@ const mapStateToProps = state => {
         telemetryModalVisible: state.scratchGui.modals.telemetryModal,
         tipsLibraryVisible: state.scratchGui.modals.tipsLibrary,
         deviceLibraryVisible: state.scratchGui.modals.deviceLibrary,
-        vm: state.scratchGui.vm
+        vm: state.scratchGui.vm,
+        pendingExplain: state.scratchGui.editorTab.pendingExplain
     };
 };
 
@@ -206,7 +208,8 @@ const mapDispatchToProps = dispatch => ({
     onSetSecondaryTab: tabIndex => dispatch(setSecondaryTab(tabIndex)),
     onSetSplitRatio: ratio => dispatch(setSplitRatio(ratio)),
     onShowSplitMenu: position => dispatch(showSplitMenu(position)),
-    onHideSplitMenu: () => dispatch(hideSplitMenu())
+    onHideSplitMenu: () => dispatch(hideSplitMenu()),
+    onClearExplain: () => dispatch(setExplainPending(null))
 });
 
 const ConnectedGUI = injectIntl(connect(

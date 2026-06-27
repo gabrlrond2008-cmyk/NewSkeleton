@@ -11,7 +11,6 @@ import {verifyBlocks} from '../lib/ai-block-verifier.js';
 import {validate} from '../lib/ai-block-validator.js';
 import {getDetailedBlockInfo} from '../lib/ai-block-library';
 import {TrainingEngine, extractOpcodes, categorizeOpcodes, descriptorToStructure, compressExamples} from '../lib/ai-training-engine';
-import {getPendingExplain} from '../lib/explain-queue';
 
 var LS_PROVIDER = 'ai_provider';
 var LS_API_KEY = function (p) { return p + '_api_key'; };
@@ -166,16 +165,21 @@ var AiTab = function (props) {
                 }
             }
         } catch (e) {}
+    }, [loadTrainingFromStorage]);
 
-        // Auto-explain: if pending explain data from right-click context menu
-        var pendingData = getPendingExplain();
-        if (pendingData) {
-            var explainText = 'Analizá este proyecto y explicá de qué trata, qué hace cada script y cómo funcionan en conjunto:\n\n' + pendingData;
+    // Auto-explain: detect pending explain from right-click context menu
+    useEffect(function () {
+        if (props.pendingExplain) {
+            var data = props.pendingExplain;
+            var explainText = 'Analizá este proyecto y explicá de qué trata, qué hace cada script y cómo funcionan en conjunto:\n\n' + data;
+            if (props.onClearExplain) {
+                props.onClearExplain();
+            }
             queueMicrotask(function () {
                 handleSend(explainText);
             });
         }
-    }, [loadTrainingFromStorage]); // eslint-disable-line react-hooks/exhaustive-deps
+    }, [props.pendingExplain]); // eslint-disable-line react-hooks/exhaustive-deps
 
     var handleSend = useCallback(function (text) {
         var service = getService();
@@ -568,7 +572,9 @@ var AiTab = function (props) {
 };
 
 AiTab.propTypes = {
-    vm: PropTypes.instanceOf(VM).isRequired
+    vm: PropTypes.instanceOf(VM).isRequired,
+    pendingExplain: PropTypes.string,
+    onClearExplain: PropTypes.func
 };
 
 export default AiTab;

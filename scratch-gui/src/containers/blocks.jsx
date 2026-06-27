@@ -38,11 +38,11 @@ import {
     activateTab,
     setSecondaryTab,
     showSplitMenu,
+    setExplainPending,
     SOUNDS_TAB_INDEX,
     AI_TAB_INDEX
 } from '../reducers/editor-tab';
 import {readWorkspace} from '../lib/ai-workspace-reader.js';
-import {setPendingExplain} from '../lib/explain-queue.js';
 
 const addFunctionListener = (object, property, callback) => {
     const oldFn = object[property];
@@ -322,7 +322,7 @@ class Blocks extends React.Component {
                         try {
                             var workspaceData = readWorkspace(blocksThis.props.vm);
                             if (workspaceData) {
-                                setPendingExplain(workspaceData);
+                                blocksThis.props.onSetExplainPending(workspaceData);
                                 blocksThis.props.onActivateTab(AI_TAB_INDEX);
                             }
                         } catch (_e) {}
@@ -948,6 +948,7 @@ class Blocks extends React.Component {
             onSetSecondaryTab,
             splitMode,
             onActivateTab,
+            onSetExplainPending,
             onWorkspaceReady,
             ...props
         } = this.props;
@@ -1042,6 +1043,7 @@ Blocks.propTypes = {
     onShowSplitMenu: PropTypes.func,
     onSetSecondaryTab: PropTypes.func,
     onActivateTab: PropTypes.func,
+    onSetExplainPending: PropTypes.func,
     onWorkspaceReady: PropTypes.func
 };
 
@@ -1109,7 +1111,8 @@ const mapDispatchToProps = dispatch => ({
     },
     onShowSplitMenu: position => dispatch(showSplitMenu(position)),
     onSetSecondaryTab: tabIndex => dispatch(setSecondaryTab(tabIndex)),
-    onActivateTab: tabIndex => dispatch(activateTab(tabIndex))
+    onActivateTab: tabIndex => dispatch(activateTab(tabIndex)),
+    onSetExplainPending: data => dispatch(setExplainPending(data))
 });
 
 export default errorBoundaryHOC('Blocks')(
