@@ -67,13 +67,12 @@ export default {
             area: 'Vista Dividida (Split Pane)',
             items: [
                 'La vista dividida te deja ver dos pestañas al mismo tiempo, como tener dos ventanas en una.',
-                'Cómo se activa: hacé clic derecho sobre cualquier pestaña (Código, Disfraces, Sonidos o AI).',
-                'Se abre un menú con opciones como "Ver con Disfraces", "Ver con Sonidos", "Ver con Código", "Ver con AI". Elegí una.',
-                'La pantalla se parte en dos mitades, cada una mostrando una pestaña distinta.',
-                'Entre las dos mitades hay una línea que podés arrastrar hacia los costados para darle más espacio a un panel.',
-                'Las pestañas que no están en la vista dividida aparecen como botones individuales arriba.',
-                'Para salir de la vista dividida: hacé clic en la pestaña no dividida (la que está sola), o clic derecho > "Cerrar vista dividida".',
-                'Es muy útil para, por ejemplo, ver el código de mientras estás dibujando un disfraz, o tener la IA abierta mientras programás.',
+                'Activála arrastrando una pestaña hacia el lado derecho del editor, o con clic derecho > "Split screen ▸".',
+                'La pantalla se parte en dos mitades con una barra divisoria que podés arrastrar.',
+                'La barra divisora tiene puntos de ajuste en 33%, 50% y 66% para distribuir el espacio rápido.',
+                'Usá el botón ↔ en el panel secundario para intercambiar los paneles.',
+                'Para salir de la vista dividida: clic en la pestaña no dividida, botón ✕ en el panel, o clic derecho > "Cerrar vista dividida".',
+                'Es muy útil para, por ejemplo, ver el código mientras dibujás un disfraz, o tener la IA abierta mientras programás.',
                 'Cuando salís de la vista dividida, todo vuelve a la normalidad y tus cosas siguen como estaban.'
             ]
         },

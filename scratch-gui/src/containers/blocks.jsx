@@ -37,12 +37,13 @@ import {isTimeTravel2020} from '../reducers/time-travel';
 import {
     activateTab,
     setSecondaryTab,
-    showSplitMenu,
     setExplainPending,
     SOUNDS_TAB_INDEX,
     AI_TAB_INDEX
 } from '../reducers/editor-tab';
 import {readWorkspace} from '../lib/ai-workspace-reader.js';
+import {saveStacks, restoreStacks} from '../lib/block-undo-manager';
+import {addTrashBlock, removeFirstTrashBlock} from '../reducers/block-trash';
 
 const addFunctionListener = (object, property, callback) => {
     const oldFn = object[property];
@@ -100,6 +101,9 @@ class Blocks extends React.Component {
         this.onTargetsUpdate = debounce(this.onTargetsUpdate, 100);
         this.toolboxUpdateQueue = [];
         this.overrideToolboxXML = null;
+        this._pendingTrashRestore = false;
+        this._isClearingWorkspace = false;
+        this._prevEditingTargetId = null;
     }
     componentDidMount () {
         this.ScratchBlocks = VMScratchBlocks(this.props.vm, this.props.useCatBlocks);
@@ -174,6 +178,29 @@ class Blocks extends React.Component {
         // the xml can change while e.g. on the costumes tab.
         this._renderedToolboxXML = this.props.toolboxXML;
 
+        // Listen for block events from the workspace
+        var sblocks = this.ScratchBlocks;
+        this.workspace.addChangeListener(function (e) {
+            try {
+                // Capture keyboard/drag-to-delete for trash
+                if (e.type === 'delete' && e.recordUndo && e.oldXml) {
+                    try {
+                        var xmlStr = sblocks.Xml.domToText(e.oldXml);
+                        var opcode = e.oldXml.getAttribute('type') || '';
+                        this.props.onAddTrashBlock(e.blockId, xmlStr, opcode);
+                    } catch (_) {}
+                }
+                // Detect block creation from trash flyout
+                if (e.type === 'create' && e.recordUndo) {
+                    var catId = this.workspace.toolbox_.getSelectedCategoryId();
+                    if (catId === 'trash' && this.props.trashBlocks.length > 0) {
+                        this.props.onRemoveFirstTrashBlock();
+                        this._pendingTrashRestore = true;
+                    }
+                }
+            } catch (_) {}
+        }.bind(this));
+
         // we actually never want the workspace to enable "refresh toolbox" - this basically re-renders the
         // entire toolbox every time we reset the workspace.  We call updateToolbox as a part of
         // componentDidUpdate so the toolbox will still correctly be updated
@@ -239,6 +266,14 @@ class Blocks extends React.Component {
                 var block = deleteList.shift();
                 if (block) {
                     if (block.workspace) {
+                        if (!block.isShadow()) {
+                            try {
+                                var dom = SB.Xml.blockToDom(block, true);
+                                var xmlStr = SB.Xml.domToText(dom);
+                                var opcode = block.type || '';
+                                blocksThis.props.onAddTrashBlock(block.id, xmlStr, opcode);
+                            } catch (_) {}
+                        }
                         block.dispose(false, true);
                         setTimeout(deleteNext, DELAY);
                     } else {
@@ -271,41 +306,7 @@ class Blocks extends React.Component {
             };
             menuOptions.push(deleteOption);
 
-            // Split screen context options
-            if (!blocksThis.props.splitMenuVisible) {
-                var splitActive = blocksThis.props.splitMode;
-                menuOptions.push({
-                    text: '──────────',
-                    enabled: false,
-                    callback: function () {}
-                });
-                if (splitActive) {
-                    menuOptions.push({
-                        text: 'Close split view',
-                        enabled: true,
-                        callback: function () {
-                            SB.ContextMenu.hide();
-                            if (blocksThis.props.onSetSecondaryTab) {
-                                blocksThis.props.onSetSecondaryTab(null);
-                            }
-                        }
-                    });
-                } else {
-                    menuOptions.push({
-                        text: 'Split screen ▸',
-                        enabled: true,
-                        callback: function () {
-                            SB.ContextMenu.hide();
-                            if (blocksThis.props.onShowSplitMenu) {
-                                blocksThis.props.onShowSplitMenu({
-                                    x: e.clientX,
-                                    y: e.clientY
-                                });
-                            }
-                        }
-                    });
-                }
-            }
+
 
             // Explain project
             menuOptions.push({
@@ -424,7 +425,8 @@ class Blocks extends React.Component {
             this.props.locale !== nextProps.locale ||
             this.props.anyModalVisible !== nextProps.anyModalVisible ||
             this.props.stageSize !== nextProps.stageSize ||
-            this.props.splitMode !== nextProps.splitMode
+            this.props.splitMode !== nextProps.splitMode ||
+            this.props.trashBlocks !== nextProps.trashBlocks
         );
     }
     componentDidUpdate (prevProps) {
@@ -435,6 +437,14 @@ class Blocks extends React.Component {
             } catch (e) {
                 // hideChaff can cascade into disposed flyout's getMetrics_/setMetrics_
                 // when a field editor's onHide_ triggers resize on a recycled flyout
+            }
+        }
+
+        // When trash blocks change, regenerate toolbox XML to include the trash category
+        if (this.props.trashBlocks !== prevProps.trashBlocks) {
+            const xml = this.getToolboxXML();
+            if (xml) {
+                this.props.updateToolboxState(xml);
             }
         }
 
@@ -673,7 +683,7 @@ class Blocks extends React.Component {
     onVisualReport (data) {
         this.workspace.reportValue(data.id, data.value);
     }
-    getToolboxXML () {
+    getToolboxXML (trashOverride) {
         // Use try/catch because this requires digging pretty deep into the VM
         // Code inside intentionally ignores several error situations (no stage, etc.)
         // Because they would get caught by this try/catch
@@ -689,12 +699,23 @@ class Blocks extends React.Component {
                 this.props.vm.runtime.getBlocksXML(target),
                 this.props.theme
             );
-            return makeToolboxXML(false, target.isStage, target.id, dynamicBlocksXML,
+            var baseXML = makeToolboxXML(false, target.isStage, target.id, dynamicBlocksXML,
                 targetCostumes[targetCostumes.length - 1].name,
                 stageCostumes[stageCostumes.length - 1].name,
                 targetSounds.length > 0 ? targetSounds[targetSounds.length - 1].name : '',
                 getColorsForTheme(this.props.theme)
             );
+            // Inject trash category with saved blocks
+            var trashBlocks = trashOverride || this.props.trashBlocks;
+            if (trashBlocks && trashBlocks.length > 0) {
+                var trashCatXML = '\n<sep gap="36"/>\n<category name="\u{1F5D1} Papelera" id="trash" colour="#A0A0A0" secondaryColour="#888888">';
+                for (var i = 0; i < trashBlocks.length; i++) {
+                    trashCatXML += '\n' + trashBlocks[i].xml;
+                }
+                trashCatXML += '\n</category>';
+                baseXML = baseXML.replace('</xml>', trashCatXML + '\n</xml>');
+            }
+            return baseXML;
         } catch {
             return null;
         }
@@ -710,8 +731,19 @@ class Blocks extends React.Component {
             this.onWorkspaceMetricsChange();
         }
 
+        // Save undo stacks for current sprite before reload
+        var prevTargetId = this._prevEditingTargetId;
+        if (prevTargetId) {
+            saveStacks(prevTargetId, this.workspace);
+        }
+
+        // Update tracking for next call
+        this._prevEditingTargetId = this.props.vm.editingTarget ?
+            this.props.vm.editingTarget.id : null;
+
         // Remove and reattach the workspace listener (but allow flyout events)
         this.workspace.removeChangeListener(this.props.vm.blockListener);
+        this._isClearingWorkspace = true;
         const dom = this.ScratchBlocks.Xml.textToDom(data.xml);
         try {
             this.ScratchBlocks.Xml.clearWorkspaceAndLoadFromXml(dom, this.workspace);
@@ -730,7 +762,14 @@ class Blocks extends React.Component {
             }
             log.error(error);
         }
+        this._isClearingWorkspace = false;
         this.workspace.addChangeListener(this.props.vm.blockListener);
+
+        // Restore undo stacks for the new editing target
+        var targetId = this.props.vm.editingTarget ? this.props.vm.editingTarget.id : null;
+        if (targetId) {
+            restoreStacks(targetId, this.workspace);
+        }
 
         if (this.props.vm.editingTarget && this.props.workspaceMetrics.targets[this.props.vm.editingTarget.id]) {
             const {scrollX, scrollY, scale} = this.props.workspaceMetrics.targets[this.props.vm.editingTarget.id];
@@ -743,7 +782,19 @@ class Blocks extends React.Component {
         // Clear the undo state of the workspace since this is a
         // fresh workspace and we don't want any changes made to another sprites
         // workspace to be 'undone' here.
-        this.workspace.clearUndo();
+        if (!targetId || prevTargetId !== targetId) {
+            this.workspace.clearUndo();
+        }
+
+        // Handle pending trash restore from flyout
+        if (this._pendingTrashRestore) {
+            this._pendingTrashRestore = false;
+            var updatedBlocks = this.props.trashBlocks.slice(1);
+            var updatedXML = this.getToolboxXML(updatedBlocks);
+            if (updatedXML) {
+                this.props.updateToolboxState(updatedXML);
+            }
+        }
     }
     handleMonitorsUpdate (monitors) {
         // Update the checkboxes of the relevant monitors.
@@ -875,6 +926,7 @@ class Blocks extends React.Component {
             });
     }
     setCategoryAnimationColors () {
+        if (this.props.reducedMotion) return;
         const toolbox = this.blocks ? this.blocks.querySelector('.blocklyToolboxDiv') : null;
         if (!toolbox) return;
         const items = toolbox.querySelectorAll('.scratchCategoryMenuItem');
@@ -889,6 +941,8 @@ class Blocks extends React.Component {
         });
     }
     animateFlyoutBlocks (flyout) {
+        if (this.props.reducedMotion) return;
+        if (typeof document !== 'undefined' && document.body.classList.contains('reduced-motion')) return;
         if (this._flyoutAnimTimer) {
             cancelAnimationFrame(this._flyoutAnimTimer);
         }
@@ -943,13 +997,15 @@ class Blocks extends React.Component {
             updateMetrics: updateMetricsProp,
             useCatBlocks,
             workspaceMetrics,
-            splitMenuVisible,
-            onShowSplitMenu,
             onSetSecondaryTab,
             splitMode,
             onActivateTab,
             onSetExplainPending,
             onWorkspaceReady,
+            reducedMotion,
+            trashBlocks,
+            onAddTrashBlock,
+            onRemoveFirstTrashBlock,
             ...props
         } = this.props;
         /* eslint-enable no-unused-vars */
@@ -1038,13 +1094,15 @@ Blocks.propTypes = {
     workspaceMetrics: PropTypes.shape({
         targets: PropTypes.objectOf(PropTypes.object)
     }),
-    splitMenuVisible: PropTypes.bool,
     splitMode: PropTypes.bool,
-    onShowSplitMenu: PropTypes.func,
     onSetSecondaryTab: PropTypes.func,
     onActivateTab: PropTypes.func,
     onSetExplainPending: PropTypes.func,
-    onWorkspaceReady: PropTypes.func
+    onWorkspaceReady: PropTypes.func,
+    reducedMotion: PropTypes.bool,
+    trashBlocks: PropTypes.arrayOf(PropTypes.object),
+    onAddTrashBlock: PropTypes.func,
+    onRemoveFirstTrashBlock: PropTypes.func
 };
 
 Blocks.defaultOptions = {
@@ -1082,8 +1140,9 @@ const mapStateToProps = state => ({
     customProceduresVisible: state.scratchGui.customProcedures.active,
     workspaceMetrics: state.scratchGui.workspaceMetrics,
     useCatBlocks: isTimeTravel2020(state),
-    splitMenuVisible: state.scratchGui.editorTab.splitMenuVisible,
-    splitMode: state.scratchGui.editorTab.secondaryTabIndex !== null
+    splitMode: state.scratchGui.editorTab.secondaryTabIndex !== null,
+    reducedMotion: state.scratchGui.animations.reducedMotion,
+    trashBlocks: state.scratchGui.blockTrash.blocks
 });
 
 const mapDispatchToProps = dispatch => ({
@@ -1109,10 +1168,11 @@ const mapDispatchToProps = dispatch => ({
     updateMetrics: metrics => {
         dispatch(updateMetrics(metrics));
     },
-    onShowSplitMenu: position => dispatch(showSplitMenu(position)),
     onSetSecondaryTab: tabIndex => dispatch(setSecondaryTab(tabIndex)),
     onActivateTab: tabIndex => dispatch(activateTab(tabIndex)),
-    onSetExplainPending: data => dispatch(setExplainPending(data))
+    onSetExplainPending: data => dispatch(setExplainPending(data)),
+    onAddTrashBlock: (id, xml, opcode) => dispatch(addTrashBlock(id, xml, opcode)),
+    onRemoveFirstTrashBlock: () => dispatch(removeFirstTrashBlock())
 });
 
 export default errorBoundaryHOC('Blocks')(

@@ -6,8 +6,14 @@ export function getSharedMessages() {
 
 export function setSharedMessages(msgs) {
     sharedMessages = msgs;
+    try {
+        window.dispatchEvent(new CustomEvent('aisharedmessagechange'));
+    } catch (e) {}
 }
 
 export function clearSharedMessages() {
     sharedMessages = [];
+    try {
+        window.dispatchEvent(new CustomEvent('aisharedmessagechange'));
+    } catch (e) {}
 }

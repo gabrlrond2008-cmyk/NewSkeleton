@@ -1,0 +1,17 @@
+diff --git a/node_modules/scratch-blocks/core/flyout_base.js b/node_modules/scratch-blocks/core/flyout_base.js
+index fe5b3fc..703f171 100644
+--- a/node_modules/scratch-blocks/core/flyout_base.js
++++ b/node_modules/scratch-blocks/core/flyout_base.js
+@@ -664,6 +664,12 @@ Blockly.Flyout.prototype.stepScrollAnimation = function() {
+   if (!this.scrollTarget) {
+     return;
+   }
++  // Jump directly when reduced motion is active
++  if (typeof document !== 'undefined' && document.body.classList.contains('reduced-motion')) {
++    this.scrollbar_.set(this.scrollTarget);
++    this.scrollTarget = null;
++    return;
++  }
+   var scrollPos = this.horizontalLayout_ ?
+     -this.workspace_.scrollX : -this.workspace_.scrollY;
+   var diff = this.scrollTarget - scrollPos;

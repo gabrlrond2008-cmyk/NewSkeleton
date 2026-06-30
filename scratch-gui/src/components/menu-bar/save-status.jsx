@@ -27,7 +27,7 @@ const SaveStatus = ({
 }) => (
     filterInlineAlerts(alertsList).length > 0 ? (
         <InlineMessages />
-    ) : projectChanged && (
+    ) : projectChanged.changed && (
         <div
             className={styles.saveNow}
             onClick={onClickSave}
@@ -43,7 +43,7 @@ const SaveStatus = ({
 SaveStatus.propTypes = {
     alertsList: PropTypes.arrayOf(PropTypes.object),
     onClickSave: PropTypes.func,
-    projectChanged: PropTypes.bool
+    projectChanged: PropTypes.shape({changed: PropTypes.bool, hasBeenSaved: PropTypes.bool})
 };
 
 const mapStateToProps = state => ({

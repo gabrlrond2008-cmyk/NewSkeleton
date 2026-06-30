@@ -28,6 +28,8 @@ import toolboxReducer, {toolboxInitialState} from './toolbox';
 import vmReducer, {vmInitialState} from './vm';
 import vmStatusReducer, {vmStatusInitialState} from './vm-status';
 import workspaceMetricsReducer, {workspaceMetricsInitialState} from './workspace-metrics';
+import blockTrashReducer, {blockTrashInitialState} from './block-trash';
+import animationsReducer, {animationsInitialState} from './animations';
 import throttle from 'redux-throttle';
 
 import decks from '../lib/libraries/decks/index.jsx';
@@ -63,7 +65,9 @@ const guiInitialState = {
     toolbox: toolboxInitialState,
     vm: vmInitialState,
     vmStatus: vmStatusInitialState,
-    workspaceMetrics: workspaceMetricsInitialState
+    workspaceMetrics: workspaceMetricsInitialState,
+    blockTrash: blockTrashInitialState,
+    animations: animationsInitialState
 };
 
 const initPlayer = function (currentState) {
@@ -164,7 +168,9 @@ const guiReducer = combineReducers({
     toolbox: toolboxReducer,
     vm: vmReducer,
     vmStatus: vmStatusReducer,
-    workspaceMetrics: workspaceMetricsReducer
+    workspaceMetrics: workspaceMetricsReducer,
+    blockTrash: blockTrashReducer,
+    animations: animationsReducer
 });
 
 export {

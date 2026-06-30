@@ -1,0 +1,140 @@
+.container {
+    position: absolute;
+    bottom: 16px;
+    right: 16px;
+    z-index: 100;
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: 10px;
+    cursor: default;
+}
+
+.face {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #f0ebff;
+    border: 2px solid #d4c5f9;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: grab;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 3px 12px rgba(133, 92, 214, 0.2);
+    user-select: none;
+    position: relative;
+}
+
+.face:hover {
+    transform: scale(1.1);
+    box-shadow: 0 5px 18px rgba(133, 92, 214, 0.35);
+}
+
+.face:active {
+    cursor: grabbing;
+    transform: scale(0.95);
+}
+
+.analyzing {
+    border-color: #b794f4;
+    box-shadow: 0 0 0 4px rgba(133, 92, 214, 0.12);
+}
+
+.emoji {
+    font-size: 1.5rem;
+    line-height: 1;
+    pointer-events: none;
+}
+
+.pulse {
+    position: absolute;
+    inset: -5px;
+    border-radius: 50%;
+    border: 2.5px solid #855CD6;
+    animation: pulseAnim 1.4s ease-in-out infinite;
+}
+
+.bubble {
+    max-width: 360px;
+    background: #fff;
+    border-radius: 14px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13);
+    overflow: hidden;
+    border: 1px solid #ececec;
+    transform-origin: left center;
+}
+
+.bubbleIn {
+    animation: bubbleEnter 0.35s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.bubbleOut {
+    animation: bubbleExit 0.25s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.message {
+    padding: 14px 16px;
+    font-size: 0.85rem;
+    line-height: 1.6;
+    color: #333;
+    white-space: pre-wrap;
+}
+
+.reanalyzeBtn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    width: 100%;
+    padding: 9px 14px;
+    border: none;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+    cursor: pointer;
+    font-size: 0.78rem;
+    color: #5c3d9e;
+    font-weight: 600;
+    transition: background 0.15s;
+}
+
+.reanalyzeBtn:hover {
+    background: #f0ebff;
+}
+
+.reanalyzeBtn svg {
+    flex-shrink: 0;
+}
+
+@keyframes bubbleEnter {
+    0% {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+    100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+
+@keyframes bubbleExit {
+    0% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    100% {
+        opacity: 0;
+        transform: scale(0.85);
+    }
+}
+
+@keyframes pulseAnim {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0;
+        transform: scale(1.3);
+    }
+}

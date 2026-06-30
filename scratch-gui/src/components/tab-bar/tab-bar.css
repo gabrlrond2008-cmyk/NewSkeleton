@@ -12,7 +12,7 @@
     font-size: 0.80rem;
     margin: 0;
     border-bottom: 0;
-    contain: layout style;
+    position: relative;
 }
 
 .tab {
@@ -30,7 +30,6 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    user-select: none;
     white-space: nowrap;
     cursor: pointer;
     transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
@@ -50,6 +49,20 @@
     background-color: $ui-white;
     z-index: 4;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+/* Chrome-style insertion indicator — a thin vertical blue line */
+.insertIndicator {
+    width: 2px;
+    height: 60%;
+    background: #4c97ff;
+    flex-shrink: 0;
+    position: relative;
+    z-index: 10;
+    border-radius: 1px;
+    pointer-events: none;
+    align-self: center;
+    margin: 0 -1px;
 }
 
 /* Combined fused tab — both split tabs rendered as one element */
@@ -75,7 +88,8 @@
 }
 
 .fusedDimmed {
-    opacity: 0.45;
+    background-color: $ui-tertiary;
+    color: $text-primary-transparent;
 }
 
 .fusedExit {
@@ -139,6 +153,11 @@
     }
 }
 
+.tab span,
+.tab img {
+    user-select: none;
+}
+
 .tabIcon {
     width: 1.375rem;
     filter: grayscale(100%);
@@ -146,6 +165,25 @@
 
 .tab.selected .tabIcon {
     filter: none;
+}
+
+.dragGhost {
+    position: fixed;
+    pointer-events: none;
+    z-index: 10000;
+    background: #fff;
+    border: 1px solid rgba(0, 0, 0, 0.15);
+    border-radius: 0.75rem 0.75rem 0 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0.92;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    font-size: 0.75rem;
+    font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+    white-space: nowrap;
+    padding: 0.125rem 1.25rem 0;
+    color: #575e75;
 }
 
 [dir="ltr"] .tabIcon {

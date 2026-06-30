@@ -36,6 +36,44 @@ function buildTrainingPrompt(examples) {
     return generateOptimizedPrompt(examples);
 }
 
+function buildMentorSystemPrompt(sessionSummary) {
+    var lines = [
+        'Eres un mentor de Scratch. Tu rol es ENSEÑAR y GUIAR al usuario, NO hacer el trabajo por él.',
+        '',
+        'REGLAS:',
+        '1. NUNCA escribas código, bloques, JSON ni respuestas en formato estructurado.',
+        '2. NUNCA incluyas @bloques ni descriptores de bloques en tu respuesta.',
+        '3. Explicá los CONCEPTOS: qué hace cada bloque, cómo se combinan, la lógica detrás.',
+        '4. Dá pistas y sugerencias, pero dejá que el usuario descubra cómo implementarlo.',
+        '5. Si el usuario pide un proyecto completo, guialo paso a paso sin darle el código.',
+        '6. Respondé SIEMPRE en español, claro y didáctico.',
+        '7. Usá analogías y ejemplos del mundo real para explicar conceptos.',
+        '8. Si el usuario se equivoca, señalá el error y preguntale cómo lo solucionaría.',
+        '',
+        'BLOQUES DISPONIBLES (solo para tu referencia):',
+    ];
+
+    var blockRef = getCompactPromptLines();
+    for (var bri = 0; bri < blockRef.length; bri++) {
+        lines.push(blockRef[bri]);
+    }
+
+    lines.push('');
+    lines.push('Áreas:');
+    for (var fi = 0; fi < AI_KNOWLEDGE.features.length; fi++) {
+        var feat = AI_KNOWLEDGE.features[fi];
+        lines.push(feat.area + ': ' + feat.items.length + ' funcionalidades');
+    }
+    lines.push('Pestañas: ' + AI_KNOWLEDGE.tabs.map(function (t) { return t.label; }).join(', '));
+
+    if (sessionSummary) {
+        lines.push('');
+        lines.push('Historial: ' + sessionSummary);
+    }
+
+    return lines.join('\n');
+}
+
 var _appPromptCache = null;
 function buildAppSystemPrompt(trainingExamples, sessionSummary) {
     if (!trainingExamples && !sessionSummary && _appPromptCache) return _appPromptCache;
@@ -117,6 +155,15 @@ function buildAppSystemPrompt(trainingExamples, sessionSummary) {
         '5. Los bloques reporteros (ej: data_variable, sensing_answer, operator_add) se anidan dentro de la propiedad del input correspondiente como un objeto con su propio opcode, inputs y fields.',
         '6. Si solo respondes una pregunta de chat sin bloques, responde con "scripts": [] y pon la respuesta en "explanation".',
         '7. Asegúrate de retornar un JSON válido.',
+        '',
+        'REGLAS CRÍTICAS DE COMPARADORES Y OPERADORES:',
+        '- En Scratch NO existen símbolos como +, -, *, /, <, >, =. Usá los bloques específicos: operator_add (suma), operator_subtract (resta), operator_multiply (multiplicación), operator_divide (división), operator_gt (>), operator_lt (<), operator_equals (=).',
+        '- Las comparaciones lógicas (si x > y, repetir hasta x < 5, esperar hasta x = 10) usan los bloques booleanos operator_gt, operator_lt, operator_equals dentro de CONDITION (control_if, control_repeat_until, control_wait_until).',
+        '- operator_and, operator_or, operator_not toman operandos booleanos (OPERAND1, OPERAND2 o OPERAND) — no números.',
+        '- operator_join (unir), operator_letter_of (letra de), operator_length (longitud) trabajan con STRING (texto).',
+        '- operator_mod (módulo/resto) y operator_round (redondear) toman un solo NUM.',
+        '- operator_random toma FROM (desde) y TO (hasta) como números.',
+        '- NUNCA pongas un símbolo (+, -, <, >, =) como valor de un input. Siempre usá el bloque opcode correspondiente con sus inputs.',
         '',
         '=== BLOQUES DISPONIBLES ===',
         'Formato: opcode[tipo] desc (f:campo1) (v:entrada1) {st:substack}',
@@ -376,16 +423,23 @@ AiService.prototype._call = function (messages, maxTokens) {
     return Promise.reject(new Error('Formato no soportado'));
 };
 
-AiService.prototype.ask = function (userMessage, sessionSummary) {
-    var prompt = this.systemPrompt;
-    if (sessionSummary) {
-        prompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, sessionSummary);
+AiService.prototype.ask = function (userMessage, sessionSummary, mentorMode) {
+    var prompt;
+    if (mentorMode) {
+        prompt = buildMentorSystemPrompt(sessionSummary || '');
+    } else {
+        prompt = this.systemPrompt;
+        if (sessionSummary) {
+            prompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, sessionSummary);
+        }
     }
     return this._call([
         {role: 'system', content: prompt},
         {role: 'user', content: userMessage}
     ], 8192);
 };
+
+
 
 AiService.prototype._parseVerification = function (raw) {
     var result = 'CORRECTO';

@@ -1,8 +1,8 @@
 const ACTIVATE_TAB = 'scratch-gui/navigation/ACTIVATE_TAB';
 const SET_SECONDARY_TAB = 'scratch-gui/navigation/SET_SECONDARY_TAB';
 const SET_SPLIT_RATIO = 'scratch-gui/navigation/SET_SPLIT_RATIO';
-const SHOW_SPLIT_MENU = 'scratch-gui/navigation/SHOW_SPLIT_MENU';
-const HIDE_SPLIT_MENU = 'scratch-gui/navigation/HIDE_SPLIT_MENU';
+const SWAP_TABS = 'scratch-gui/navigation/SWAP_TABS';
+const REORDER_TABS = 'scratch-gui/navigation/REORDER_TABS';
 const SET_EXPLAIN_PENDING = 'scratch-gui/navigation/SET_EXPLAIN_PENDING';
 const SET_PROJECT_KEY = 'scratch-gui/navigation/SET_PROJECT_KEY';
 
@@ -18,8 +18,7 @@ const initialState = {
     secondaryTabIndex: null,
     splitPrimaryIndex: null,
     splitRatio: 0.5,
-    splitMenuVisible: false,
-    splitMenuPosition: null,
+    tabOrder: [BLOCKS_TAB_INDEX, COSTUMES_TAB_INDEX, SOUNDS_TAB_INDEX, AI_TAB_INDEX],
     pendingExplain: null,
     projectKey: 0
 };
@@ -40,15 +39,15 @@ const reducer = function (state, action) {
         return Object.assign({}, state, {
             splitRatio: Math.max(0.2, Math.min(0.8, action.ratio))
         });
-    case SHOW_SPLIT_MENU:
+    case SWAP_TABS:
         return Object.assign({}, state, {
-            splitMenuVisible: true,
-            splitMenuPosition: action.position
+            activeTabIndex: state.secondaryTabIndex,
+            secondaryTabIndex: state.activeTabIndex,
+            splitPrimaryIndex: state.secondaryTabIndex
         });
-    case HIDE_SPLIT_MENU:
+    case REORDER_TABS:
         return Object.assign({}, state, {
-            splitMenuVisible: false,
-            splitMenuPosition: null
+            tabOrder: action.tabOrder
         });
     case SET_EXPLAIN_PENDING:
         return Object.assign({}, state, {
@@ -84,16 +83,16 @@ const setSplitRatio = function (ratio) {
     };
 };
 
-const showSplitMenu = function (position) {
+const swapTabs = function () {
     return {
-        type: SHOW_SPLIT_MENU,
-        position: position
+        type: SWAP_TABS
     };
 };
 
-const hideSplitMenu = function () {
+const reorderTabs = function (tabOrder) {
     return {
-        type: HIDE_SPLIT_MENU
+        type: REORDER_TABS,
+        tabOrder: tabOrder
     };
 };
 
@@ -107,7 +106,7 @@ const setExplainPending = function (data) {
 const setProjectKey = function (key) {
     return {
         type: SET_PROJECT_KEY,
-        data: key
+        key: key
     };
 };
 
@@ -117,8 +116,8 @@ export {
     activateTab,
     setSecondaryTab,
     setSplitRatio,
-    showSplitMenu,
-    hideSplitMenu,
+    swapTabs,
+    reorderTabs,
     setExplainPending,
     setProjectKey,
     BLOCKS_TAB_INDEX,
@@ -126,4 +125,3 @@ export {
     SOUNDS_TAB_INDEX,
     AI_TAB_INDEX
 };
-

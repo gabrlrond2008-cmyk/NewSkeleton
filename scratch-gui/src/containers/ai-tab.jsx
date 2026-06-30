@@ -65,6 +65,7 @@ var AiTab = function (props) {
     var [typingData, setTypingData] = useState(null);
     var [creatingIndex, setCreatingIndex] = useState(null);
     var [createStatus, setCreateStatus] = useState(null);
+    var [instructing, setInstructing] = useState(false);
     var [trainingData, setTrainingData] = useState(null);
     var typingTimerRef = useRef(null);
     var typingMsgRef = useRef(null);
@@ -183,12 +184,38 @@ var AiTab = function (props) {
         prevProjectKeyRef.current = props.projectKey;
     }, [props.projectKey]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Clear session history when mentor mode changes — prevents stale
+    // mentor-style history from leaking into normal-mode system prompts.
+    useEffect(function () {
+        function handleModeChange() {
+            sessionRef.current = [];
+            try { localStorage.removeItem(LS_SESSION); } catch (e) {}
+        }
+        window.addEventListener('aimentormodechange', handleModeChange);
+        return function () { window.removeEventListener('aimentormodechange', handleModeChange); };
+    }, []);
+
     // Sync messages to shared state (keeps split instances in sync)
     useEffect(function () {
         if (messages.length > 0) {
             setSharedMessages(messages);
         }
     }, [messages]);
+
+    // Listen for shared state changes from other split instances
+    useEffect(function () {
+        function handleSync() {
+            var shared = getSharedMessages();
+            setMessages(function (prev) {
+                if (shared.length > prev.length) {
+                    return shared.slice();
+                }
+                return prev;
+            });
+        }
+        window.addEventListener('aisharedmessagechange', handleSync);
+        return function () { window.removeEventListener('aisharedmessagechange', handleSync); };
+    }, []);
 
     // Auto-explain: detect pending explain from right-click context menu
     useEffect(function () {
@@ -203,6 +230,12 @@ var AiTab = function (props) {
             });
         }
     }, [props.pendingExplain]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(function () {
+        if (props.reanalyzeTick > 0) {
+            handleInstruct();
+        }
+    }, [props.reanalyzeTick]); // eslint-disable-line react-hooks/exhaustive-deps
 
     var handleSend = useCallback(function (text) {
         var service = getService();
@@ -237,8 +270,11 @@ var AiTab = function (props) {
                 detailInfo = '\n=== INFO DETALLADA: ' + detailMatch[1] + ' ===\n' + detailResult + '\n';
             }
         }
-        var enhancedText = (workspaceContext ? workspaceContext + '\n---\n' : '') + detailInfo + text;
-        service.ask(enhancedText, sessionSum).then(function (response) {
+        var mentorMode = typeof window !== 'undefined' ? localStorage.getItem('ai_mentor_mode') === 'true' : false;
+        var modeTag = mentorMode ? '[MODO MENTOR]' : '[MODO NORMAL]';
+        var enhancedText = modeTag + '\n' + (workspaceContext ? workspaceContext + '\n---\n' : '') + detailInfo + text;
+        var askPromise = service.ask(enhancedText, sessionSum, mentorMode);
+        askPromise.then(function (response) {
             var assIdx = msgIdx + 1;
             var cleanResponse = (response || '').trim();
             if (!cleanResponse) {
@@ -255,6 +291,7 @@ var AiTab = function (props) {
             if (!displayText) {
                 displayText = 'Listo. Los bloques están listos para crear.';
             }
+
             sessionRef.current.push({u: text, a: displayText.substring(0, 120)});
             if (sessionRef.current.length > 10) {
                 sessionRef.current = sessionRef.current.slice(-10);
@@ -269,14 +306,15 @@ var AiTab = function (props) {
                     content: cleanResponse,
                     displayContent: displayText,
                     id: assIdx,
-                    typing: true
+                    typing: true,
+                    hasBlocks: !mentorMode
                 }]);
             });
             setSending(false);
             startTyping(assIdx, displayText);
 
-            // Auto-create blocks from @bloques (sync with typing)
-            if (props.vm && props.vm.editingTarget) {
+            // Auto-create blocks (normal mode only, sync with typing)
+            if (!mentorMode && props.vm && props.vm.editingTarget) {
                 setCreatingIndex(assIdx);
                 setCreateStatus({type: 'loading', message: 'Creando bloques...'});
                 setTimeout(function () { doCreate(cleanResponse); }, 0);
@@ -421,7 +459,11 @@ var AiTab = function (props) {
         }
 
         var parsed = parseDescriptor(assistantContent);
-        if (!parsed) { setCreatingIndex(null); return; }
+        if (!parsed) {
+            setCreateStatus({type: 'error', message: 'No se encontraron bloques en la respuesta. Probá reformular la pregunta.'});
+            setTimeout(function () { setCreateStatus(null); setCreatingIndex(null); }, 5000);
+            return;
+        }
 
         parsed = autoCorrect(parsed);
         var blockMap = parsed.blockMap;
@@ -493,6 +535,7 @@ var AiTab = function (props) {
     }
 
     var handleCreateBlocks = useCallback(function (msgIndex) {
+        if (typeof window !== 'undefined' && localStorage.getItem('ai_mentor_mode') === 'true') return;
         if (!props.vm || !props.vm.editingTarget || creatingIndex !== null) return;
 
         var assistantMsg = messages[msgIndex];
@@ -503,6 +546,76 @@ var AiTab = function (props) {
         setCreateStatus({type: 'loading', message: 'Creando bloques...'});
         setTimeout(function () { doCreate(assistantMsg.content); }, 0);
     }, [props.vm, messages, creatingIndex]);
+
+    var handleInstruct = useCallback(function (msgIndex) {
+        if (instructing) return;
+        setInstructing(true);
+
+        var service = getService();
+        if (!service) { setInstructing(false); return; }
+
+        // If no msgIndex, find latest assistant message
+        if (msgIndex === undefined) {
+            for (var mi = messages.length - 1; mi >= 0; mi--) {
+                if (messages[mi].role === 'assistant') {
+                    msgIndex = mi;
+                    break;
+                }
+            }
+        }
+
+        var assistantMsg = messages[msgIndex];
+        if (!assistantMsg) { setInstructing(false); return; }
+
+        // Show analyzing state in code tab
+        if (props.onMentorGuidance) {
+            props.onMentorGuidance('');
+        }
+        if (props.onActivateTab) {
+            props.onActivateTab(0);
+        }
+
+        var workspaceText = '';
+        try { workspaceText = readWorkspace(props.vm); } catch (e) {}
+
+        var promptText = 'Esta es la guía que le diste al estudiante:\n' +
+            (assistantMsg.content || '') +
+            '\n\nBloques actuales del estudiante (código Scratch):\n' +
+            (workspaceText || '(sin bloques)') +
+            '\n\nAnalizá:\n' +
+            '- ¿El proyecto va por buen camino?\n' +
+            '- Si el estudiante siguió otra estrategia, validala y felicitalo.\n' +
+            '- Detectá si está usando **números literales directos** en operadores (ej: `1 + 2`, `< 50`, `* 3`) donde debería usar **variables**. Diferenciá bien entre un número literal fijo (ok para valores constantes) y uno que debería ser variable.\n' +
+            '- ¿Qué falta o qué mejorar? ¿Está completo?\n' +
+            'Respondé en 4-5 oraciones como máximo. Usá **negrita** y demás formato Markdown si ayuda. Respondé SOLO en español.';
+
+        service.ask(promptText, '').then(function (response) {
+            setInstructing(false);
+            var clean = stripBlockDescriptor(response || '') || 'No se pudo analizar.';
+            if (props.onMentorGuidance) {
+                props.onMentorGuidance(clean);
+            }
+            // Save analysis to chat history
+            setMessages(function (prev) {
+                return prev.concat([{
+                    role: 'assistant',
+                    content: '🧠 **Análisis del Mentor:**\n' + clean
+                }]);
+            });
+        }).catch(function (err) {
+            setInstructing(false);
+            var errMsg = 'Error: ' + (err.message || 'desconocido');
+            if (props.onMentorGuidance) {
+                props.onMentorGuidance(errMsg);
+            }
+            setMessages(function (prev) {
+                return prev.concat([{
+                    role: 'assistant',
+                    content: '🧠 **Análisis rápido:**\n' + errMsg
+                }]);
+            });
+        });
+    }, [getService, instructing, props.vm, props.onMentorGuidance, props.onActivateTab, messages]); // eslint-disable-line react-hooks/exhaustive-deps
 
     var isTrainingEnabled = useCallback(function () {
         try {
@@ -574,6 +687,7 @@ var AiTab = function (props) {
     }, [messages, getPrecedingUserMsg, isTrainingEnabled]);
 
     var trainingEnabled = typeof window !== 'undefined' ? localStorage.getItem('ai_training_enabled') !== 'false' : true;
+    var mentorMode = typeof window !== 'undefined' ? localStorage.getItem('ai_mentor_mode') === 'true' : false;
 
     return (
         <AiTabComponent
@@ -586,10 +700,13 @@ var AiTab = function (props) {
             createStatus={createStatus}
             trainingData={trainingData}
             trainingEnabled={trainingEnabled}
+            mentorMode={mentorMode}
+            instructing={instructing}
             onSend={handleSend}
             onVerify={handleVerify}
             onCreateBlocks={handleCreateBlocks}
             onTrain={handleTrain}
+            onInstruct={handleInstruct}
         />
     );
 };
@@ -598,7 +715,10 @@ AiTab.propTypes = {
     vm: PropTypes.instanceOf(VM).isRequired,
     pendingExplain: PropTypes.string,
     projectKey: PropTypes.number,
-    onClearExplain: PropTypes.func
+    onClearExplain: PropTypes.func,
+    onMentorGuidance: PropTypes.func,
+    onActivateTab: PropTypes.func,
+    reanalyzeTick: PropTypes.number
 };
 
 export default AiTab;

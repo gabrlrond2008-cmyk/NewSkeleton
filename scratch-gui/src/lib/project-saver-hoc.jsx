@@ -15,7 +15,7 @@ import {
     showStandardAlert
 } from '../reducers/alerts';
 import {setAutoSaveTimeoutId} from '../reducers/timeout';
-import {setProjectUnchanged} from '../reducers/project-changed';
+import {setProjectUnchanged, setHasBeenSaved} from '../reducers/project-changed';
 import {
     LoadingStates,
     autoUpdateProject,
@@ -74,11 +74,14 @@ const ProjectSaverHOC = function (WrappedComponent) {
                 this.reportTelemetryEvent('projectDidLoad');
             }
 
-            if (this.props.projectChanged && !prevProps.projectChanged) {
+            if (this.props.projectChanged.changed && !prevProps.projectChanged.changed) {
                 this.scheduleAutoSave();
             }
             if (this.props.isUpdating && !prevProps.isUpdating) {
                 this.updateProjectToStorage();
+            }
+            if (!this.props.isManualUpdating && prevProps.isManualUpdating && !this.props.projectChanged.hasBeenSaved) {
+                this.props.onSetHasBeenSaved();
             }
             if (this.props.isCreatingNew && !prevProps.isCreatingNew) {
                 this.createNewProjectToStorage();
@@ -124,7 +127,7 @@ const ProjectSaverHOC = function (WrappedComponent) {
             this.props.onSetProjectSaver(null);
         }
         leavePageConfirm (e) {
-            if (this.props.projectChanged) {
+            if (this.props.projectChanged.changed) {
                 // both methods of returning a value may be necessary for browser compatibility
                 (e || window.event).returnValue = true;
                 return true;
@@ -145,8 +148,36 @@ const ProjectSaverHOC = function (WrappedComponent) {
             }
         }
         tryToAutoSave () {
-            if (this.props.projectChanged && this.props.isShowingSaveable) {
+            if (this.props.projectChanged.changed && this.props.isShowingSaveable) {
                 this.props.onAutoUpdateProject();
+                if (this.props.projectChanged.hasBeenSaved) {
+                    this.localSnapshot();
+                }
+            }
+        }
+        localSnapshot () {
+            try {
+                var vm = this.props.vm;
+                vm.saveProjectFlynt().then(function (blob) {
+                    var defaultPath = localStorage.getItem('scratchDefaultPath');
+                    if (!defaultPath) return;
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        var arrayBuffer = reader.result;
+                        var bytes = new Uint8Array(arrayBuffer);
+                        var fileName = 'project-auto-' + Date.now() + '.flynt';
+                        var filePath = defaultPath.replace(/\/$/, '') + '/' + fileName;
+                        import('@tauri-apps/api/core').then(function (tauri) {
+                            tauri.invoke('save_file', {
+                                path: filePath,
+                                content: Array.from(bytes)
+                            }).catch(function () {});
+                        }).catch(function () {});
+                    };
+                    reader.readAsArrayBuffer(blob);
+                }).catch(function () {});
+            } catch (e) {
+                // Silently fail — snapshot is best-effort
             }
         }
         isShowingCreatable (props) {
@@ -391,7 +422,7 @@ const ProjectSaverHOC = function (WrappedComponent) {
         onUpdateProjectData: PropTypes.func.isRequired,
         onUpdateProjectThumbnail: PropTypes.func,
         onUpdatedProject: PropTypes.func,
-        projectChanged: PropTypes.bool,
+        projectChanged: PropTypes.shape({changed: PropTypes.bool, hasBeenSaved: PropTypes.bool}),
         reduxProjectId: PropTypes.oneOfType([PropTypes.string, PropTypes.number]),
         reduxProjectTitle: PropTypes.string,
         setAutoSaveTimeoutId: PropTypes.func.isRequired,
@@ -441,7 +472,8 @@ const ProjectSaverHOC = function (WrappedComponent) {
         onShowSaveSuccessAlert: () => showAlertWithTimeout(dispatch, 'saveSuccess'),
         onShowSavingAlert: () => showAlertWithTimeout(dispatch, 'saving'),
         onUpdatedProject: loadingState => dispatch(doneUpdatingProject(loadingState)),
-        setAutoSaveTimeoutId: id => dispatch(setAutoSaveTimeoutId(id))
+        setAutoSaveTimeoutId: id => dispatch(setAutoSaveTimeoutId(id)),
+        onSetHasBeenSaved: () => dispatch(setHasBeenSaved())
     });
     // Allow incoming props to override redux-provided props. Used to mock in tests.
     const mergeProps = (stateProps, dispatchProps, ownProps) => Object.assign(

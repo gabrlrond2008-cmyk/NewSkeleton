@@ -15,11 +15,9 @@ import {
     activateTab,
     setSecondaryTab,
     setSplitRatio,
-    showSplitMenu,
-    hideSplitMenu,
+    swapTabs,
+    reorderTabs,
     BLOCKS_TAB_INDEX,
-    COSTUMES_TAB_INDEX,
-    SOUNDS_TAB_INDEX,
     setExplainPending,
     setProjectKey
 } from '../reducers/editor-tab';
@@ -165,15 +163,15 @@ const mapStateToProps = state => {
         splitPrimaryIndex: state.scratchGui.editorTab.splitPrimaryIndex,
         splitMode: state.scratchGui.editorTab.secondaryTabIndex !== null,
         splitRatio: state.scratchGui.editorTab.splitRatio,
-        splitMenuVisible: state.scratchGui.editorTab.splitMenuVisible,
-        splitMenuPosition: state.scratchGui.editorTab.splitMenuPosition,
+        tabOrder: state.scratchGui.editorTab.tabOrder,
         alertsVisible: state.scratchGui.alerts.visible,
         backdropLibraryVisible: state.scratchGui.modals.backdropLibrary,
-        blocksTabVisible: state.scratchGui.editorTab.activeTabIndex === BLOCKS_TAB_INDEX,
+        blocksTabVisible: state.scratchGui.editorTab.activeTabIndex === BLOCKS_TAB_INDEX ||
+            (state.scratchGui.editorTab.secondaryTabIndex !== null &&
+             state.scratchGui.editorTab.secondaryTabIndex === BLOCKS_TAB_INDEX),
         cardsVisible: state.scratchGui.cards.visible,
         connectionModalVisible: state.scratchGui.modals.connectionModal,
         costumeLibraryVisible: state.scratchGui.modals.costumeLibrary,
-        costumesTabVisible: state.scratchGui.editorTab.activeTabIndex === COSTUMES_TAB_INDEX,
         debugModalVisible: state.scratchGui.modals.debugModal,
         error: state.scratchGui.projectState.error,
         isError: getIsError(loadingState),
@@ -183,7 +181,6 @@ const mapStateToProps = state => {
         isShowingProject: getIsShowingProject(loadingState),
         loadingStateVisible: state.scratchGui.modals.loadingProject,
         projectId: state.scratchGui.projectState.projectId,
-        soundsTabVisible: state.scratchGui.editorTab.activeTabIndex === SOUNDS_TAB_INDEX,
         targetIsStage: (
             state.scratchGui.targets.stage &&
             state.scratchGui.targets.stage.id === state.scratchGui.targets.editingTarget
@@ -200,8 +197,6 @@ const mapStateToProps = state => {
 const mapDispatchToProps = dispatch => ({
     onExtensionButtonClick: () => dispatch(openExtensionLibrary()),
     onActivateTab: tab => dispatch(activateTab(tab)),
-    onActivateCostumesTab: () => dispatch(activateTab(COSTUMES_TAB_INDEX)),
-    onActivateSoundsTab: () => dispatch(activateTab(SOUNDS_TAB_INDEX)),
     onRequestCloseBackdropLibrary: () => dispatch(closeBackdropLibrary()),
     onRequestCloseCostumeLibrary: () => dispatch(closeCostumeLibrary()),
     onRequestCloseDebugModal: () => dispatch(closeDebugModal()),
@@ -210,8 +205,8 @@ const mapDispatchToProps = dispatch => ({
     onRequestCloseDeviceLibrary: () => dispatch(closeDeviceLibrary()),
     onSetSecondaryTab: tabIndex => dispatch(setSecondaryTab(tabIndex)),
     onSetSplitRatio: ratio => dispatch(setSplitRatio(ratio)),
-    onShowSplitMenu: position => dispatch(showSplitMenu(position)),
-    onHideSplitMenu: () => dispatch(hideSplitMenu()),
+    onSwapTabs: () => dispatch(swapTabs()),
+    onReorderTabs: order => dispatch(reorderTabs(order)),
     onClearExplain: () => dispatch(setExplainPending(null)),
     onSetProjectKey: key => dispatch(setProjectKey(key))
 });

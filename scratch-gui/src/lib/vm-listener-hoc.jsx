@@ -74,7 +74,7 @@ const vmListenerHOC = function (WrappedComponent) {
             }
         }
         handleProjectChanged () {
-            if (this.props.shouldUpdateProjectChanged && !this.props.projectChanged) {
+            if (this.props.shouldUpdateProjectChanged && !this.props.projectChanged.changed) {
                 this.props.onProjectChanged();
             }
         }
@@ -158,7 +158,7 @@ const vmListenerHOC = function (WrappedComponent) {
         onTargetsUpdate: PropTypes.func.isRequired,
         onTurboModeOff: PropTypes.func.isRequired,
         onTurboModeOn: PropTypes.func.isRequired,
-        projectChanged: PropTypes.bool,
+        projectChanged: PropTypes.shape({changed: PropTypes.bool, hasBeenSaved: PropTypes.bool}),
         shouldUpdateTargets: PropTypes.bool,
         shouldUpdateProjectChanged: PropTypes.bool,
         username: PropTypes.string,

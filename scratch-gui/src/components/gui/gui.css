@@ -124,4 +124,56 @@ $fade-out-distance: 15px;
     overflow: hidden;
 }
 
+/* Suppress ALL CSS animations/transitions when reduced-motion is active */
+:global(body.reduced-motion *),
+:global(body.reduced-motion *::before),
+:global(body.reduced-motion *::after) {
+    animation-duration: 0s !important;
+    animation-delay: 0s !important;
+    transition-duration: 0s !important;
+    transition-delay: 0s !important;
+}
 
+.dropIndicator {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    width: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #00357a;
+    font-size: 0.85rem;
+    font-weight: 500;
+    pointer-events: none;
+    z-index: 5;
+    background: rgba(0, 53, 122, 0.08);
+}
+
+.dropLeft {
+    left: 0;
+    border-right: 2px dashed rgba(0, 53, 122, 0.3);
+    border-radius: 8px 0 0 8px;
+}
+
+.dropRight {
+    right: 0;
+    border-left: 2px dashed rgba(0, 53, 122, 0.3);
+    border-radius: 0 8px 8px 0;
+}
+
+[dir="rtl"] .dropLeft {
+    left: auto;
+    right: 0;
+    border-right: none;
+    border-left: 2px dashed rgba(0, 53, 122, 0.3);
+    border-radius: 0 8px 8px 0;
+}
+
+[dir="rtl"] .dropRight {
+    right: auto;
+    left: 0;
+    border-left: none;
+    border-right: 2px dashed rgba(0, 53, 122, 0.3);
+    border-radius: 8px 0 0 8px;
+}

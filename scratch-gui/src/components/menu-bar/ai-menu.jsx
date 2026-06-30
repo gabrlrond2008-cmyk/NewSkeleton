@@ -57,6 +57,7 @@ var LS_PROVIDER = 'ai_provider';
 var LS_API_KEY = function (p) { return p + '_api_key'; };
 var LS_MODEL = function (p) { return p + '_model'; };
 var LS_TRAINING_ENABLED = 'ai_training_enabled';
+var LS_MENTOR_MODE = 'ai_mentor_mode';
 
 var toggleStyle = {
     display: 'flex',
@@ -206,6 +207,7 @@ class AiMenu extends React.PureComponent {
             'handleKeyChange',
             'handleModelChange',
             'handleTrainingToggle',
+            'handleMentorToggle',
             'loadModels'
         ]);
         var savedProvider = typeof window !== 'undefined' ? localStorage.getItem(LS_PROVIDER) || 'groq' : 'groq';
@@ -215,7 +217,8 @@ class AiMenu extends React.PureComponent {
             model: typeof window !== 'undefined' ? localStorage.getItem(LS_MODEL(savedProvider)) || '' : '',
             models: [],
             loading: false,
-            trainingEnabled: typeof window !== 'undefined' ? localStorage.getItem(LS_TRAINING_ENABLED) !== 'false' : true
+            trainingEnabled: typeof window !== 'undefined' ? localStorage.getItem(LS_TRAINING_ENABLED) !== 'false' : true,
+            mentorMode: typeof window !== 'undefined' ? localStorage.getItem(LS_MENTOR_MODE) === 'true' : false
         };
     }
 
@@ -296,6 +299,13 @@ class AiMenu extends React.PureComponent {
         localStorage.setItem(LS_TRAINING_ENABLED, newVal);
     }
 
+    handleMentorToggle () {
+        var newVal = !this.state.mentorMode;
+        this.setState({mentorMode: newVal});
+        localStorage.setItem(LS_MENTOR_MODE, newVal);
+        try { window.dispatchEvent(new CustomEvent('aimentormodechange')); } catch (e) {}
+    }
+
     render () {
         var models = this.state.models;
         var providerOptions = Object.keys(PROVIDER_META).map(function (id) {
@@ -374,6 +384,19 @@ class AiMenu extends React.PureComponent {
                                 title={this.state.trainingEnabled ? 'Entrenamiento activado' : 'Entrenamiento desactivado'}
                             >
                                 <div style={toggleKnobStyle(this.state.trainingEnabled)} />
+                            </button>
+                        </div>
+                        <div style={Object.assign({}, toggleStyle, {marginTop: 4})}>
+                            <span style={Object.assign({}, toggleLabelStyle, {fontSize: '0.68rem'})}>
+                                Modo Mentor (beta)
+                            </span>
+                            <button
+                                style={toggleSwitchStyle(this.state.mentorMode)}
+                                onClick={this.handleMentorToggle}
+                                type="button"
+                                title={this.state.mentorMode ? 'Modo mentor activado' : 'Modo mentor desactivado'}
+                            >
+                                <div style={toggleKnobStyle(this.state.mentorMode)} />
                             </button>
                         </div>
                     </div>

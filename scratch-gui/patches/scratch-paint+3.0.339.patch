@@ -1,0 +1,491 @@
+diff --git a/node_modules/scratch-paint/src/components/paint-editor/paint-editor.css b/node_modules/scratch-paint/src/components/paint-editor/paint-editor.css
+index 35672d5..beb5d23 100644
+--- a/node_modules/scratch-paint/src/components/paint-editor/paint-editor.css
++++ b/node_modules/scratch-paint/src/components/paint-editor/paint-editor.css
+@@ -135,7 +135,7 @@ $border-radius: 0.25rem;
+     border: 1px solid #e8edf1;
+     border-radius: .25rem;
+     position: relative;
+-    overflow: visible;
++    overflow: hidden;
+ }
+ 
+ .mode-selector {
+diff --git a/node_modules/scratch-paint/src/components/scrollable-canvas/scrollable-canvas.jsx b/node_modules/scratch-paint/src/components/scrollable-canvas/scrollable-canvas.jsx
+index 236a540..22b1fc8 100644
+--- a/node_modules/scratch-paint/src/components/scrollable-canvas/scrollable-canvas.jsx
++++ b/node_modules/scratch-paint/src/components/scrollable-canvas/scrollable-canvas.jsx
+@@ -6,6 +6,7 @@ import styles from './scrollable-canvas.css';
+ const ScrollableCanvasComponent = props => (
+     <div
+         className={props.style}
++        ref={props.wrapperRef}
+     >
+         {props.children}
+         <div
+@@ -62,7 +63,8 @@ ScrollableCanvasComponent.propTypes = {
+     onVerticalScrollbarMouseDown: PropTypes.func.isRequired,
+     style: PropTypes.string,
+     verticalScrollLengthPercent: PropTypes.number,
+-    verticalScrollStartPercent: PropTypes.number
++    verticalScrollStartPercent: PropTypes.number,
++    wrapperRef: PropTypes.func
+ };
+ 
+ export default ScrollableCanvasComponent;
+diff --git a/node_modules/scratch-paint/src/containers/bit-brush-mode.jsx b/node_modules/scratch-paint/src/containers/bit-brush-mode.jsx
+index 652395d..bfe1a35 100644
+--- a/node_modules/scratch-paint/src/containers/bit-brush-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/bit-brush-mode.jsx
+@@ -26,7 +26,7 @@ class BitBrushMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.color !== this.props.color) {
+             this.tool.setColor(nextProps.color);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/bit-eraser-mode.jsx b/node_modules/scratch-paint/src/containers/bit-eraser-mode.jsx
+index 6266a9d..9c9868e 100644
+--- a/node_modules/scratch-paint/src/containers/bit-eraser-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/bit-eraser-mode.jsx
+@@ -24,7 +24,7 @@ class BitEraserMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.bitEraserSize !== this.props.bitEraserSize) {
+             this.tool.setBrushSize(nextProps.bitEraserSize);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/bit-fill-mode.jsx b/node_modules/scratch-paint/src/containers/bit-fill-mode.jsx
+index 8ed9a2a..df19bbe 100644
+--- a/node_modules/scratch-paint/src/containers/bit-fill-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/bit-fill-mode.jsx
+@@ -28,7 +28,7 @@ class BitFillMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool) {
+             if (nextProps.color !== this.props.color) {
+                 this.tool.setColor(nextProps.color);
+diff --git a/node_modules/scratch-paint/src/containers/bit-line-mode.jsx b/node_modules/scratch-paint/src/containers/bit-line-mode.jsx
+index 5b57cda..5b62778 100644
+--- a/node_modules/scratch-paint/src/containers/bit-line-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/bit-line-mode.jsx
+@@ -26,7 +26,7 @@ class BitLineMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.color !== this.props.color) {
+             this.tool.setColor(nextProps.color);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/bit-oval-mode.jsx b/node_modules/scratch-paint/src/containers/bit-oval-mode.jsx
+index bf3ae38..fc043a6 100644
+--- a/node_modules/scratch-paint/src/containers/bit-oval-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/bit-oval-mode.jsx
+@@ -29,7 +29,7 @@ class BitOvalMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool) {
+             if (nextProps.color !== this.props.color) {
+                 this.tool.setColor(nextProps.color);
+diff --git a/node_modules/scratch-paint/src/containers/bit-rect-mode.jsx b/node_modules/scratch-paint/src/containers/bit-rect-mode.jsx
+index 6263953..5a0f90a 100644
+--- a/node_modules/scratch-paint/src/containers/bit-rect-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/bit-rect-mode.jsx
+@@ -29,7 +29,7 @@ class BitRectMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool) {
+             if (nextProps.color !== this.props.color) {
+                 this.tool.setColor(nextProps.color);
+diff --git a/node_modules/scratch-paint/src/containers/bit-select-mode.jsx b/node_modules/scratch-paint/src/containers/bit-select-mode.jsx
+index 7f049b1..751c43b 100644
+--- a/node_modules/scratch-paint/src/containers/bit-select-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/bit-select-mode.jsx
+@@ -27,7 +27,7 @@ class BitSelectMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.selectedItems !== this.props.selectedItems) {
+             this.tool.onSelectionChanged(nextProps.selectedItems);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/brush-mode.jsx b/node_modules/scratch-paint/src/containers/brush-mode.jsx
+index f1936ad..82823a1 100644
+--- a/node_modules/scratch-paint/src/containers/brush-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/brush-mode.jsx
+@@ -29,7 +29,7 @@ class BrushMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (nextProps.isBrushModeActive && !this.props.isBrushModeActive) {
+             this.activateTool();
+         } else if (!nextProps.isBrushModeActive && this.props.isBrushModeActive) {
+diff --git a/node_modules/scratch-paint/src/containers/color-indicator.jsx b/node_modules/scratch-paint/src/containers/color-indicator.jsx
+index 10b5faf..6984555 100644
+--- a/node_modules/scratch-paint/src/containers/color-indicator.jsx
++++ b/node_modules/scratch-paint/src/containers/color-indicator.jsx
+@@ -30,7 +30,7 @@ const makeColorIndicator = (label, isStroke) => {
+             // Flag to track whether an svg-update-worthy change has been made
+             this._hasChanged = false;
+         }
+-        componentWillReceiveProps (newProps) {
++        UNSAFE_componentWillReceiveProps (newProps) {
+             const {colorModalVisible, onUpdateImage} = this.props;
+             if (colorModalVisible && !newProps.colorModalVisible) {
+                 // Submit the new SVG, which also stores a single undo/redo action.
+diff --git a/node_modules/scratch-paint/src/containers/color-picker.jsx b/node_modules/scratch-paint/src/containers/color-picker.jsx
+index 1411008..98ba6e2 100644
+--- a/node_modules/scratch-paint/src/containers/color-picker.jsx
++++ b/node_modules/scratch-paint/src/containers/color-picker.jsx
+@@ -58,7 +58,7 @@ class ColorPicker extends React.Component {
+             brightness: hsv[2]
+         };
+     }
+-    componentWillReceiveProps (newProps) {
++    UNSAFE_componentWillReceiveProps (newProps) {
+         const color = newProps.colorIndex === 0 ? this.props.color : this.props.color2;
+         const newColor = newProps.colorIndex === 0 ? newProps.color : newProps.color2;
+         const colorSetByEyedropper = this.props.isEyeDropping && color !== newColor;
+diff --git a/node_modules/scratch-paint/src/containers/eraser-mode.jsx b/node_modules/scratch-paint/src/containers/eraser-mode.jsx
+index 1d8aac9..625624f 100644
+--- a/node_modules/scratch-paint/src/containers/eraser-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/eraser-mode.jsx
+@@ -24,7 +24,7 @@ class EraserMode extends React.Component {
+             this.activateTool();
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (nextProps.isEraserModeActive && !this.props.isEraserModeActive) {
+             this.activateTool();
+         } else if (!nextProps.isEraserModeActive && this.props.isEraserModeActive) {
+diff --git a/node_modules/scratch-paint/src/containers/fill-mode.jsx b/node_modules/scratch-paint/src/containers/fill-mode.jsx
+index 555863c..be8a7b8 100644
+--- a/node_modules/scratch-paint/src/containers/fill-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/fill-mode.jsx
+@@ -29,7 +29,7 @@ class FillMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool) {
+             if (nextProps.fillColor !== this.props.fillColor) {
+                 this.tool.setFillColor(nextProps.fillColor);
+diff --git a/node_modules/scratch-paint/src/containers/line-mode.jsx b/node_modules/scratch-paint/src/containers/line-mode.jsx
+index db4f097..f000b39 100644
+--- a/node_modules/scratch-paint/src/containers/line-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/line-mode.jsx
+@@ -41,7 +41,7 @@ class LineMode extends React.Component {
+             this.activateTool();
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (nextProps.isLineModeActive && !this.props.isLineModeActive) {
+             this.activateTool();
+         } else if (!nextProps.isLineModeActive && this.props.isLineModeActive) {
+diff --git a/node_modules/scratch-paint/src/containers/oval-mode.jsx b/node_modules/scratch-paint/src/containers/oval-mode.jsx
+index da8d441..b727241 100644
+--- a/node_modules/scratch-paint/src/containers/oval-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/oval-mode.jsx
+@@ -32,7 +32,7 @@ class OvalMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.colorState !== this.props.colorState) {
+             this.tool.setColorState(nextProps.colorState);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/paint-editor.jsx b/node_modules/scratch-paint/src/containers/paint-editor.jsx
+index cd3d944..d57a675 100644
+--- a/node_modules/scratch-paint/src/containers/paint-editor.jsx
++++ b/node_modules/scratch-paint/src/containers/paint-editor.jsx
+@@ -103,7 +103,7 @@ class PaintEditor extends React.Component {
+         document.addEventListener('mouseup', this.onMouseUp);
+         document.addEventListener('touchend', this.onMouseUp);
+     }
+-    componentWillReceiveProps (newProps) {
++    UNSAFE_componentWillReceiveProps (newProps) {
+         if (!isBitmap(this.props.format) && isBitmap(newProps.format)) {
+             this.switchModeForFormat(Formats.BITMAP);
+         } else if (!isVector(this.props.format) && isVector(newProps.format)) {
+@@ -209,6 +209,7 @@ class PaintEditor extends React.Component {
+         }
+     }
+     handleZoomIn () {
++        if (!paper || !paper.view) return;
+         // Make the "next step" after the outermost zoom level be the default
+         // zoom level (0.5)
+         let zoomIncrement = PaintEditor.ZOOM_INCREMENT;
+@@ -220,11 +221,13 @@ class PaintEditor extends React.Component {
+         this.handleSetSelectedItems();
+     }
+     handleZoomOut () {
++        if (!paper || !paper.view) return;
+         zoomOnSelection(-PaintEditor.ZOOM_INCREMENT);
+         this.props.updateViewBounds(paper.view.matrix);
+         this.handleSetSelectedItems();
+     }
+     handleZoomReset () {
++        if (!paper || !paper.view) return;
+         resetZoom();
+         this.props.updateViewBounds(paper.view.matrix);
+         this.handleSetSelectedItems();
+@@ -240,6 +243,8 @@ class PaintEditor extends React.Component {
+         this.setState({textArea: element});
+     }
+     onMouseDown (event) {
++        if (!paper || !paper.view) return;
++
+         if (event.target === paper.view.element &&
+                 document.activeElement instanceof HTMLInputElement) {
+             document.activeElement.blur();
+@@ -267,6 +272,7 @@ class PaintEditor extends React.Component {
+         }
+     }
+     startEyeDroppingLoop () {
++        if (!paper || !paper.view || !this.canvas) return;
+         this.eyeDropper = new EyeDropperTool(
+             this.canvas,
+             paper.project.view.bounds.width,
+diff --git a/node_modules/scratch-paint/src/containers/paper-canvas.jsx b/node_modules/scratch-paint/src/containers/paper-canvas.jsx
+index b28b40b..93c1342 100644
+--- a/node_modules/scratch-paint/src/containers/paper-canvas.jsx
++++ b/node_modules/scratch-paint/src/containers/paper-canvas.jsx
+@@ -40,6 +40,7 @@ class PaperCanvas extends React.Component {
+     }
+     componentDidMount () {
+         paper.setup(this.canvas);
++        this.project = paper.project;
+         paper.view.on('resize', this.onViewResize);
+         resetZoom();
+         if (this.props.zoomLevelId) {
+@@ -66,7 +67,7 @@ class PaperCanvas extends React.Component {
+         this.importImage(
+             this.props.imageFormat, this.props.image, this.props.rotationCenterX, this.props.rotationCenterY);
+     }
+-    componentWillReceiveProps (newProps) {
++    UNSAFE_componentWillReceiveProps (newProps) {
+         if (this.props.imageId !== newProps.imageId) {
+             this.switchCostume(newProps.imageFormat, newProps.image,
+                 newProps.rotationCenterX, newProps.rotationCenterY,
+@@ -83,7 +84,12 @@ class PaperCanvas extends React.Component {
+         if (!this.shouldZoomToFit) {
+             this.props.saveZoomLevel();
+         }
+-        paper.remove();
++        if (this.project) {
++            this.project.remove();
++            if (paper && paper.projects && paper.projects.length > 0) {
++                paper.project = paper.projects[0];
++            }
++        }
+     }
+     clearQueuedImport () {
+         if (this.queuedImport) {
+@@ -398,7 +404,9 @@ const mapDispatchToProps = dispatch => ({
+         dispatch(changeFormat(format));
+     },
+     saveZoomLevel: () => {
+-        dispatch(saveZoomLevel(paper.view.matrix));
++        if (paper && paper.view) {
++            dispatch(saveZoomLevel(paper.view.matrix));
++        }
+     },
+     setZoomLevelId: zoomLevelId => {
+         dispatch(setZoomLevelId(zoomLevelId));
+diff --git a/node_modules/scratch-paint/src/containers/rect-mode.jsx b/node_modules/scratch-paint/src/containers/rect-mode.jsx
+index 887f32f..167b3b5 100644
+--- a/node_modules/scratch-paint/src/containers/rect-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/rect-mode.jsx
+@@ -32,7 +32,7 @@ class RectMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.colorState !== this.props.colorState) {
+             this.tool.setColorState(nextProps.colorState);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/reshape-mode.jsx b/node_modules/scratch-paint/src/containers/reshape-mode.jsx
+index c404283..d4369bd 100644
+--- a/node_modules/scratch-paint/src/containers/reshape-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/reshape-mode.jsx
+@@ -25,7 +25,7 @@ class ReshapeMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.hoveredItemId !== this.props.hoveredItemId) {
+             this.tool.setPrevHoveredItemId(nextProps.hoveredItemId);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/rounded-rect-mode.jsx b/node_modules/scratch-paint/src/containers/rounded-rect-mode.jsx
+index d729dcb..74f8d46 100644
+--- a/node_modules/scratch-paint/src/containers/rounded-rect-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/rounded-rect-mode.jsx
+@@ -25,7 +25,7 @@ class RoundedRectMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.hoveredItemId !== this.props.hoveredItemId) {
+             this.tool.setPrevHoveredItemId(nextProps.hoveredItemId);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/scrollable-canvas.jsx b/node_modules/scratch-paint/src/containers/scrollable-canvas.jsx
+index 2989798..352bb68 100644
+--- a/node_modules/scratch-paint/src/containers/scrollable-canvas.jsx
++++ b/node_modules/scratch-paint/src/containers/scrollable-canvas.jsx
+@@ -25,23 +25,32 @@ class ScrollableCanvas extends React.Component {
+             'handleVerticalScrollbarMouseDown',
+             'handleVerticalScrollbarMouseMove',
+             'handleVerticalScrollbarMouseUp',
+-            'handleWheel'
++            'handleWheel',
++            'setWrapperRef'
+         ]);
++        this.wrapperRef = null;
+     }
+     componentDidMount () {
+-        if (this.props.canvas) {
+-            this.props.canvas.addEventListener('wheel', this.handleWheel);
++        if (this.wrapperRef) {
++            this.wrapperRef.addEventListener('wheel', this.handleWheel);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
+-        if (nextProps.canvas) {
+-            if (this.props.canvas) {
+-                this.props.canvas.removeEventListener('wheel', this.handleWheel);
+-            }
+-            nextProps.canvas.addEventListener('wheel', this.handleWheel);
++    componentWillUnmount () {
++        if (this.wrapperRef) {
++            this.wrapperRef.removeEventListener('wheel', this.handleWheel);
++        }
++    }
++    setWrapperRef (el) {
++        if (this.wrapperRef && this.wrapperRef !== el) {
++            this.wrapperRef.removeEventListener('wheel', this.handleWheel);
++        }
++        this.wrapperRef = el;
++        if (el) {
++            el.addEventListener('wheel', this.handleWheel);
+         }
+     }
+     handleHorizontalScrollbarMouseDown (event) {
++        if (!paper || !paper.view) return;
+         this.initialMouseX = getEventXY(event).x;
+         this.initialScreenX = paper.view.matrix.tx;
+         window.addEventListener('mousemove', this.handleHorizontalScrollbarMouseMove);
+@@ -67,6 +76,7 @@ class ScrollableCanvas extends React.Component {
+         event.preventDefault();
+     }
+     handleVerticalScrollbarMouseDown (event) {
++        if (!paper || !paper.view) return;
+         this.initialMouseY = getEventXY(event).y;
+         this.initialScreenY = paper.view.matrix.ty;
+         window.addEventListener('mousemove', this.handleVerticalScrollbarMouseMove);
+@@ -92,12 +102,13 @@ class ScrollableCanvas extends React.Component {
+         event.preventDefault();
+     }
+     handleWheel (event) {
+-        // Multiplier variable, so that non-pixel-deltaModes are supported. Needed for Firefox.
+-        // See #529 (or LLK/scratch-blocks#1190).
++        event.preventDefault();
++        if (!paper || !paper.view) return;
+         const multiplier = event.deltaMode === 0x1 ? 15 : 1;
+         const deltaX = event.deltaX * multiplier;
+         const deltaY = event.deltaY * multiplier;
+-        const canvasRect = this.props.canvas.getBoundingClientRect();
++        const canvasRect = this.props.canvas && this.props.canvas.getBoundingClientRect();
++        if (!canvasRect) return;
+         const offsetX = event.clientX - canvasRect.left;
+         const offsetY = event.clientY - canvasRect.top;
+         const fixedPoint = paper.view.viewToProject(
+@@ -124,7 +135,6 @@ class ScrollableCanvas extends React.Component {
+                 paper.tool.view._handleMouseEvent('mousemove', event, fixedPoint);
+             }
+         }
+-        event.preventDefault();
+     }
+     render () {
+         let widthPercent = 0;
+@@ -151,6 +161,7 @@ class ScrollableCanvas extends React.Component {
+                 verticalScrollStartPercent={topPercent}
+                 onHorizontalScrollbarMouseDown={this.handleHorizontalScrollbarMouseDown}
+                 onVerticalScrollbarMouseDown={this.handleVerticalScrollbarMouseDown}
++                wrapperRef={this.setWrapperRef}
+             >
+                 {this.props.children}
+             </ScrollableCanvasComponent>
+diff --git a/node_modules/scratch-paint/src/containers/select-mode.jsx b/node_modules/scratch-paint/src/containers/select-mode.jsx
+index 1f9726b..589adbe 100644
+--- a/node_modules/scratch-paint/src/containers/select-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/select-mode.jsx
+@@ -27,7 +27,7 @@ class SelectMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool && nextProps.hoveredItemId !== this.props.hoveredItemId) {
+             this.tool.setPrevHoveredItemId(nextProps.hoveredItemId);
+         }
+diff --git a/node_modules/scratch-paint/src/containers/text-mode.jsx b/node_modules/scratch-paint/src/containers/text-mode.jsx
+index ce270cd..f0a6912 100644
+--- a/node_modules/scratch-paint/src/containers/text-mode.jsx
++++ b/node_modules/scratch-paint/src/containers/text-mode.jsx
+@@ -34,7 +34,7 @@ class TextMode extends React.Component {
+             this.activateTool(this.props);
+         }
+     }
+-    componentWillReceiveProps (nextProps) {
++    UNSAFE_componentWillReceiveProps (nextProps) {
+         if (this.tool) {
+             if (nextProps.colorState !== this.props.colorState) {
+                 this.tool.setColorState(nextProps.colorState);
+diff --git a/node_modules/scratch-paint/src/helper/selection.js b/node_modules/scratch-paint/src/helper/selection.js
+index 6b34954..b8a4826 100644
+--- a/node_modules/scratch-paint/src/helper/selection.js
++++ b/node_modules/scratch-paint/src/helper/selection.js
+@@ -32,6 +32,7 @@ const getItems = function (options) {
+ const getAllRootItems = function (includeGuides) {
+     includeGuides = includeGuides || false;
+     const allItems = [];
++    if (!paper || !paper.project) return allItems;
+     for (const layer of paper.project.layers) {
+         for (const child of layer.children) {
+             // don't give guides back
+diff --git a/node_modules/scratch-paint/src/helper/view.js b/node_modules/scratch-paint/src/helper/view.js
+index 36affd8..3660c24 100644
+--- a/node_modules/scratch-paint/src/helper/view.js
++++ b/node_modules/scratch-paint/src/helper/view.js
+@@ -143,6 +143,7 @@ const zoomOnSelection = deltaZoom => {
+ };
+ 
+ const resetZoom = () => {
++    if (!paper || !paper.project || !paper.project.view) return;
+     paper.project.view.zoom = .5;
+     setWorkspaceBounds(true /* clipEmpty */);
+     resizeCrosshair();

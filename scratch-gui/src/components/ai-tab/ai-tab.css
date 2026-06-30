@@ -504,49 +504,58 @@
 .suggestionDropdown {
     position: absolute;
     bottom: 100%;
-    left: 0;
-    right: 0;
-    max-height: 240px;
+    left: 12px;
+    max-width: 320px;
+    max-height: 200px;
     overflow-y: auto;
     background: #fff;
     border: 1px solid #e0e0e0;
-    border-radius: 8px 8px 0 0;
-    box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
+    border-radius: 8px;
+    box-shadow: 0 -2px 10px rgba(0,0,0,0.08);
     z-index: 10;
-    margin: 0 12px;
 }
 
 .suggestionItem {
     display: flex;
     align-items: center;
     gap: 8px;
-    padding: 6px 10px;
+    padding: 5px 10px;
     cursor: pointer;
-    font-size: 0.78rem;
+    font-size: 0.75rem;
     color: #444;
     transition: background 0.1s;
-    border-bottom: 1px solid #f0f0f0;
 }
 
-.suggestionItem:last-child {
-    border-bottom: none;
+.suggestionItem:not(:last-child) {
+    border-bottom: 1px solid #f0f0f0;
 }
 
 .suggestionItem:hover,
 .suggestionSelected {
-    background: #f3eefb;
+    background: #f5f5f5;
 }
 
 .suggestionCat {
     flex-shrink: 0;
-    font-size: 0.6rem;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 8px 3px 6px;
+    border-radius: 5px;
+    color: #fff;
+    font-size: 0.55rem;
+    font-weight: 700;
     text-transform: uppercase;
-    color: #999;
-    background: #f0f0f0;
-    padding: 1px 5px;
-    border-radius: 3px;
-    min-width: 36px;
-    text-align: center;
+    letter-spacing: 0.4px;
+    white-space: nowrap;
+}
+
+.suggestionBubble {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.35);
+    flex-shrink: 0;
 }
 
 .suggestionDesc {

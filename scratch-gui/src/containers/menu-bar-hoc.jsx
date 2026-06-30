@@ -15,13 +15,13 @@ const MenuBarHOC = function (WrappedComponent) {
         }
         confirmReadyToReplaceProject (message) {
             let readyToReplaceProject = true;
-            if (this.props.projectChanged && !this.props.canCreateNew) {
+            if (this.props.projectChanged.changed && !this.props.canCreateNew) {
                 readyToReplaceProject = this.props.confirmWithMessage(message);
             }
             return readyToReplaceProject;
         }
         shouldSaveBeforeTransition () {
-            return (this.props.canSave && this.props.projectChanged);
+            return (this.props.canSave && this.props.projectChanged.changed);
         }
         render () {
             const {
@@ -42,7 +42,7 @@ const MenuBarHOC = function (WrappedComponent) {
         canCreateNew: PropTypes.bool,
         canSave: PropTypes.bool,
         confirmWithMessage: PropTypes.func,
-        projectChanged: PropTypes.bool
+        projectChanged: PropTypes.shape({changed: PropTypes.bool, hasBeenSaved: PropTypes.bool})
     };
     MenuBarContainer.defaultProps = {
         // default to using standard js confirm

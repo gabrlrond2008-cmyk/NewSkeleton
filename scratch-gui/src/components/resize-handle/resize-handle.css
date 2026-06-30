@@ -2,7 +2,7 @@
     flex-shrink: 0;
     position: relative;
     z-index: 10;
-    background: transparent;
+    background: rgba(0, 0, 0, 0.04);
     transition: background-color 0.15s ease;
 }
 
@@ -19,4 +19,36 @@
 .vertical {
     height: 5px;
     cursor: row-resize;
+}
+
+.swapButton {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 15;
+    width: 1.25rem;
+    height: 1.25rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.12);
+    border: 1px solid rgba(0, 0, 0, 0.18);
+    border-radius: 50%;
+    cursor: pointer;
+    color: #575e75;
+    font-size: 0.7rem;
+    line-height: 1;
+    padding: 0;
+    opacity: 0;
+    transition: opacity 0.15s ease, background-color 0.15s ease;
+}
+
+.handle:hover .swapButton {
+    opacity: 1;
+}
+
+.swapButton:hover {
+    background: rgba(0, 53, 122, 0.2);
+    border-color: rgba(0, 53, 122, 0.3);
 }

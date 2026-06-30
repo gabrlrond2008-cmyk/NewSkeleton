@@ -103,7 +103,7 @@ const SBFileUploaderHOC = function (WrappedComponent) {
                 // replace it. (If they don't own the project and haven't
                 // changed it, no need to confirm.)
                 let uploadAllowed = true;
-                if (userOwnsProject || (projectChanged && isShowingWithoutId)) {
+                if (userOwnsProject || (projectChanged.changed && isShowingWithoutId)) {
                     uploadAllowed = confirm( // eslint-disable-line no-alert
                         intl.formatMessage(sharedMessages.replaceProjectWarning)
                     );
@@ -269,7 +269,7 @@ const SBFileUploaderHOC = function (WrappedComponent) {
         onLoadingFinished: PropTypes.func,
         onLoadingStarted: PropTypes.func,
         onSetProjectTitle: PropTypes.func,
-        projectChanged: PropTypes.bool,
+        projectChanged: PropTypes.shape({changed: PropTypes.bool, hasBeenSaved: PropTypes.bool}),
         requestProjectUpload: PropTypes.func,
         userOwnsProject: PropTypes.bool,
         vm: PropTypes.shape({

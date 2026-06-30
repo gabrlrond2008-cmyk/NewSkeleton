@@ -4,14 +4,57 @@ import {markdownToHtml} from '../../lib/markdown.js';
 import {BLOCKS} from '../../lib/ai-block-library';
 import styles from './ai-tab.css';
 
-function hasBlockDescriptor(text) {
-    if (!text) return false;
-    return text.indexOf('@bloques') !== -1;
+var CAT_COLORS = {
+    motion: '#4C97FF',
+    looks: '#9966FF',
+    sound: '#CF63CF',
+    control: '#FFAB19',
+    event: '#FFD500',
+    sensing: '#5CB1D6',
+    operator: '#59C059',
+    data: '#FF8C1A',
+    pen: '#0DA57A',
+    music: '#CF63CF'
+};
+
+function findTrigger(val) {
+    for (var ti = val.length - 1; ti >= 0; ti--) {
+        var ch = val[ti];
+        if (ch === '@' && (ti === 0 || val[ti - 1] === ' ')) {
+            return ti;
+        }
+    }
+    return -1;
+}
+
+function getWorkspaceBlocks(vm) {
+    if (!vm || !vm.editingTarget || !vm.editingTarget.blocks) return [];
+    var blocksMap = vm.editingTarget.blocks._blocks;
+    if (!blocksMap) return [];
+    var ids = Object.keys(blocksMap);
+    ids.sort(function (a, b) {
+        var ay = blocksMap[a].y || 0;
+        var by = blocksMap[b].y || 0;
+        if (ay !== by) return ay - by;
+        return (blocksMap[a].x || 0) - (blocksMap[b].x || 0);
+    });
+    var seen = {};
+    var results = [];
+    for (var i = 0; i < ids.length; i++) {
+        var op = blocksMap[ids[i]].opcode;
+        if (!op || seen[op]) continue;
+        seen[op] = true;
+        var info = BLOCKS[op];
+        if (info && info.c !== 'internal') {
+            results.push({opcode: op, desc: info.d, type: info.t, cat: info.c});
+        }
+    }
+    return results;
 }
 
 var AiTabComponent = function (props) {
     var {messages, sending, verifyingIndex, typingData, creatingIndex, createStatus, trainingEnabled,
-        onSend, onVerify, onCreateBlocks, onTrain} = props;
+        mentorMode, instructing, vm, onSend, onVerify, onCreateBlocks, onTrain, onInstruct} = props;
     var [input, setInput] = useState('');
     var [suggestions, setSuggestions] = useState([]);
     var [selectedSuggestionIdx, setSelectedSuggestionIdx] = useState(-1);
@@ -51,11 +94,11 @@ var AiTabComponent = function (props) {
     }, [input, sending, onSend]);
 
     var insertSuggestion = useCallback(function (suggestion) {
-        var text = input.trim();
-        var words = text.split(/\s+/);
-        var lastWord = words.length > 0 ? words[words.length - 1] : '';
-        var prefix = text.substring(0, text.length - lastWord.length);
-        setInput(prefix + suggestion.desc + ' ');
+        var val = input;
+        var triggerIdx = findTrigger(val);
+        if (triggerIdx === -1) return;
+        var newVal = val.substring(0, triggerIdx) + suggestion.desc + ' ';
+        setInput(newVal);
         setShowSuggestions(false);
         setSuggestions([]);
         setSelectedSuggestionIdx(-1);
@@ -68,34 +111,53 @@ var AiTabComponent = function (props) {
 
         if (debounceRef.current) clearTimeout(debounceRef.current);
 
-        var trimmed = val.trim();
-        if (trimmed.length < 1) {
+        var triggerIdx = findTrigger(val);
+
+        if (triggerIdx === -1) {
+            setSuggestions([]);
+            setShowSuggestions(false);
+            return;
+        }
+
+        var afterTrigger = val.substring(triggerIdx + 1);
+        var queryMatch = afterTrigger.match(/^(\S*)/);
+        var q = queryMatch ? queryMatch[1].toLowerCase() : '';
+
+        if (q.length < 1) {
             setSuggestions([]);
             setShowSuggestions(false);
             return;
         }
 
         debounceRef.current = setTimeout(function () {
-            var q = trimmed.toLowerCase();
             var results = [];
-            for (var op in BLOCKS) {
-                if (!Object.prototype.hasOwnProperty.call(BLOCKS, op)) continue;
-                if (BLOCKS[op].c === 'internal') continue;
-                if (op.toLowerCase().indexOf(q) !== -1 || BLOCKS[op].d.toLowerCase().indexOf(q) !== -1) {
-                    results.push({opcode: op, desc: BLOCKS[op].d, type: BLOCKS[op].t, cat: BLOCKS[op].c});
+            var wsBlocks = getWorkspaceBlocks(vm);
+            for (var i = 0; i < wsBlocks.length; i++) {
+                var b = wsBlocks[i];
+                if (b.opcode.toLowerCase().indexOf(q) !== -1 || b.desc.toLowerCase().indexOf(q) !== -1) {
+                    results.push(b);
                 }
             }
-            results.sort(function (a, b) {
-                var aStarts = a.desc.toLowerCase().indexOf(q) === 0 ? 0 : 1;
-                var bStarts = b.desc.toLowerCase().indexOf(q) === 0 ? 0 : 1;
-                if (aStarts !== bStarts) return aStarts - bStarts;
-                return a.desc.length - b.desc.length;
-            });
+            if (results.length === 0) {
+                for (var op in BLOCKS) {
+                    if (!Object.prototype.hasOwnProperty.call(BLOCKS, op)) continue;
+                    if (BLOCKS[op].c === 'internal') continue;
+                    if (op.toLowerCase().indexOf(q) !== -1 || BLOCKS[op].d.toLowerCase().indexOf(q) !== -1) {
+                        results.push({opcode: op, desc: BLOCKS[op].d, type: BLOCKS[op].t, cat: BLOCKS[op].c});
+                    }
+                }
+                results.sort(function (a, b) {
+                    var aStarts = a.desc.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+                    var bStarts = b.desc.toLowerCase().indexOf(q) === 0 ? 0 : 1;
+                    if (aStarts !== bStarts) return aStarts - bStarts;
+                    return a.desc.length - b.desc.length;
+                });
+            }
             setSuggestions(results.slice(0, 8));
             setShowSuggestions(results.length > 0);
             setSelectedSuggestionIdx(-1);
         }, 80);
-    }, []);
+    }, [vm]);
 
     var handleKeyDown = useCallback(function (e) {
         if (showSuggestions && suggestions.length > 0) {
@@ -215,7 +277,20 @@ var AiTabComponent = function (props) {
                                         </svg>
                                         {isVerifying ? 'Verificando...' : 'Verificar'}
                                     </button>
-                                    {hasBlockDescriptor(msg.content) && (
+                                    {mentorMode && (
+                                        <button
+                                            className={styles.createBtn + (instructing ? ' ' + styles.creating : '')}
+                                            onClick={function () { onInstruct(i); }}
+                                            disabled={instructing || sending}
+                                            title="Analizar bloques y guiar al estudiante"
+                                        >
+                                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                                                <path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z"/>
+                                            </svg>
+                                            {instructing ? 'Analizando...' : 'Instruir'}
+                                        </button>
+                                    )}
+                                    {!mentorMode && msg.hasBlocks && (
                                         <button
                                             className={styles.createBtn + (creatingIndex === i ? ' ' + styles.creating : '')}
                                             onClick={function () { onCreateBlocks(i); }}
@@ -324,6 +399,7 @@ var AiTabComponent = function (props) {
                 {showSuggestions && suggestions.length > 0 && (
                     <div className={styles.suggestionDropdown}>
                         {suggestions.map(function (s, i) {
+                            var catColor = CAT_COLORS[s.cat] || '#999';
                             return (
                                 <div
                                     key={s.opcode}
@@ -334,7 +410,10 @@ var AiTabComponent = function (props) {
                                     onMouseDown={function (e) { e.preventDefault(); insertSuggestion(s); }}
                                     onMouseEnter={function () { setSelectedSuggestionIdx(i); }}
                                 >
-                                    <span className={styles.suggestionCat}>{s.cat}</span>
+                                    <span className={styles.suggestionCat} style={{backgroundColor: catColor}}>
+                                        <span className={styles.suggestionBubble}></span>
+                                        {s.cat}
+                                    </span>
                                     <span className={styles.suggestionDesc}>{s.desc}</span>
                                 </div>
                             );
@@ -345,10 +424,16 @@ var AiTabComponent = function (props) {
                     ref={inputRef}
                     className={styles.input}
                     type="text"
-                    placeholder="Escribí tu pregunta..."
+                    placeholder="Escribí tu pregunta... (usá @ para bloques)"
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
+                    onBlur={function () {
+                        setTimeout(function () {
+                            setShowSuggestions(false);
+                            setSuggestions([]);
+                        }, 150);
+                    }}
                 />
                 <button
                     className={styles.sendButton + (sending ? ' ' + styles.sending : '')}
@@ -368,6 +453,7 @@ AiTabComponent.propTypes = {
     messages: PropTypes.arrayOf(PropTypes.shape({
         role: PropTypes.string,
         content: PropTypes.string,
+        hasBlocks: PropTypes.bool,
         id: PropTypes.number,
         typing: PropTypes.bool,
         verification: PropTypes.shape({
@@ -399,7 +485,10 @@ AiTabComponent.propTypes = {
     }),
     trainingData: PropTypes.array,
     trainingEnabled: PropTypes.bool,
+    mentorMode: PropTypes.bool,
+    instructing: PropTypes.bool,
     onSend: PropTypes.func,
+    onInstruct: PropTypes.func,
     onVerify: PropTypes.func,
     onCreateBlocks: PropTypes.func,
     onTrain: PropTypes.func,

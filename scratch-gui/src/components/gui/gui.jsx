@@ -1,7 +1,7 @@
-import classNames from 'classnames';
 import omit from 'lodash.omit';
 import PropTypes from 'prop-types';
 import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import classNames from 'classnames';
 import {defineMessages, FormattedMessage, injectIntl, intlShape} from 'react-intl';
 import {connect} from 'react-redux';
 import VM from 'scratch-vm';
@@ -42,7 +42,7 @@ import DeviceSelector from '../device-selector/device-selector.jsx';
 import deviceData from '../../lib/libraries/devices/devices.jsx';
 import TabBar from '../tab-bar/tab-bar.jsx';
 import SplitContainer from '../split-container/split-container.jsx';
-import SplitContextMenu from '../split-container/split-context-menu.jsx';
+import MentorGuide from '../mentor-guide/mentor-guide.jsx';
 
 const messages = defineMessages({
     addExtension: {
@@ -98,7 +98,6 @@ const GUIComponent = props => {
         children,
         connectionModalVisible,
         costumeLibraryVisible,
-        costumesTabVisible,
         debugModalVisible,
         deviceLibraryVisible,
         enableCommunity,
@@ -111,9 +110,8 @@ const GUIComponent = props => {
         isTelemetryEnabled,
         isTotallyNormal,
         loading,
+        reducedMotion,
         onClickAbout,
-        onActivateCostumesTab,
-        onActivateSoundsTab,
         onActivateTab,
         onExtensionButtonClick,
         onProjectTelemetryEvent,
@@ -132,12 +130,10 @@ const GUIComponent = props => {
         onTelemetryModalOptOut,
         secondaryTabIndex,
         showComingSoon,
-        soundsTabVisible,
         splitPrimaryIndex,
         splitMode,
         splitRatio,
-        splitMenuVisible,
-        splitMenuPosition,
+        tabOrder,
         stageSizeMode,
         targetIsStage,
         telemetryModalVisible,
@@ -149,9 +145,11 @@ const GUIComponent = props => {
         projectKey,
         onSetSecondaryTab,
         onSetSplitRatio,
-        onShowSplitMenu,
-        onHideSplitMenu,
+        onSwapTabs,
+        onReorderTabs,
         onClearExplain,
+        onSetProjectKey,
+        onSetHasBeenSaved,
         ...componentProps
     } = omit(props, 'dispatch');
     if (children) {
@@ -160,6 +158,14 @@ const GUIComponent = props => {
 
     const [selectedDevice, setSelectedDevice] = useState(null);
     const [workspaceHandle, setWorkspaceHandle] = useState(null);
+    const [mentorGuidanceMsg, setMentorGuidanceMsg] = useState();
+    const handleMentorGuidance = useCallback(d => setMentorGuidanceMsg(d), []);
+    const [reanalyzeTick, setReanalyzeTick] = useState(0);
+    const handleReanalyze = useCallback(function () {
+        setReanalyzeTick(function (t) { return t + 1; });
+    }, []);
+    const [isDragToSplit, setIsDragToSplit] = useState(false);
+    const [dragZone, setDragZone] = useState(null);
     const [isFullSize, setIsFullSize] = useState(
         typeof window !== 'undefined' ?
             window.matchMedia(`(min-width: ${layout.fullSizeMinWidth}px)`).matches :
@@ -173,6 +179,12 @@ const GUIComponent = props => {
         mql.addListener(handler);
         return () => mql.removeListener(handler);
     }, []);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        document.body.classList.toggle('reduced-motion', reducedMotion);
+        return () => document.body.classList.remove('reduced-motion');
+    }, [reducedMotion]);
 
     const stageSize = resolveStageSize(stageSizeMode, isFullSize);
 
@@ -216,7 +228,7 @@ const GUIComponent = props => {
 
     const costumePanel = useMemo(() => <CostumeTab vm={vm} />, [vm]);
     const soundPanel = useMemo(() => <SoundTab vm={vm} />, [vm]);
-    const aiPanel = useMemo(() => <AiTab vm={vm} pendingExplain={pendingExplain} projectKey={projectKey} onClearExplain={onClearExplain} />, [vm, pendingExplain, projectKey, onClearExplain]);
+    const aiPanel = useMemo(() => <AiTab vm={vm} pendingExplain={pendingExplain} projectKey={projectKey} onClearExplain={onClearExplain} onMentorGuidance={handleMentorGuidance} onActivateTab={onActivateTab} reanalyzeTick={reanalyzeTick} />, [vm, pendingExplain, projectKey, onClearExplain, handleMentorGuidance, onActivateTab, reanalyzeTick]);
 
     const panels = useMemo(() => [codePanel, costumePanel, soundPanel, aiPanel],
         [codePanel, costumePanel, soundPanel, aiPanel]);
@@ -240,9 +252,22 @@ const GUIComponent = props => {
         onSetSecondaryTab(null);
     }, [onSetSecondaryTab]);
 
+    const handleSwap = useCallback(() => {
+        onSwapTabs();
+    }, [onSwapTabs]);
+
+    const handleDragToSplitPanel = useCallback((active, zone) => {
+        setIsDragToSplit(active);
+        setDragZone(active ? zone : null);
+    }, []);
+
     const handleRatioChange = useCallback(ratio => {
         onSetSplitRatio(ratio);
     }, [onSetSplitRatio]);
+
+    const handleTabReorder = useCallback(newOrder => {
+        onReorderTabs(newOrder);
+    }, [onReorderTabs]);
 
     const renderEditor = () => (
         <Box className={styles.bodyWrapper}>
@@ -250,14 +275,19 @@ const GUIComponent = props => {
                 <Box className={styles.editorWrapper}>
                     <TabBar
                         tabs={tabsConfig}
+                        tabOrder={tabOrder}
                         activeTabIndex={activeTabIndex}
                         secondaryTabIndex={secondaryTabIndex}
                         splitPrimaryIndex={splitPrimaryIndex}
                         splitMode={splitMode}
                         onTabClick={handleTabClick}
+                        onTabReorder={handleTabReorder}
+                        onSetSecondaryTab={onSetSecondaryTab}
+                        onActivateTab={onActivateTab}
+                        onDragToSplitPanel={handleDragToSplitPanel}
                         rtl={isRtl}
                     />
-                    <div className={styles.tabsBody}>
+                    <div className={styles.tabsBody} data-tabs-body>
                         <SplitContainer
                             panels={panels}
                             primaryIndex={activeTabIndex}
@@ -267,7 +297,13 @@ const GUIComponent = props => {
                             splitDirection="horizontal"
                             onRatioChange={handleRatioChange}
                             onCloseSecondary={handleCloseSecondary}
+                            onSwap={handleSwap}
                         />
+                        {isDragToSplit && !showSplit && dragZone && (
+                            <div className={classNames(styles.dropIndicator, dragZone === 'left' ? styles.dropLeft : styles.dropRight)}>
+                                <span>Soltar aquí para pantalla dividida</span>
+                            </div>
+                        )}
                         {!showSplit && activeTabIndex === 0 && (
                             <Box className={styles.extensionButtonContainer}>
                                 <button
@@ -287,6 +323,9 @@ const GUIComponent = props => {
                             <Box className={styles.watermark}>
                                 <Watermark selectedDevice={selectedDevice} />
                             </Box>
+                        )}
+                        {activeTabIndex === 0 && (
+                            <MentorGuide message={mentorGuidanceMsg} onReanalyze={handleReanalyze} />
                         )}
                     </div>
                 </Box>
@@ -403,13 +442,6 @@ const GUIComponent = props => {
             />
             {renderEditor()}
             <DragLayer />
-            <SplitContextMenu
-                visible={splitMenuVisible}
-                position={splitMenuPosition}
-                activeTabIndex={activeTabIndex}
-                onSelect={onSetSecondaryTab}
-                onClose={onHideSplitMenu}
-            />
         </Box>
     );
 };
@@ -436,7 +468,6 @@ GUIComponent.propTypes = {
     cardsVisible: PropTypes.bool,
     children: PropTypes.node,
     costumeLibraryVisible: PropTypes.bool,
-    costumesTabVisible: PropTypes.bool,
     debugModalVisible: PropTypes.bool,
     deviceLibraryVisible: PropTypes.bool,
     enableCommunity: PropTypes.bool,
@@ -449,8 +480,6 @@ GUIComponent.propTypes = {
     isTotallyNormal: PropTypes.bool,
     loading: PropTypes.bool,
     logo: PropTypes.string,
-    onActivateCostumesTab: PropTypes.func,
-    onActivateSoundsTab: PropTypes.func,
     onActivateTab: PropTypes.func,
     onExtensionButtonClick: PropTypes.func,
     onRequestCloseBackdropLibrary: PropTypes.func,
@@ -463,32 +492,26 @@ GUIComponent.propTypes = {
     onShare: PropTypes.func,
     onShowPrivacyPolicy: PropTypes.func,
     onStartSelectingFileUpload: PropTypes.func,
-    onTabSelect: PropTypes.func,
     onTelemetryModalCancel: PropTypes.func,
     onTelemetryModalOptIn: PropTypes.func,
     onTelemetryModalOptOut: PropTypes.func,
     secondaryTabIndex: PropTypes.number,
-    showComingSoon: PropTypes.bool,
-    soundsTabVisible: PropTypes.bool,
     splitMode: PropTypes.bool,
     splitPrimaryIndex: PropTypes.number,
     splitRatio: PropTypes.number,
-    splitMenuVisible: PropTypes.bool,
-    splitMenuPosition: PropTypes.shape({
-        x: PropTypes.number,
-        y: PropTypes.number
-    }),
+    tabOrder: PropTypes.arrayOf(PropTypes.number),
     stageSizeMode: PropTypes.oneOf(Object.keys(STAGE_SIZE_MODES)),
     targetIsStage: PropTypes.bool,
     telemetryModalVisible: PropTypes.bool,
     theme: PropTypes.string,
     tipsLibraryVisible: PropTypes.bool,
     toolboxXML: PropTypes.string,
+    reducedMotion: PropTypes.bool,
     vm: PropTypes.instanceOf(VM).isRequired,
     onSetSecondaryTab: PropTypes.func,
     onSetSplitRatio: PropTypes.func,
-    onShowSplitMenu: PropTypes.func,
-    onHideSplitMenu: PropTypes.func
+    onSwapTabs: PropTypes.func,
+    onReorderTabs: PropTypes.func
 };
 
 GUIComponent.defaultProps = {
@@ -518,7 +541,8 @@ const mapStateToProps = state => ({
     blocksId: state.scratchGui.timeTravel.year.toString(),
     stageSizeMode: state.scratchGui.stageSize.stageSize,
     theme: state.scratchGui.theme.theme,
-    toolboxXML: state.scratchGui.toolbox.toolboxXML
+    toolboxXML: state.scratchGui.toolbox.toolboxXML,
+    reducedMotion: state.scratchGui.animations.reducedMotion
 });
 
 export default injectIntl(connect(

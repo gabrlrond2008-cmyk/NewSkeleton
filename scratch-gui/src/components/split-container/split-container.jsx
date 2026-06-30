@@ -5,49 +5,70 @@ import classNames from 'classnames';
 import ResizeHandle from '../resize-handle/resize-handle.jsx';
 import styles from './split-container.css';
 
-const SplitContainer = ({
-    panels,
-    primaryIndex,
-    secondaryIndex,
-    splitMode,
-    splitRatio,
-    splitDirection,
-    onRatioChange,
-    onCloseSecondary
-}) => {
-    const containerRef = useRef(null);
-    const [exiting, setExiting] = useState(false);
-    const rafRef = useRef(null);
+var SplitContainer = function (props) {
+    var panels = props.panels;
+    var primaryIndex = props.primaryIndex;
+    var secondaryIndex = props.secondaryIndex;
+    var splitMode = props.splitMode;
+    var splitRatio = props.splitRatio;
+    var splitDirection = props.splitDirection;
+    var onRatioChange = props.onRatioChange;
+    var onCloseSecondary = props.onCloseSecondary;
+    var onSwap = props.onSwap;
 
-    const handleClose = useCallback(() => {
+    var containerRef = useRef(null);
+    var [exiting, setExiting] = useState(false);
+    var rafRef = useRef(null);
+
+    var hasSecondary = splitMode && secondaryIndex != null && secondaryIndex !== primaryIndex;
+
+    var handleClose = useCallback(function () {
         setExiting(true);
-        setTimeout(() => {
-            setExiting(false);
+        setTimeout(function () {
             onCloseSecondary();
+            setExiting(false);
         }, 200);
     }, [onCloseSecondary]);
 
-    const handleRatioChange = useCallback((ratio) => {
+    var handleRatioChange = useCallback(function (ratio) {
         if (rafRef.current) return;
-        rafRef.current = requestAnimationFrame(() => {
+        rafRef.current = requestAnimationFrame(function () {
             rafRef.current = null;
             onRatioChange(ratio);
         });
     }, [onRatioChange]);
 
-    useEffect(() => {
+    useEffect(function () {
         window.dispatchEvent(new Event('resize'));
-    }, [splitMode]);
+    }, [splitMode, primaryIndex, secondaryIndex]);
 
-    useEffect(() => {
-        return () => {
+    // Route wheel events to the scroll-focused panel instead of letting
+    // them bubble to Blockly's document listener.
+    useEffect(function () {
+        var el = containerRef.current;
+        if (!el) return;
+        var handler = function (e) {
+            if (e.target.closest('.blocklySvg, .blocklyMainWorkspace')) return;
+            e.stopPropagation();
+        };
+        el.addEventListener('wheel', handler, {passive: true});
+        return function () { el.removeEventListener('wheel', handler); };
+    }, []);
+
+    useEffect(function () {
+        return function () {
             if (rafRef.current) {
                 cancelAnimationFrame(rafRef.current);
             }
         };
     }, []);
 
-    const hasSecondary = splitMode && secondaryIndex != null && secondaryIndex !== primaryIndex;
+    // Single panelStack — ALL panels rendered once, positioned via CSS.
+    // No panel ever unmounts, so Blockly workspace / CostumeTab / etc.
+    // survive swaps between primary and secondary.
+    var percKey = splitDirection === 'vertical' ? 'top' : 'left';
+    var percDir = splitDirection === 'vertical' ? 'height' : 'width';
+    var primSize = splitRatio;
 
     return (
         <div
@@ -55,60 +76,68 @@ const SplitContainer = ({
             className={classNames(
                 styles.container,
                 styles[splitDirection],
-                {
-                    [styles.splitActive]: hasSecondary,
-                    [styles.exiting]: exiting
-                }
+                {[styles.splitActive]: hasSecondary}
             )}
         >
-            <div className={classNames(styles.panel, styles.primaryPanel)} style={{flex: hasSecondary ? splitRatio : 1}}>
-                <div className={styles.panelStack}>
-                    {panels.map((panel, i) => (
+            <div className={styles.panelStack}>
+                {panels.map(function (panel, i) {
+                    var isPrimary = i === primaryIndex;
+                    var isSecondary = hasSecondary && i === secondaryIndex;
+
+                    var panelStyle = {};
+                    if (isPrimary) {
+                        panelStyle[percKey] = 0;
+                        panelStyle[percDir] = (hasSecondary ? primSize : 1) * 100 + '%';
+                    } else if (isSecondary) {
+                        panelStyle[percKey] = primSize * 100 + '%';
+                        panelStyle[percDir] = (1 - primSize) * 100 + '%';
+                    }
+                    // Hidden panels: no inline styles needed — CSS defaults (top:0;left:0;right:0;bottom:0)
+                    // keep them filling the panelStack; opacity/visibility hide them.
+
+                    return (
                         <div
                             key={i}
                             className={classNames(styles.panelItem, {
-                                [styles.panelActive]: i === primaryIndex
+                                [styles.panelActive]: isPrimary || isSecondary,
+                                [styles.panelSecondary]: isSecondary,
+                                [styles.secondaryExit]: exiting && isSecondary
                             })}
+                            style={panelStyle}
                         >
                             {panel}
                         </div>
-                    ))}
-                </div>
+                    );
+                })}
             </div>
             {hasSecondary && (
-                <ResizeHandle
-                    direction={splitDirection}
-                    containerRef={containerRef}
-                    onRatioChange={handleRatioChange}
-                />
-            )}
-            <div
-                className={classNames(styles.panel, styles.secondaryPanel, {
-                    [styles.secondaryExit]: exiting
-                })}
-                style={{
-                    flex: hasSecondary ? 1 - splitRatio : 0,
-                    display: hasSecondary ? '' : 'none'
-                }}
-            >
-                <div className={styles.panelStack}>
-                    {hasSecondary && secondaryIndex != null && secondaryIndex >= 0 && secondaryIndex < panels.length && (
-                        <div className={classNames(styles.panelItem, styles.panelActive)}>
-                            {panels[secondaryIndex]}
-                        </div>
-                    )}
+                <div
+                    className={styles.handleWrapper}
+                    style={{
+                        [percKey]: primSize * 100 + '%',
+                        transform: splitDirection === 'horizontal'
+                            ? 'translateX(-50%)'
+                            : 'translateY(-50%)'
+                    }}
+                >
+                    <ResizeHandle
+                        direction={splitDirection}
+                        containerRef={containerRef}
+                        onRatioChange={handleRatioChange}
+                        onSwap={onSwap}
+                    />
                 </div>
-                {hasSecondary && (
-                    <button
-                        className={styles.closeButton}
-                        onClick={handleClose}
-                        title="Close split view"
-                        type="button"
-                    >
-                        &times;
-                    </button>
-                )}
-            </div>
+            )}
+            {hasSecondary && (
+                <button
+                    className={styles.closeButton}
+                    onClick={handleClose}
+                    title="Close split view"
+                    type="button"
+                >
+                    &times;
+                </button>
+            )}
         </div>
     );
 };
@@ -121,7 +150,8 @@ SplitContainer.propTypes = {
     splitRatio: PropTypes.number,
     splitDirection: PropTypes.oneOf(['horizontal', 'vertical']),
     onRatioChange: PropTypes.func.isRequired,
-    onCloseSecondary: PropTypes.func.isRequired
+    onCloseSecondary: PropTypes.func.isRequired,
+    onSwap: PropTypes.func
 };
 
 SplitContainer.defaultProps = {
