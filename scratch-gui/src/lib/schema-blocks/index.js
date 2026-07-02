@@ -8,10 +8,12 @@ function getEdgesFromConnections(workspace, Blockly) {
         var edges = [];
         var seen = new Set();
 
+        console.log('[schema] getEdgesFromConnections: total blocks:', allBlocks.length);
         for (var i = 0; i < allBlocks.length; i++) {
             var block = allBlocks[i];
             if (!block || block.isShadow() || seen.has(block.id)) continue;
             seen.add(block.id);
+            console.log('[schema] processing block:', block.type, block.id, 'next:', !!(block.nextConnection && block.nextConnection.isConnected()), 'inputs:', block.inputList ? block.inputList.length : 0);
 
             var nc = block.nextConnection;
             if (nc && nc.isConnected()) {
@@ -135,8 +137,11 @@ function getCompactHeight(block, Blockly) {
             }
         }
         if (isFinite(firstStmtY)) {
-            return Math.max(30, firstStmtY - blockPos.y + 6);
+            var compactH = Math.max(30, firstStmtY - blockPos.y + 6);
+            console.log('[schema] compact:', block.type, 'original:', block.height, 'compact:', compactH, 'stmtInputs:', stmtInputs.length, 'firstStmtY:', firstStmtY, 'blockPos.y:', blockPos.y);
+            return compactH;
         }
+        console.warn('[schema] compact fallback: no valid connection y_, using subtraction');
         return Math.max(30, block.height - stmtInputs.length * 40);
     } catch (e) {
         console.warn('[schema] getCompactHeight fallback:', e.message);

@@ -91,10 +91,17 @@ var EdgeOverlay = function (props) {
         };
     }, [workspace]);
 
-    if (!workspace || !Blockly) return null;
+    if (!workspace || !Blockly) {
+        console.warn('[edge-overlay] no workspace or Blockly');
+        return null;
+    }
 
     var ports = computePorts(workspace, Blockly);
-    if ((!edges || edges.length === 0) && ports.length === 0) return null;
+    console.log('[edge-overlay] render: edges=' + (edges ? edges.length : 0) + ' ports=' + ports.length);
+    if ((!edges || edges.length === 0) && ports.length === 0) {
+        console.warn('[edge-overlay] nothing to render (no edges, no ports)');
+        return null;
+    }
 
     var canvasTransform = getCanvasTransform(workspace);
 

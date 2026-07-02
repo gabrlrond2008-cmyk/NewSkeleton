@@ -67,6 +67,7 @@ class SchemaTab extends React.Component {
         this._pushing = false;
     }
     componentDidMount() {
+        console.log('[schema] componentDidMount, blocks:', !!this.blocks, 'toolboxXML:', !!this.props.toolboxXML);
         this.ScratchBlocks.ScratchMsgs.setLocale(this.props.locale);
         var workspaceConfig = defaultsDeep({},
             DEFAULT_OPTIONS,
@@ -80,6 +81,7 @@ class SchemaTab extends React.Component {
         this.props.vm.on('workspaceUpdate', this.onWorkspaceUpdate);
         this.props.vm.on('targetsUpdate', this.onTargetsUpdate);
         if (this.blocks && this.props.toolboxXML) {
+            console.log('[schema] componentDidMount: injecting workspace');
             applyLineConnectionsPatch(this.ScratchBlocks);
             flattenBlockSvgPaths(this.ScratchBlocks);
             this.workspace = this.ScratchBlocks.inject(this.blocks, workspaceConfig);
@@ -89,7 +91,9 @@ class SchemaTab extends React.Component {
         }
     }
     componentDidUpdate(prevProps) {
+        console.log('[schema] componentDidUpdate, ws:', !!this.workspace, 'blocks:', !!this.blocks, 'toolbox:', !!this.props.toolboxXML);
         if (!this.workspace && this.blocks && this.props.toolboxXML) {
+            console.log('[schema] componentDidUpdate: injecting workspace');
             applyLineConnectionsPatch(this.ScratchBlocks);
             flattenBlockSvgPaths(this.ScratchBlocks);
             var workspaceConfig = defaultsDeep({},
@@ -104,6 +108,7 @@ class SchemaTab extends React.Component {
             this.workspace = this.ScratchBlocks.inject(this.blocks, workspaceConfig);
             this.workspace.useLineConnections = true;
             this.workspace.addChangeListener(this.props.vm.blockListener);
+            console.log('[schema] workspace injected, calling requestInitialWorkspace');
             this.requestInitialWorkspace();
             return;
         }
@@ -129,9 +134,9 @@ class SchemaTab extends React.Component {
         }
     }
     onWorkspaceUpdate = function (data) {
+        console.log('[schema] onWorkspaceUpdate called, pushing:', this._pushing, 'ws:', !!this.workspace, 'target:', this.props.vm && this.props.vm.editingTarget ? this.props.vm.editingTarget.id : 'none');
         if (this._pushing || !this.workspace || !this.props.vm.editingTarget) {
-            console.warn('[schema] onWorkspaceUpdate skipped: pushing=' + this._pushing +
-                ' ws=' + !!this.workspace + ' target=' + !!this.props.vm.editingTarget);
+            console.warn('[schema] onWorkspaceUpdate skipped');
             return;
         }
         this._pushing = true;
@@ -142,11 +147,16 @@ class SchemaTab extends React.Component {
                 this.setState({edges: []});
                 return;
             }
+            console.log('[schema] XML length:', data.xml.length);
             var dom = this.ScratchBlocks.Xml.textToDom(data.xml);
+            console.log('[schema] XML parsed, top blocks:', dom.querySelectorAll('block[type]').length);
             this.ScratchBlocks.Xml.clearWorkspaceAndLoadFromXml(dom, this.workspace);
-            var edges = getEdgesFromConnections(this.workspace, this.ScratchBlocks);
             var allB = this.workspace.getAllBlocks(false);
-            console.log('[schema] loaded blocks:', allB.length, 'edges:', edges.length);
+            var edges = getEdgesFromConnections(this.workspace, this.ScratchBlocks);
+            console.log('[schema] blocks:', allB.length, 'edges:', edges.length);
+            allB.forEach(function (b) {
+                console.log('  -', b.type, b.id, 'next:', !!b.nextConnection, 'prev:', !!b.previousConnection, 'inputs:', b.inputList ? b.inputList.length : 0);
+            });
             this.setState({edges: edges});
         } catch (e) {
             console.error('[schema] onWorkspaceUpdate error:', e.message, e.stack);
