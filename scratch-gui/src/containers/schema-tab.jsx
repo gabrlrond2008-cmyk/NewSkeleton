@@ -46,7 +46,13 @@ function applyLineConnectionsPatch(Blockly) {
                 var ws = this.getSourceBlock().workspace;
                 if (ws && ws.useLineConnections &&
                     (this.type === Blockly.NEXT_STATEMENT || this.type === Blockly.PREVIOUS_STATEMENT)) {
-                    Blockly.Connection.prototype.connect_.call(this, targetConnection);
+                    // Manual model-only connection: avoid calling Blockly.Connection.prototype.connect_
+                    // which may be renamed by Closure compiler in scratch-blocks.
+                    if (this.targetConnection !== null || targetConnection.targetConnection !== null) {
+                        return;
+                    }
+                    this.targetConnection = targetConnection;
+                    targetConnection.targetConnection = this;
                     var b = this.getSourceBlock();
                     var a = targetConnection.getSourceBlock();
                     b.rendered && b.updateDisabled();
@@ -149,13 +155,13 @@ class SchemaTab extends React.Component {
             }
             console.log('[schema] XML length:', data.xml.length);
             var dom = this.ScratchBlocks.Xml.textToDom(data.xml);
-            console.log('[schema] XML parsed, top blocks:', dom.querySelectorAll('block[type]').length);
+            console.log('[schema] XML parsed, blocks in XML:', dom.querySelectorAll('block[type]').length);
             this.ScratchBlocks.Xml.clearWorkspaceAndLoadFromXml(dom, this.workspace);
             var allB = this.workspace.getAllBlocks(false);
             var edges = getEdgesFromConnections(this.workspace, this.ScratchBlocks);
-            console.log('[schema] blocks:', allB.length, 'edges:', edges.length);
+            console.log('[schema] workspace blocks:', allB.length, 'edges:', edges.length);
             allB.forEach(function (b) {
-                console.log('  -', b.type, b.id, 'next:', !!b.nextConnection, 'prev:', !!b.previousConnection, 'inputs:', b.inputList ? b.inputList.length : 0);
+                console.log('  -', b.type, b.id, 'next:', !!(b.nextConnection && b.nextConnection.isConnected()), 'prev:', !!(b.previousConnection && b.previousConnection.isConnected()), 'inputs:', b.inputList ? b.inputList.length : 0);
             });
             this.setState({edges: edges});
         } catch (e) {
