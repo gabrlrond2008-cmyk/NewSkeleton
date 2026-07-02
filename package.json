@@ -18,6 +18,7 @@
     "react": "^16.14.0",
     "react-dom": "^16.14.0",
     "react-redux": "^5.1.2",
+    "reactflow": "^11.11.4",
     "redux": "^3.7.2"
   }
 }

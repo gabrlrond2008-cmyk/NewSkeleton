@@ -10,6 +10,7 @@ const BLOCKS_TAB_INDEX = 0;
 const COSTUMES_TAB_INDEX = 1;
 const SOUNDS_TAB_INDEX = 2;
 const AI_TAB_INDEX = 3;
+const SCHEMA_TAB_INDEX = 4;
 
 var projectKeyCounter = 0;
 
@@ -18,7 +19,7 @@ const initialState = {
     secondaryTabIndex: null,
     splitPrimaryIndex: null,
     splitRatio: 0.5,
-    tabOrder: [BLOCKS_TAB_INDEX, COSTUMES_TAB_INDEX, SOUNDS_TAB_INDEX, AI_TAB_INDEX],
+    tabOrder: [BLOCKS_TAB_INDEX, COSTUMES_TAB_INDEX, SOUNDS_TAB_INDEX, AI_TAB_INDEX, SCHEMA_TAB_INDEX],
     pendingExplain: null,
     projectKey: 0
 };
@@ -123,5 +124,6 @@ export {
     BLOCKS_TAB_INDEX,
     COSTUMES_TAB_INDEX,
     SOUNDS_TAB_INDEX,
-    AI_TAB_INDEX
+    AI_TAB_INDEX,
+    SCHEMA_TAB_INDEX
 };

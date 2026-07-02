@@ -9,6 +9,7 @@ import Renderer from 'scratch-render';
 
 import Blocks from '../../containers/blocks.jsx';
 import AiTab from '../../containers/ai-tab.jsx';
+import SchemaTab from '../../containers/schema-tab.jsx';
 import CostumeTab from '../../containers/costume-tab.jsx';
 import SoundTab from '../../containers/sound-tab.jsx';
 import StageWrapper from '../../containers/stage-wrapper.jsx';
@@ -34,6 +35,7 @@ import {themeMap} from '../../lib/themes';
 import styles from './gui.css';
 import addExtensionIcon from './icon--extensions.svg';
 import aiIcon from './icon--ai.svg';
+import schemaIcon from './icon--schema.svg';
 import codeIcon from './icon--code.svg';
 import costumesIcon from './icon--costumes.svg';
 import soundsIcon from './icon--sounds.svg';
@@ -70,7 +72,10 @@ const TABS_CONFIG = [
         icon: soundsIcon},
     {id: 'ai',
         label: 'AI',
-        icon: aiIcon}
+        icon: aiIcon},
+    {id: 'schema',
+        label: 'Esquema',
+        icon: schemaIcon}
 ];
 
 const GUIComponent = props => {
@@ -229,8 +234,16 @@ const GUIComponent = props => {
     const costumePanel = useMemo(() => <CostumeTab vm={vm} />, [vm]);
     const soundPanel = useMemo(() => <SoundTab vm={vm} />, [vm]);
     const aiPanel = useMemo(() => <AiTab vm={vm} pendingExplain={pendingExplain} projectKey={projectKey} onClearExplain={onClearExplain} onMentorGuidance={handleMentorGuidance} onActivateTab={onActivateTab} reanalyzeTick={reanalyzeTick} />, [vm, pendingExplain, projectKey, onClearExplain, handleMentorGuidance, onActivateTab, reanalyzeTick]);
+    const schemaPanel = useMemo(() => (
+        <SchemaTab
+            vm={vm}
+            options={{
+                media: `${basePath}static/${themeMap[theme].blocksMediaFolder}/`
+            }}
+        />
+    ), [vm, basePath, theme]);
 
-    const panels = useMemo(() => [codePanel, costumePanel, soundPanel, aiPanel],
+    const panels = useMemo(() => [codePanel, costumePanel, soundPanel, aiPanel, schemaPanel],
         [codePanel, costumePanel, soundPanel, aiPanel]);
 
     const handleTabClick = useCallback(index => {
