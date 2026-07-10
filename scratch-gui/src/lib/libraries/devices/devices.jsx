@@ -1,22 +1,22 @@
 import unselectDeviceIconURL from './unselectDevice/unselectDevice.png';
-import arduinoUnoIconURL from './arduinoUno/arduinoUno.png';
-import arduinoNanoIconURL from './arduinoNano/arduinoNano.png';
-import arduinoLeonardoIconURL from './arduinoLeonardo/arduinoLeonardo.png';
-import arduinoMega2560IconURL from './arduinoMega2560/arduinoMega2560.png';
-import arduinoUnoR4MinimaIconURL from './arduinoUnoR4Minima/arduinoUnoR4Minima.png';
-import arduinoUnoR4WifiIconURL from './arduinoUnoR4Wifi/arduinoUnoR4Wifi.png';
-import microbitIconURL from './microbit/microbit.png';
-import microbitV2IconURL from './microbitV2/microbitV2.png';
-import esp32IconURL from './esp32/esp32.png';
-import esp32S3IconURL from './esp32S3/esp32S3.png';
-import esp8266NodeMCUIconURL from './esp8266NodeMCU/esp8266NodeMCU.png';
-import k210MaixDockIconURL from './k210MaixDock/k210MaixDock.png';
-import k210MaixduinoIconURL from './k210Maixduino/k210Maixduino.png';
-import raspberryPiPicoIconURL from './raspberryPiPico/raspberryPiPico.png';
-import raspberryPiPicoWIconURL from './raspberryPiPicoW/raspberryPiPicoW.png';
-import raspberryPiPico2IconURL from './raspberryPiPico2/raspberryPiPico2.png';
-import raspberryPiPico2WIconURL from './raspberryPiPico2W/raspberryPiPico2W.png';
-import stBoardExtensionIconURL from './stBoardExtension/stboard-extension.jpg';
+import arduinoUnoIconURL from './arduinoUno/arduinoUno-small.svg';
+import arduinoNanoIconURL from './arduinoNano/arduinoNano-small.svg';
+import arduinoLeonardoIconURL from './arduinoLeonardo/arduinoLeonardo-small.svg';
+import arduinoMega2560IconURL from './arduinoMega2560/arduinoMega2560-small.svg';
+import arduinoUnoR4MinimaIconURL from './arduinoUnoR4Minima/arduinoUnoR4Minima-small.svg';
+import arduinoUnoR4WifiIconURL from './arduinoUnoR4Wifi/arduinoUnoR4Wifi-small.svg';
+import microbitIconURL from './microbit/microbit-small.svg';
+import microbitV2IconURL from './microbitV2/microbitV2-small.svg';
+import esp32IconURL from './esp32/esp32-small.svg';
+import esp32S3IconURL from './esp32S3/esp32S3-small.svg';
+import esp8266NodeMCUIconURL from './esp8266NodeMCU/esp8266NodeMCU-small.svg';
+import k210MaixDockIconURL from './k210MaixDock/k210MaixDock-small.svg';
+import k210MaixduinoIconURL from './k210Maixduino/k210Maixduino-small.svg';
+import raspberryPiPicoIconURL from './raspberryPiPico/raspberryPiPico-small.svg';
+import raspberryPiPicoWIconURL from './raspberryPiPicoW/raspberryPiPicoW-small.svg';
+import raspberryPiPico2IconURL from './raspberryPiPico2/raspberryPiPico2-small.svg';
+import raspberryPiPico2WIconURL from './raspberryPiPico2W/raspberryPiPico2W-small.svg';
+import stBoardExtensionIconURL from './stBoardExtension/stboard-extension.png';
 import stbBoardV2IconURL from './stbBoardV2/stbboard-v2.png';
 
 const DEVICE_TYPES = {
@@ -302,7 +302,9 @@ const deviceData = [
     }
 ];
 
+const getDevices = () => deviceData;
+
 export {
-    deviceData as default,
+    getDevices as default,
     DEVICE_TYPES
 };

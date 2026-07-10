@@ -3,6 +3,7 @@ import bindAll from 'lodash.bindall';
 import PropTypes from 'prop-types';
 import React from 'react';
 import {connect} from 'react-redux';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 import {MenuItem, Submenu} from '../menu/menu.jsx';
 import {aiMenuOpen, openAiMenu} from '../../reducers/menus.js';
 import AiSelect from './ai-select.jsx';
@@ -11,6 +12,79 @@ import styles from './settings-menu.css';
 import menuBarStyles from './menu-bar.css';
 import dropdownCaret from './dropdown-caret.svg';
 import aiIcon from './icon--ai.svg';
+
+var menuMessages = defineMessages({
+    menuLabel: {
+        id: 'gui.aiMenu.menuLabel',
+        defaultMessage: 'AI',
+        description: 'AI menu item label in menu bar'
+    },
+    providerLabel: {
+        id: 'gui.aiMenu.providerLabel',
+        defaultMessage: 'Provider',
+        description: 'Provider label in AI settings'
+    },
+    apiKeyLabel: {
+        id: 'gui.aiMenu.apiKeyLabel',
+        defaultMessage: 'API Key',
+        description: 'API Key label in AI settings'
+    },
+    modelLabel: {
+        id: 'gui.aiMenu.modelLabel',
+        defaultMessage: 'Model',
+        description: 'Model label in AI settings'
+    },
+    loadingModels: {
+        id: 'gui.aiMenu.loadingModels',
+        defaultMessage: 'Loading models...',
+        description: 'Loading models text'
+    },
+    selectModelPlaceholder: {
+        id: 'gui.aiMenu.selectModelPlaceholder',
+        defaultMessage: 'Select model...',
+        description: 'Model select placeholder'
+    },
+    trainingLabel: {
+        id: 'gui.aiMenu.trainingLabel',
+        defaultMessage: 'Training',
+        description: 'Training toggle label'
+    },
+    trainingOn: {
+        id: 'gui.aiMenu.trainingOn',
+        defaultMessage: 'Training enabled',
+        description: 'Training toggle title when on'
+    },
+    trainingOff: {
+        id: 'gui.aiMenu.trainingOff',
+        defaultMessage: 'Training disabled',
+        description: 'Training toggle title when off'
+    },
+    mentorLabel: {
+        id: 'gui.aiMenu.mentorLabel',
+        defaultMessage: 'Mentor Mode (beta)',
+        description: 'Mentor mode toggle label'
+    },
+    mentorOn: {
+        id: 'gui.aiMenu.mentorOn',
+        defaultMessage: 'Mentor mode enabled',
+        description: 'Mentor mode toggle title when on'
+    },
+    mentorOff: {
+        id: 'gui.aiMenu.mentorOff',
+        defaultMessage: 'Mentor mode disabled',
+        description: 'Mentor mode toggle title when off'
+    },
+    paidSeparator: {
+        id: 'gui.aiMenu.paidSeparator',
+        defaultMessage: '───────── Paid ─────────',
+        description: 'Separator between free and paid models'
+    },
+    freeSuffix: {
+        id: 'gui.aiMenu.freeSuffix',
+        defaultMessage: ' (free)',
+        description: 'Suffix for free model options'
+    }
+});
 
 var PROVIDER_META = {
     groq: {label: 'Groq', gratis: true, apiModels: 'https://api.groq.com/openai/v1/models'},
@@ -256,7 +330,7 @@ class AiMenu extends React.PureComponent {
                     ordered.push(classified.gratis[g]);
                 }
                 if (classified.gratis.length > 0 && classified.pago.length > 0) {
-                    ordered.push({id: '---', label: '───────── Pagos ─────────'});
+                    ordered.push({id: '---', label: '---PAID_SEPARATOR---'});
                 }
                 for (var p = 0; p < classified.pago.length; p++) {
                     ordered.push(classified.pago[p]);
@@ -315,9 +389,9 @@ class AiMenu extends React.PureComponent {
         for (var mi = 0; mi < models.length; mi++) {
             var m = models[mi];
             if (m.id === '---') {
-                modelOptions.push({value: '---', label: m.label, disabled: true});
+                modelOptions.push({value: '---', label: this.props.intl.formatMessage(menuMessages.paidSeparator), disabled: true});
             } else {
-                var mLabel = m.label + (m.gratis ? ' (gratis)' : '');
+                var mLabel = m.label + (m.gratis ? this.props.intl.formatMessage(menuMessages.freeSuffix) : '');
                 modelOptions.push({value: m.id, label: mLabel});
             }
         }
@@ -332,13 +406,13 @@ class AiMenu extends React.PureComponent {
                     onMouseOver={this.handleMouseOver}
                 >
                     <img className={styles.icon} src={aiIcon} />
-                    <span className={styles.submenuLabel}>AI</span>
+                    <span className={styles.submenuLabel}>{this.props.intl.formatMessage(menuMessages.menuLabel)}</span>
                     <img className={styles.expandCaret} src={dropdownCaret} />
                 </div>
                 <Submenu place={this.props.isRtl ? 'left' : 'right'}>
                     <div style={{padding: '8px 12px', minWidth: 220, maxHeight: 320, overflowY: 'auto'}}>
                         <div style={{marginBottom: 8}}>
-                            <label style={labelStyle}>Proveedor</label>
+                            <label style={labelStyle}>{this.props.intl.formatMessage(menuMessages.providerLabel)}</label>
                             <AiSelect
                                 value={this.state.provider}
                                 options={providerOptions}
@@ -346,7 +420,7 @@ class AiMenu extends React.PureComponent {
                             />
                         </div>
                         <div style={{marginBottom: 8}}>
-                            <label style={labelStyle}>API Key</label>
+                            <label style={labelStyle}>{this.props.intl.formatMessage(menuMessages.apiKeyLabel)}</label>
                             <input
                                 type="text"
                                 value={this.state.apiKey}
@@ -361,40 +435,40 @@ class AiMenu extends React.PureComponent {
                             />
                         </div>
                         <div>
-                            <label style={labelStyle}>Modelo</label>
+                            <label style={labelStyle}>{this.props.intl.formatMessage(menuMessages.modelLabel)}</label>
                             {this.state.loading ? (
                                 <div style={{color: 'rgba(255,255,255,0.6)', fontSize: '0.78rem', padding: '6px 0'}}>
-                                    Cargando modelos...
+                                    {this.props.intl.formatMessage(menuMessages.loadingModels)}
                                 </div>
                             ) : (
                                 <AiSelect
                                     value={this.state.model}
                                     options={modelOptions}
                                     onChange={this.handleModelChange}
-                                    placeholder="Seleccionar modelo..."
+                                    placeholder={this.props.intl.formatMessage(menuMessages.selectModelPlaceholder)}
                                 />
                             )}
                         </div>
                         <div style={toggleStyle}>
-                            <span style={toggleLabelStyle}>Entrenamiento</span>
+                            <span style={toggleLabelStyle}>{this.props.intl.formatMessage(menuMessages.trainingLabel)}</span>
                             <button
                                 style={toggleSwitchStyle(this.state.trainingEnabled)}
                                 onClick={this.handleTrainingToggle}
                                 type="button"
-                                title={this.state.trainingEnabled ? 'Entrenamiento activado' : 'Entrenamiento desactivado'}
+                                title={this.props.intl.formatMessage(this.state.trainingEnabled ? menuMessages.trainingOn : menuMessages.trainingOff)}
                             >
                                 <div style={toggleKnobStyle(this.state.trainingEnabled)} />
                             </button>
                         </div>
                         <div style={Object.assign({}, toggleStyle, {marginTop: 4})}>
                             <span style={Object.assign({}, toggleLabelStyle, {fontSize: '0.68rem'})}>
-                                Modo Mentor (beta)
+                                {this.props.intl.formatMessage(menuMessages.mentorLabel)}
                             </span>
                             <button
                                 style={toggleSwitchStyle(this.state.mentorMode)}
                                 onClick={this.handleMentorToggle}
                                 type="button"
-                                title={this.state.mentorMode ? 'Modo mentor activado' : 'Modo mentor desactivado'}
+                                title={this.props.intl.formatMessage(this.state.mentorMode ? menuMessages.mentorOn : menuMessages.mentorOff)}
                             >
                                 <div style={toggleKnobStyle(this.state.mentorMode)} />
                             </button>
@@ -407,6 +481,7 @@ class AiMenu extends React.PureComponent {
 }
 
 AiMenu.propTypes = {
+    intl: intlShape,
     isRtl: PropTypes.bool,
     menuOpen: PropTypes.bool,
     onRequestCloseSettings: PropTypes.func,
@@ -426,4 +501,4 @@ var mapDispatchToProps = function (dispatch, ownProps) {
     };
 };
 
-export default connect(mapStateToProps, mapDispatchToProps)(AiMenu);
+export default connect(mapStateToProps, mapDispatchToProps)(injectIntl(AiMenu));

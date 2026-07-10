@@ -237,6 +237,14 @@ class Runtime extends EventEmitter {
         this._blockInfo = [];
 
         /**
+         * IDs of categories that were registered by the EVM device system.
+         * Used for cleanup when switching devices.
+         * @type {Array.<string>}
+         * @private
+         */
+        this._deviceCategoryIds = [];
+
+        /**
          * Map to look up hat blocks' metadata.
          * Keys are opcode for hat, values are metadata objects.
          * @type {Object.<string, Object>}
@@ -600,6 +608,22 @@ class Runtime extends EventEmitter {
     }
 
     /**
+     * Event name for reporting that an EVM device was loaded.
+     * @const {string}
+     */
+    static get EVM_DEVICE_LOADED () {
+        return 'EVM_DEVICE_LOADED';
+    }
+
+    /**
+     * Event name for reporting that an EVM device was cleared.
+     * @const {string}
+     */
+    static get EVM_DEVICE_CLEARED () {
+        return 'EVM_DEVICE_CLEARED';
+    }
+
+    /**
      * Event name for reporting that an extension as asked for a custom field to be added
      * @const {string}
      */
@@ -894,6 +918,37 @@ class Runtime extends EventEmitter {
         }
 
         this.emit(Runtime.EXTENSION_ADDED, categoryInfo);
+    }
+
+    /**
+     * Register a category as a device category (tracked for cleanup).
+     * Public wrapper around the private _registerExtensionPrimitives.
+     * @param {ExtensionMetadata} categoryInfo - the category to register
+     */
+    registerDeviceCategory (categoryInfo) {
+        this._deviceCategoryIds.push(categoryInfo.id);
+        this._registerExtensionPrimitives(categoryInfo);
+    }
+
+    /**
+     * Unregister all device-tracked categories, removing them from _blockInfo.
+     * Also removes their primitives and hat entries.
+     */
+    unregisterDeviceCategories () {
+        this._deviceCategoryIds.forEach(catId => {
+            const catIndex = this._blockInfo.findIndex(info => info.id === catId);
+            if (catIndex !== -1) {
+                const catInfo = this._blockInfo[catIndex];
+                catInfo.blocks.forEach(block => {
+                    if (block.json) {
+                        delete this._primitives[block.json.type];
+                        delete this._hats[block.json.type];
+                    }
+                });
+                this._blockInfo.splice(catIndex, 1);
+            }
+        });
+        this._deviceCategoryIds = [];
     }
 
     /**

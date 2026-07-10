@@ -1,3 +1,33 @@
+import {defineMessages} from 'react-intl';
+
+var validatorMessages = defineMessages({
+    unknownBlock: {
+        id: 'gui.aiBlocks.validator.unknownBlock',
+        defaultMessage: 'Unknown block: "{opcode}" — does not exist in Scratch',
+        description: 'Error when a block opcode is not recognized'
+    },
+    hatNotTopLevel: {
+        id: 'gui.aiBlocks.validator.hatNotTopLevel',
+        defaultMessage: 'Hat "{opcode}" must be top-level (cannot follow another block)',
+        description: 'Error when a hat block is not at the top level'
+    },
+    endHasNext: {
+        id: 'gui.aiBlocks.validator.endHasNext',
+        defaultMessage: 'End "{opcode}" cannot have a next block (it is a terminal block)',
+        description: 'Error when an end/terminal block has a next block'
+    },
+    reporterBooleanTopLevel: {
+        id: 'gui.aiBlocks.validator.reporterBooleanTopLevel',
+        defaultMessage: 'Reporter/Boolean "{opcode}" cannot be top-level (must be inside another block)',
+        description: 'Error when a reporter or boolean block is top-level'
+    },
+    cBlockEmpty: {
+        id: 'gui.aiBlocks.validator.cBlockEmpty',
+        defaultMessage: 'C-block "{opcode}" is empty (needs child blocks)',
+        description: 'Error when a C-shaped block has no child blocks'
+    }
+});
+
 var OPCODES = {
     event_whenflagclicked: 'hat', event_whenkeypressed: 'hat', event_whenstageclicked: 'hat',
     event_whenthisspriteclicked: 'hat', event_whenbackdropswitchesto: 'hat',
@@ -59,7 +89,7 @@ var OPCODES = {
     sensing_keyoptions: 'reporter', sensing_of_object_menu: 'reporter'
 };
 
-function validate(blockData) {
+function validate(blockData, intl) {
     var errors = [];
     var blockMap = blockData.blockMap;
     if (!blockMap) return {valid: true, errors: []};
@@ -73,20 +103,20 @@ function validate(blockData) {
 
         var shape = OPCODES[b.opcode];
         if (!shape) {
-            errors.push('Bloque desconocido: "' + b.opcode + '" — no existe en Scratch');
+            errors.push(intl ? intl.formatMessage(validatorMessages.unknownBlock, {opcode: b.opcode}) : validatorMessages.unknownBlock.defaultMessage.replace('{opcode}', b.opcode));
             continue;
         }
 
         if (shape === 'hat' && !b.topLevel) {
-            errors.push('Hat "' + b.opcode + '" debe ser top-level (no puede ir después de otro bloque)');
+            errors.push(intl ? intl.formatMessage(validatorMessages.hatNotTopLevel, {opcode: b.opcode}) : validatorMessages.hatNotTopLevel.defaultMessage.replace('{opcode}', b.opcode));
         }
 
         if (shape === 'end' && b.next) {
-            errors.push('End "' + b.opcode + '" no puede tener next (es bloque terminal)');
+            errors.push(intl ? intl.formatMessage(validatorMessages.endHasNext, {opcode: b.opcode}) : validatorMessages.endHasNext.defaultMessage.replace('{opcode}', b.opcode));
         }
 
         if ((shape === 'reporter' || shape === 'boolean') && b.topLevel) {
-            errors.push('Reporter/Boolean "' + b.opcode + '" no puede ser top-level (debe ir dentro de otro bloque)');
+            errors.push(intl ? intl.formatMessage(validatorMessages.reporterBooleanTopLevel, {opcode: b.opcode}) : validatorMessages.reporterBooleanTopLevel.defaultMessage.replace('{opcode}', b.opcode));
         }
 
         if (shape === 'c') {
@@ -98,7 +128,7 @@ function validate(blockData) {
                 }
             }
             if (!hasStatementChild) {
-                errors.push('C-block "' + b.opcode + '" está vacío (necesita bloques dentro)');
+                errors.push(intl ? intl.formatMessage(validatorMessages.cBlockEmpty, {opcode: b.opcode}) : validatorMessages.cBlockEmpty.defaultMessage.replace('{opcode}', b.opcode));
             }
         }
     }

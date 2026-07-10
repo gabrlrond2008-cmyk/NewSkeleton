@@ -8,9 +8,10 @@
         This color is lighter than sound-primary, but
         cannot use alpha because of overlapping elements.
     */
-    fill: hsl(300, 54%, 72%);
-    stroke: $sound-tertiary;
+    fill: $looks-secondary;
+    fill-opacity: 0.3;
+    stroke: $looks-secondary-dark;
 }
 .baseline {
-    stroke: $sound-tertiary;
+    stroke: $looks-secondary-dark;
 }

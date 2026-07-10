@@ -1,8 +1,102 @@
 import PropTypes from 'prop-types';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 import {markdownToHtml} from '../../lib/markdown.js';
 import {BLOCKS} from '../../lib/ai-block-library';
 import styles from './ai-tab.css';
+
+var messages = defineMessages({
+    emptyTitle: {
+        id: 'gui.aiTab.emptyTitle',
+        defaultMessage: 'Ask me about the app',
+        description: 'AI tab empty state title'
+    },
+    emptyHint: {
+        id: 'gui.aiTab.emptyHint',
+        defaultMessage: 'E.g.: What components does it have? How does the block editor work? What is split mode?',
+        description: 'AI tab empty state hint'
+    },
+    inputPlaceholder: {
+        id: 'gui.aiTab.inputPlaceholder',
+        defaultMessage: 'Type your question... (use @ for blocks)',
+        description: 'AI chat input placeholder'
+    },
+    verify: {
+        id: 'gui.aiTab.verify',
+        defaultMessage: 'Verify',
+        description: 'Verify button text'
+    },
+    verifying: {
+        id: 'gui.aiTab.verifying',
+        defaultMessage: 'Verifying...',
+        description: 'Verify button text while verifying'
+    },
+    verifyTitle: {
+        id: 'gui.aiTab.verifyTitle',
+        defaultMessage: 'Verify answer',
+        description: 'Verify button tooltip'
+    },
+    instruct: {
+        id: 'gui.aiTab.instruct',
+        defaultMessage: 'Instruct',
+        description: 'Instruct button text'
+    },
+    instructing: {
+        id: 'gui.aiTab.instructing',
+        defaultMessage: 'Analyzing...',
+        description: 'Instruct button text while analyzing'
+    },
+    instructTitle: {
+        id: 'gui.aiTab.instructTitle',
+        defaultMessage: 'Analyze blocks and guide the student',
+        description: 'Instruct button tooltip'
+    },
+    create: {
+        id: 'gui.aiTab.create',
+        defaultMessage: 'Create',
+        description: 'Create blocks button text'
+    },
+    creating: {
+        id: 'gui.aiTab.creating',
+        defaultMessage: 'Creating...',
+        description: 'Create blocks button text while creating'
+    },
+    createTitle: {
+        id: 'gui.aiTab.createTitle',
+        defaultMessage: 'Create blocks in the editor',
+        description: 'Create blocks button tooltip'
+    },
+    train: {
+        id: 'gui.aiTab.train',
+        defaultMessage: 'Train',
+        description: 'Train button text'
+    },
+    trainTitle: {
+        id: 'gui.aiTab.trainTitle',
+        defaultMessage: 'Save as training example',
+        description: 'Train button tooltip'
+    },
+    analyzingDots: {
+        id: 'gui.aiTab.analyzingDots',
+        defaultMessage: 'Analyzing',
+        description: 'Loading text while AI is responding'
+    },
+    blocksDetected: {
+        id: 'gui.aiTab.blocksDetected',
+        defaultMessage: '{count} block(s) detected',
+        description: 'Block check summary showing count'
+    },
+    blocksInEditor: {
+        id: 'gui.aiTab.blocksInEditor',
+        defaultMessage: '{count} block(s) in editor',
+        description: 'Block check info showing count in editor'
+    },
+    blocksNotCreated: {
+        id: 'gui.aiTab.blocksNotCreated',
+        defaultMessage: 'Blocks not created yet (use "Create")',
+        description: 'Warning when blocks are valid but not yet created'
+    }
+});
 
 var CAT_COLORS = {
     motion: '#4C97FF',
@@ -53,7 +147,7 @@ function getWorkspaceBlocks(vm) {
 }
 
 var AiTabComponent = function (props) {
-    var {messages, sending, verifyingIndex, typingData, creatingIndex, createStatus, trainingEnabled,
+    var {intl, messages: msgs, sending, verifyingIndex, typingData, creatingIndex, createStatus, trainingEnabled,
         mentorMode, instructing, vm, onSend, onVerify, onCreateBlocks, onTrain, onInstruct} = props;
     var [input, setInput] = useState('');
     var [suggestions, setSuggestions] = useState([]);
@@ -75,7 +169,7 @@ var AiTabComponent = function (props) {
         return function () {
             if (debounceRef.current) clearTimeout(debounceRef.current);
         };
-    }, [messages, typingData]);
+    }, [msgs, typingData]);
 
     var handleScroll = useCallback(function () {
         if (listRef.current) {
@@ -211,7 +305,7 @@ var AiTabComponent = function (props) {
     return (
         <div className={styles.container}>
             <div ref={listRef} onScroll={handleScroll} className={styles.messageList}>
-                {messages.length === 0 && (
+                {msgs.length === 0 && (
                     <div className={styles.empty}>
                         <div className={styles.emptyIcon}>
                             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#ccc" strokeWidth="1.5">
@@ -220,14 +314,14 @@ var AiTabComponent = function (props) {
                             </svg>
                         </div>
                         <div className={styles.emptyText}>
-                            Preguntame sobre la aplicación<br/>
+                            {intl.formatMessage(messages.emptyTitle)}<br/>
                             <span className={styles.emptyHint}>
-                                Ej: ¿Qué componentes tiene? ¿Cómo funciona el editor de bloques? ¿Qué es el split mode?
+                                {intl.formatMessage(messages.emptyHint)}
                             </span>
                         </div>
                     </div>
                 )}
-                {messages.map(function (msg, i) {
+                {msgs.map(function (msg, i) {
                     var isUser = msg.role === 'user';
                     var isSystem = msg.role === 'system';
                     var isAssistant = msg.role === 'assistant';
@@ -250,7 +344,7 @@ var AiTabComponent = function (props) {
                                 }
                             >
                                 <div className={styles.avatar}>
-                                    {isUser ? '👤' : isSystem ? '⚙' : '🤖'}
+                                    {isUser ? '\u{1F464}' : isSystem ? '\u2699' : '\u{1F916}'}
                                 </div>
                                 <div className={styles.bubble}>
                                     {typing ? (
@@ -269,25 +363,25 @@ var AiTabComponent = function (props) {
                                         className={styles.verifyBtn + (isVerifying ? ' ' + styles.verifying : '')}
                                         onClick={function () { onVerify(i); }}
                                         disabled={isVerifying || sending}
-                                        title="Verificar respuesta"
+                                        title={intl.formatMessage(messages.verifyTitle)}
                                     >
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                             <path d="M9 12l2 2 4-4"/>
                                             <circle cx="12" cy="12" r="10"/>
                                         </svg>
-                                        {isVerifying ? 'Verificando...' : 'Verificar'}
+                                        {isVerifying ? intl.formatMessage(messages.verifying) : intl.formatMessage(messages.verify)}
                                     </button>
                                     {mentorMode && (
                                         <button
                                             className={styles.createBtn + (instructing ? ' ' + styles.creating : '')}
                                             onClick={function () { onInstruct(i); }}
                                             disabled={instructing || sending}
-                                            title="Analizar bloques y guiar al estudiante"
+                                            title={intl.formatMessage(messages.instructTitle)}
                                         >
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                                 <path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z"/>
                                             </svg>
-                                            {instructing ? 'Analizando...' : 'Instruir'}
+                                            {instructing ? intl.formatMessage(messages.instructing) : intl.formatMessage(messages.instruct)}
                                         </button>
                                     )}
                                     {!mentorMode && msg.hasBlocks && (
@@ -295,12 +389,12 @@ var AiTabComponent = function (props) {
                                             className={styles.createBtn + (creatingIndex === i ? ' ' + styles.creating : '')}
                                             onClick={function () { onCreateBlocks(i); }}
                                             disabled={creatingIndex !== null || sending}
-                                            title="Crear bloques en el editor"
+                                            title={intl.formatMessage(messages.createTitle)}
                                         >
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                                 <path d="M12 4v16M4 12h16"/>
                                             </svg>
-                                            {creatingIndex === i ? 'Creando...' : 'Crear'}
+                                            {creatingIndex === i ? intl.formatMessage(messages.creating) : intl.formatMessage(messages.create)}
                                         </button>
                                     )}
                                     {trainingEnabled !== false && (
@@ -308,14 +402,14 @@ var AiTabComponent = function (props) {
                                             className={styles.trainBtn}
                                             onClick={function () { onTrain(i); }}
                                             disabled={sending}
-                                            title="Guardar como ejemplo de entrenamiento"
+                                            title={intl.formatMessage(messages.trainTitle)}
                                         >
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                                 <path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/>
                                                 <polyline points="17,21 17,13 7,13 7,21"/>
                                                 <polyline points="7,3 7,8 15,8"/>
                                             </svg>
-                                            Entrenar
+                                            {intl.formatMessage(messages.train)}
                                         </button>
                                     )}
                                 </div>
@@ -328,7 +422,7 @@ var AiTabComponent = function (props) {
                                     (createStatus.type === 'loading' ? ' ' + styles.createLoading : '')
                                 }>
                                     <span className={styles.createStatusIcon}>
-                                        {createStatus.type === 'success' ? '✓' : createStatus.type === 'error' ? '⚠' : '⏳'}
+                                        {createStatus.type === 'success' ? '\u2713' : createStatus.type === 'error' ? '\u26A0' : '\u23F3'}
                                     </span>
                                     <span>{createStatus.message}</span>
                                 </div>
@@ -336,7 +430,7 @@ var AiTabComponent = function (props) {
                             {hasVerification && (
                                 <div className={styles.verificationPanel}>
                                     <div className={styles.verifIcon}>
-                                        {msg.verification.result === 'CORRECTO' ? '✓' : '⚠'}
+                                        {msg.verification.result === 'CORRECTO' ? '\u2713' : '\u26A0'}
                                     </div>
                                     <div className={styles.verifContent}>
                                         <div className={styles.verifResult}>
@@ -351,11 +445,11 @@ var AiTabComponent = function (props) {
                             {hasBlockCheck && msg.blockCheck.found && (
                                 <div className={styles.blockCheckPanel + ' ' + (msg.blockCheck.valid && msg.blockCheck.created ? styles.blockCheckOK : styles.blockCheckIssues)}>
                                     <div className={styles.blockCheckIcon}>
-                                        {msg.blockCheck.valid && msg.blockCheck.created ? '📦✓' : '📦⚠'}
+                                        {msg.blockCheck.valid && msg.blockCheck.created ? '\u{1F4E6}\u2713' : '\u{1F4E6}\u26A0'}
                                     </div>
                                     <div className={styles.blockCheckContent}>
                                         <div className={styles.blockCheckSummary}>
-                                            {msg.blockCheck.intendedCount} bloque(s) detectados
+                                            {intl.formatMessage(messages.blocksDetected, {count: msg.blockCheck.intendedCount})}
                                         </div>
                                         {!msg.blockCheck.valid && msg.blockCheck.validationErrors.length > 0 && (
                                             <div className={styles.blockCheckError}>
@@ -369,12 +463,12 @@ var AiTabComponent = function (props) {
                                         )}
                                         {msg.blockCheck.valid && msg.blockCheck.created && (
                                             <div className={styles.blockCheckOKText}>
-                                                {msg.blockCheck.actualCount} bloque(s) en el editor
+                                                {intl.formatMessage(messages.blocksInEditor, {count: msg.blockCheck.actualCount})}
                                             </div>
                                         )}
                                         {!msg.blockCheck.created && msg.blockCheck.valid && (
                                             <div className={styles.blockCheckWarn}>
-                                                Bloques no creados aún (usá "Crear")
+                                                {intl.formatMessage(messages.blocksNotCreated)}
                                             </div>
                                         )}
                                     </div>
@@ -385,9 +479,9 @@ var AiTabComponent = function (props) {
                 })}
                 {sending && (
                     <div className={styles.message + ' ' + styles.assistantMsg}>
-                        <div className={styles.avatar}>🤖</div>
+                        <div className={styles.avatar}>{'\u{1F916}'}</div>
                         <div className={styles.bubble}>
-                            <span className={styles.typing}>Analizando</span>
+                            <span className={styles.typing}>{intl.formatMessage(messages.analyzingDots)}</span>
                             <span className={styles.dot1}>.</span>
                             <span className={styles.dot2}>.</span>
                             <span className={styles.dot3}>.</span>
@@ -424,7 +518,7 @@ var AiTabComponent = function (props) {
                     ref={inputRef}
                     className={styles.input}
                     type="text"
-                    placeholder="Escribí tu pregunta... (usá @ para bloques)"
+                    placeholder={intl.formatMessage(messages.inputPlaceholder)}
                     value={input}
                     onChange={handleInputChange}
                     onKeyDown={handleKeyDown}
@@ -450,6 +544,7 @@ var AiTabComponent = function (props) {
 };
 
 AiTabComponent.propTypes = {
+    intl: intlShape,
     messages: PropTypes.arrayOf(PropTypes.shape({
         role: PropTypes.string,
         content: PropTypes.string,
@@ -495,4 +590,4 @@ AiTabComponent.propTypes = {
     vm: PropTypes.object
 };
 
-export default AiTabComponent;
+export default injectIntl(AiTabComponent);

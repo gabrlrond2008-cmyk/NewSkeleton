@@ -1,4 +1,4 @@
-import AI_KNOWLEDGE from './ai-knowledge';
+import {getKnowledge} from './ai-knowledge';
 import {getCompactPromptLines, getDetailedBlockInfo} from './ai-block-library';
 import {TrainingEngine, generateOptimizedPrompt} from './ai-training-engine';
 
@@ -36,7 +36,9 @@ function buildTrainingPrompt(examples) {
     return generateOptimizedPrompt(examples);
 }
 
-function buildMentorSystemPrompt(sessionSummary) {
+function buildMentorSystemPrompt(sessionSummary, locale) {
+    var knowledge = getKnowledge(locale);
+    var lang = locale === 'es' ? 'español' : (locale === 'en' ? 'English' : (locale || 'español'));
     var lines = [
         'Eres un mentor de Scratch. Tu rol es ENSEÑAR y GUIAR al usuario, NO hacer el trabajo por él.',
         '',
@@ -46,7 +48,7 @@ function buildMentorSystemPrompt(sessionSummary) {
         '3. Explicá los CONCEPTOS: qué hace cada bloque, cómo se combinan, la lógica detrás.',
         '4. Dá pistas y sugerencias, pero dejá que el usuario descubra cómo implementarlo.',
         '5. Si el usuario pide un proyecto completo, guialo paso a paso sin darle el código.',
-        '6. Respondé SIEMPRE en español, claro y didáctico.',
+        '6. La app está configurada en ' + lang + '. Respondé SIEMPRE en ' + lang + ', claro y didáctico.',
         '7. Usá analogías y ejemplos del mundo real para explicar conceptos.',
         '8. Si el usuario se equivoca, señalá el error y preguntale cómo lo solucionaría.',
         '',
@@ -60,11 +62,11 @@ function buildMentorSystemPrompt(sessionSummary) {
 
     lines.push('');
     lines.push('Áreas:');
-    for (var fi = 0; fi < AI_KNOWLEDGE.features.length; fi++) {
-        var feat = AI_KNOWLEDGE.features[fi];
+    for (var fi = 0; fi < knowledge.features.length; fi++) {
+        var feat = knowledge.features[fi];
         lines.push(feat.area + ': ' + feat.items.length + ' funcionalidades');
     }
-    lines.push('Pestañas: ' + AI_KNOWLEDGE.tabs.map(function (t) { return t.label; }).join(', '));
+    lines.push('Pestañas: ' + knowledge.tabs.map(function (t) { return t.label; }).join(', '));
 
     if (sessionSummary) {
         lines.push('');
@@ -75,14 +77,16 @@ function buildMentorSystemPrompt(sessionSummary) {
 }
 
 var _appPromptCache = null;
-function buildAppSystemPrompt(trainingExamples, sessionSummary) {
+function buildAppSystemPrompt(trainingExamples, sessionSummary, locale) {
+    var knowledge = getKnowledge(locale);
     if (!trainingExamples && !sessionSummary && _appPromptCache) return _appPromptCache;
+    var lang = locale === 'es' ? 'español' : (locale === 'en' ? 'English' : (locale || 'español'));
     var lines = [
         'Eres asistente Scratch GUI. PODÉS crear/editar bloques reales.',
         '',
         'DEBES responder SIEMPRE en formato JSON con la siguiente estructura:',
         '{',
-        '  "explanation": "Explicación en español para mostrar en el chat sobre qué hace el script o la respuesta a la pregunta del usuario.",',
+        '  "explanation": "Explicación en ' + lang + ' para mostrar en el chat sobre qué hace el script o la respuesta a la pregunta del usuario.",',
         '  "clearExisting": true o false (si es true, borra los bloques actuales del Sprite; si es false, agrega los nuevos bloques al lado),',
         '  "scripts": [',
         '    {',
@@ -191,13 +195,13 @@ function buildAppSystemPrompt(trainingExamples, sessionSummary) {
     lines.push('- Si dudás de un bloque, usá DETALLE:opcode y recibirás la info completa.');
 
     lines.push('Áreas:');
-    for (var fi = 0; fi < AI_KNOWLEDGE.features.length; fi++) {
-        var feat = AI_KNOWLEDGE.features[fi];
+    for (var fi = 0; fi < knowledge.features.length; fi++) {
+        var feat = knowledge.features[fi];
         lines.push(feat.area + ': ' + feat.items.length + ' funcionalidades');
     }
-    lines.push('Pestañas: ' + AI_KNOWLEDGE.tabs.map(function (t) { return t.label; }).join(', '));
+    lines.push('Pestañas: ' + knowledge.tabs.map(function (t) { return t.label; }).join(', '));
     lines.push('Menús: Archivo | Configuración | Modo | Acerca de | AI');
-    lines.push('Proveedores: ' + Object.keys(AI_KNOWLEDGE.aiSettings.providers).join(', '));
+    lines.push('Proveedores: ' + Object.keys(knowledge.aiSettings.providers).join(', '));
 
     if (sessionSummary) {
         lines.push('');
@@ -392,23 +396,24 @@ function callGemini(apiKey, model, messages, maxTokens, retries) {
     return attempt(retries);
 }
 
-function AiService(provider, apiKey, model, trainingData) {
+function AiService(provider, apiKey, model, trainingData, locale) {
     this.provider = provider;
     this.apiKey = apiKey;
     this.model = model;
     this.trainingData = trainingData || [];
     this.sessionSummary = '';
-    this.systemPrompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null);
+    this.locale = locale || 'es';
+    this.systemPrompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, '', this.locale);
 }
 
 AiService.prototype.setTrainingData = function (trainingData) {
     this.trainingData = trainingData || [];
-    this.systemPrompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, this.sessionSummary);
+    this.systemPrompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, this.sessionSummary, this.locale);
 };
 
 AiService.prototype.setSessionSummary = function (summary) {
     this.sessionSummary = summary || '';
-    this.systemPrompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, this.sessionSummary);
+    this.systemPrompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, this.sessionSummary, this.locale);
 };
 
 AiService.prototype._call = function (messages, maxTokens) {
@@ -426,11 +431,11 @@ AiService.prototype._call = function (messages, maxTokens) {
 AiService.prototype.ask = function (userMessage, sessionSummary, mentorMode) {
     var prompt;
     if (mentorMode) {
-        prompt = buildMentorSystemPrompt(sessionSummary || '');
+        prompt = buildMentorSystemPrompt(sessionSummary || '', this.locale);
     } else {
         prompt = this.systemPrompt;
         if (sessionSummary) {
-            prompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, sessionSummary);
+            prompt = buildAppSystemPrompt(this.trainingData.length > 0 ? this.trainingData : null, sessionSummary, this.locale);
         }
     }
     return this._call([

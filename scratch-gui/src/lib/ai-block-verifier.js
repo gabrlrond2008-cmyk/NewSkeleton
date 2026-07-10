@@ -1,4 +1,24 @@
-function verifyBlocks(blockData, vm) {
+import {defineMessages} from 'react-intl';
+
+var verifierMessages = defineMessages({
+    couldNotRead: {
+        id: 'gui.aiBlocks.verifier.couldNotRead',
+        defaultMessage: 'Could not read the created blocks',
+        description: 'Error when created blocks cannot be read for verification'
+    },
+    missingBlocks: {
+        id: 'gui.aiBlocks.verifier.missingBlocks',
+        defaultMessage: 'Missing blocks: expected {expected}, created {created}',
+        description: 'Error when fewer blocks were created than expected'
+    },
+    missingOpcode: {
+        id: 'gui.aiBlocks.verifier.missingOpcode',
+        defaultMessage: 'Missing "{opcode}": expected {expected}, found {found}',
+        description: 'Error when a specific opcode count is less than expected'
+    }
+});
+
+function verifyBlocks(blockData, vm, intl) {
     if (!blockData || !blockData.blockMap || !vm || !vm.editingTarget) {
         return {ok: true, issues: []};
     }
@@ -15,7 +35,7 @@ function verifyBlocks(blockData, vm) {
 
     var actual = vm.editingTarget.blocks;
     if (!actual || !actual._blocks) {
-        issues.push('No se pudieron leer los bloques creados');
+        issues.push(intl ? intl.formatMessage(verifierMessages.couldNotRead) : verifierMessages.couldNotRead.defaultMessage);
         return {ok: false, issues: issues};
     }
 
@@ -25,7 +45,7 @@ function verifyBlocks(blockData, vm) {
     }
 
     if (actualNonShadow < intendedCount) {
-        issues.push('Faltan bloques: se esperaban ' + intendedCount + ', se crearon ' + actualNonShadow);
+        issues.push(intl ? intl.formatMessage(verifierMessages.missingBlocks, {expected: intendedCount, created: actualNonShadow}) : verifierMessages.missingBlocks.defaultMessage.replace('{expected}', intendedCount).replace('{created}', actualNonShadow));
     }
 
     var intendedOpcodes = {};
@@ -48,7 +68,7 @@ function verifyBlocks(blockData, vm) {
         var expected = intendedOpcodes[op];
         var found = actualOpcodes[op] || 0;
         if (found < expected) {
-            issues.push('Falta/n "' + op + '": se esperaban ' + expected + ', se encontraron ' + found);
+            issues.push(intl ? intl.formatMessage(verifierMessages.missingOpcode, {opcode: op, expected: expected, found: found}) : verifierMessages.missingOpcode.defaultMessage.replace('{opcode}', op).replace('{expected}', expected).replace('{found}', found));
         }
     }
 

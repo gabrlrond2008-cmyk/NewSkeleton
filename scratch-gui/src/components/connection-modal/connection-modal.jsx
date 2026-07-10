@@ -1,6 +1,7 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import keyMirror from 'keymirror';
+import {defineMessages, FormattedMessage} from 'react-intl';
 
 import Box from '../box/box.jsx';
 import Modal from '../../containers/modal.jsx';
@@ -14,6 +15,14 @@ import UnavailableStep from './unavailable-step.jsx';
 import UpdatePeripheralStep from './update-peripheral-step.jsx';
 
 import styles from './connection-modal.css';
+
+var connectionMessages = defineMessages({
+    connecting: {
+        id: 'gui.connectionModal.connecting',
+        defaultMessage: 'Connecting',
+        description: 'Default connecting message for extensions'
+    }
+});
 
 const PHASES = keyMirror({
     scanning: null,
@@ -59,7 +68,7 @@ ConnectionModalComponent.propTypes = {
 };
 
 ConnectionModalComponent.defaultProps = {
-    connectingMessage: 'Connecting'
+    connectingMessage: <FormattedMessage {...connectionMessages.connecting} />
 };
 
 export {

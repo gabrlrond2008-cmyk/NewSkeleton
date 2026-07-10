@@ -41,6 +41,7 @@ const messages = defineMessages({
 
 const PromptComponent = props => (
     <Modal
+        id="prompt"
         className={styles.modalContent}
         contentLabel={props.title}
         onRequestClose={props.onCancel}

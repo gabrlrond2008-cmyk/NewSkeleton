@@ -1,0 +1,78 @@
+.simulationWrapper {
+    display: flex;
+    flex-direction: row;
+    height: 100%;
+    overflow: hidden;
+}
+
+.stageSection {
+    flex: 1 1 0;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.stageSection > div {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.stageSection :global([class*="stage-wrapper_stage-canvas-wrapper"]) {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+}
+
+.stageSection :global([class*="stage_stage-wrapper"]) {
+    position: relative;
+    flex: 0 0 auto;
+    display: flex;
+    flex-direction: column;
+    margin-left: 23px;
+}
+
+.stageSection :global([class*="stage_stage"]):not([class*="-wrapper"]) {
+    width: 755px !important;
+    height: 635px !important;
+    flex: 0 0 auto;
+    position: relative;
+}
+
+.stageSection :global([class*="stage_stage"]):not([class*="-wrapper"]) > * {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.stageSection :global([class*="stage_stage"]):not([class*="-wrapper"]) > div > canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+
+.stageSection :global([class*="stage-overlays"]) {
+    width: 755px !important;
+    height: 635px !important;
+}
+
+.stageSection :global([class*="stage-header_stage-size-row"]) {
+    display: none !important;
+}
+
+.stageSection :global([class*="stage-wrapper_stage-menu-wrapper"]) {
+    display: none !important;
+}
+
+.targetPaneSection {
+    flex: 0 0 460px;
+    border-left: 1px solid rgba(0, 0, 0, 0.15);
+    min-height: 701.6px;
+}
+
+.targetPaneSection > :global(div) {
+    height: 701.6px !important;
+}
+
+

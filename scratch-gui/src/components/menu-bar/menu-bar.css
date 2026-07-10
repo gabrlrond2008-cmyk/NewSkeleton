@@ -207,6 +207,12 @@
     vertical-align: middle;
 }
 
+.deviceIconImg {
+    max-height: 2rem;
+    max-width: 2rem;
+    object-fit: contain;
+}
+
 .collapsible-label {
     margin: 0 .5rem 0 .25rem;
 }

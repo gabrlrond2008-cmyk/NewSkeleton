@@ -3,7 +3,6 @@
 
 .tabList {
     height: $stage-menu-height;
-    width: 250px;
     display: flex;
     align-items: flex-end;
     flex-shrink: 0;
@@ -13,10 +12,11 @@
     margin: 0;
     border-bottom: 0;
     position: relative;
+    overflow: visible;
 }
 
 .tab {
-    flex-grow: 1;
+    flex: 0 0 auto;
     height: 80%;
     margin-bottom: 0;
     border-radius: 1rem 1rem 0 0;
@@ -34,7 +34,9 @@
     cursor: pointer;
     transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
                 color 0.25s cubic-bezier(0.4, 0, 0.2, 1),
-                height 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+                height 0.25s cubic-bezier(0.4, 0, 0.2, 1),
+                opacity 0.2s ease,
+                transform 0.2s ease;
     outline: none;
     position: relative;
 }
@@ -51,11 +53,25 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
-/* Chrome-style insertion indicator — a thin vertical blue line */
+.tabEnter {
+    animation: tabSlideIn 0.2s ease both;
+}
+
+@keyframes tabSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(12px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
 .insertIndicator {
     width: 2px;
     height: 60%;
-    background: #4c97ff;
+    background: $motion-primary;
     flex-shrink: 0;
     position: relative;
     z-index: 10;
@@ -65,7 +81,179 @@
     margin: 0 -1px;
 }
 
-/* Combined fused tab — both split tabs rendered as one element */
+/* ===== CLOSE BUTTON ===== */
+.closeBtn {
+    font-size: 14px;
+    line-height: 1;
+    margin-left: 4px;
+    padding: 0 2px;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    cursor: pointer;
+    border-radius: 2px;
+    color: $text-primary-transparent;
+}
+
+.tab:hover .closeBtn {
+    opacity: 0.6;
+}
+
+.closeBtn:hover {
+    opacity: 1 !important;
+    background: rgba(0, 0, 0, 0.08);
+}
+
+.tab.selected .closeBtn {
+    color: $looks-secondary;
+}
+
+/* ===== ADD TAB BUTTON ===== */
+.addTabWrapper {
+    position: relative;
+    display: flex;
+    align-items: flex-end;
+    height: 100%;
+    flex-shrink: 0;
+}
+
+.addTabBtn {
+    flex: 0 0 auto;
+    min-width: 32px;
+    padding: 0.125rem 0.5rem 0;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: $text-primary-transparent;
+    z-index: 3;
+}
+
+.addTabBtn:hover {
+    background-color: $ui-primary;
+    color: $looks-secondary;
+}
+
+.addTabOpen {
+    background-color: $ui-white;
+    color: $looks-secondary;
+    z-index: 20;
+}
+
+/* ===== ADD TAB MENU ===== */
+.addMenu {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    min-width: 220px;
+    background: $ui-white;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 8px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 100;
+    padding: 6px;
+    display: flex;
+    flex-direction: row;
+    gap: 0;
+    animation: menuSlideDown 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+    transform-origin: top left;
+}
+
+.addMenuColumn {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+}
+
+.addMenuHeader {
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: $text-primary-transparent;
+    padding: 4px 8px 2px;
+    margin-bottom: 2px;
+    opacity: 0.7;
+}
+
+.addMenuDivider {
+    width: 1px;
+    background: $ui-black-transparent;
+    margin: 8px 2px;
+    align-self: stretch;
+    flex-shrink: 0;
+}
+
+.addMenuClosing {
+    animation: menuSlideUp 0.2s cubic-bezier(0.4, 0, 0.2, 1) both;
+}
+
+@keyframes menuSlideDown {
+    from {
+        opacity: 0;
+        transform: scaleY(0);
+    }
+    to {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+}
+
+@keyframes menuSlideUp {
+    from {
+        opacity: 1;
+        transform: scaleY(1);
+    }
+    to {
+        opacity: 0;
+        transform: scaleY(0);
+    }
+}
+
+.addMenuTab {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 0.75rem;
+    margin: 0 4px;
+    font-size: 0.7rem;
+    color: $text-primary-transparent;
+    background-color: $ui-tertiary;
+    border: 1px solid $ui-black-transparent;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    height: 28px;
+}
+
+.addMenuTab:hover {
+    background-color: $ui-white;
+    color: $looks-secondary;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+}
+
+.addMenuTabIcon {
+    width: 1.1rem;
+    height: 1.1rem;
+    filter: grayscale(100%) brightness(4);
+    flex-shrink: 0;
+    transition: filter 0.15s ease;
+}
+
+.addMenuTab:hover .addMenuTabIcon {
+    filter: none;
+}
+
+[dir="rtl"] .addMenu {
+    left: auto;
+    right: 0;
+    transform-origin: top right;
+}
+
+[dir="rtl"] .addMenuDivider {
+    margin: 8px 2px;
+}
+
+/* ===== FUSED / SPLIT ===== */
 .fusedTab {
     flex-grow: 2;
     height: 100%;
@@ -96,7 +284,6 @@
     animation: fuseOut 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
 }
 
-/* Each side of the fused tab (one icon per side) */
 .fusedPart {
     flex: 1;
     display: flex;
@@ -105,7 +292,6 @@
     padding: 0.25rem 0;
 }
 
-/* Vertical divider between the two icons */
 .fusedDivider {
     width: 1px;
     height: 1.25rem;
@@ -113,14 +299,12 @@
     flex-shrink: 0;
 }
 
-/* Icons inside the fused tab */
 .fusedIcon {
     width: 1.25rem;
     height: 1.25rem;
     filter: none;
 }
 
-/* Dimmed tab (the one not in the split pair) */
 .dimmed {
     opacity: 0.5;
     height: 80%;
@@ -160,11 +344,22 @@
 
 .tabIcon {
     width: 1.375rem;
-    filter: grayscale(100%);
+    filter: grayscale(100%) brightness(2.5);
+    transition: filter 0.25s ease,
+                transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
 .tab.selected .tabIcon {
     filter: none;
+    animation: tabIconJump 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes tabIconJump {
+    0% { transform: translateY(0); }
+    30% { transform: translateY(-5px); }
+    50% { transform: translateY(-2px); }
+    70% { transform: translateY(-1px); }
+    100% { transform: translateY(0); }
 }
 
 .dragGhost {
@@ -214,9 +409,12 @@
 .tab:nth-child(2) { z-index: 3; }
 .tab:nth-child(3) { z-index: 2; }
 .tab:nth-child(4) { z-index: 1; }
+.tab:nth-child(5) { z-index: 1; }
+.tab:nth-child(6) { z-index: 1; }
 
 .tab.selected { z-index: 5; }
 .fusedTab { z-index: 5; }
+.addTabBtn { z-index: 3; }
 
 @media (max-width: 1023px) {
     .tabList {
@@ -231,13 +429,6 @@
     .tabIcon {
         width: 1rem;
         margin-right: 0.05rem;
-    }
-
-    .tab:nth-child(1),
-    .tab:nth-child(2),
-    .tab:nth-child(3),
-    .tab:nth-child(4) {
-        /* ensure stable z-index stacking in compressed layout */
     }
 
     .tab.selected {

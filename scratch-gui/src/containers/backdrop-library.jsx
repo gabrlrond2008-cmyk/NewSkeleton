@@ -32,7 +32,6 @@ class BackdropLibrary extends React.Component {
             bitmapResolution: item.bitmapResolution,
             skinId: null
         };
-        // Do not switch to stage, just add the backdrop
         this.props.vm.addBackdrop(item.md5ext, vmBackdrop);
     }
     render () {

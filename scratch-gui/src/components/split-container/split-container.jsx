@@ -1,11 +1,21 @@
 import PropTypes from 'prop-types';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import classNames from 'classnames';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 
 import ResizeHandle from '../resize-handle/resize-handle.jsx';
 import styles from './split-container.css';
 
+var messages = defineMessages({
+    closeSplitView: {
+        id: 'gui.splitContainer.closeSplitView',
+        defaultMessage: 'Close split view',
+        description: 'Title for close split view button'
+    }
+});
+
 var SplitContainer = function (props) {
+    var intl = props.intl;
     var panels = props.panels;
     var primaryIndex = props.primaryIndex;
     var secondaryIndex = props.secondaryIndex;
@@ -132,7 +142,7 @@ var SplitContainer = function (props) {
                 <button
                     className={styles.closeButton}
                     onClick={handleClose}
-                    title="Close split view"
+                    title={intl.formatMessage(messages.closeSplitView)}
                     type="button"
                 >
                     &times;
@@ -143,6 +153,7 @@ var SplitContainer = function (props) {
 };
 
 SplitContainer.propTypes = {
+    intl: intlShape,
     panels: PropTypes.arrayOf(PropTypes.node).isRequired,
     primaryIndex: PropTypes.number.isRequired,
     secondaryIndex: PropTypes.number,
@@ -160,4 +171,4 @@ SplitContainer.defaultProps = {
     splitDirection: 'horizontal'
 };
 
-export default React.memo(SplitContainer);
+export default React.memo(injectIntl(SplitContainer));

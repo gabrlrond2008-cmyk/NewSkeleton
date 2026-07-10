@@ -22,6 +22,7 @@ $text-primary-transparent: hsla(225, 15%, 40%, 0.75);
 
 $motion-primary: hsla(225, 100%, 73%, 1); /* #7495ff */
 $motion-tertiary: hsla(225, 80%, 52%, 1); /* #3d6bcc */
+$motion-transparent: hsla(225, 100%, 73%, 0.25); /* 25% transparent motion-primary */
 
 $looks-secondary: hsla(210, 100%, 24%, 1); /* #00357a */
 $looks-transparent: hsla(210, 100%, 24%, 0.35); /* 35% transparent version of looks-secondary */

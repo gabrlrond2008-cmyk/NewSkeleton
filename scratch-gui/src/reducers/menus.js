@@ -8,7 +8,6 @@ const MENU_EDIT = 'editMenu';
 const MENU_FILE = 'fileMenu';
 const MENU_LANGUAGE = 'languageMenu';
 const MENU_LOGIN = 'loginMenu';
-const MENU_MODE = 'modeMenu';
 const MENU_SETTINGS = 'settingsMenu';
 const MENU_THEME = 'themeMenu';
 
@@ -57,7 +56,6 @@ const rootMenu = new Menu('root')
     )
     .addChild(new Menu(MENU_FILE))
     .addChild(new Menu(MENU_EDIT))
-    .addChild(new Menu(MENU_MODE))
     .addChild(new Menu(MENU_SETTINGS))
     .addChild(new Menu(MENU_LOGIN))
     .addChild(new Menu(MENU_ACCOUNT))
@@ -71,7 +69,6 @@ const initialState = {
     [MENU_FILE]: false,
     [MENU_LANGUAGE]: false,
     [MENU_LOGIN]: false,
-    [MENU_MODE]: false,
     [MENU_SETTINGS]: false,
     [MENU_THEME]: false
 };
@@ -141,10 +138,6 @@ const openLoginMenu = () => openMenu(MENU_LOGIN);
 const closeLoginMenu = () => closeMenu(MENU_LOGIN);
 const loginMenuOpen = state => state.scratchGui.menus[MENU_LOGIN];
 
-const openModeMenu = () => openMenu(MENU_MODE);
-const closeModeMenu = () => closeMenu(MENU_MODE);
-const modeMenuOpen = state => state.scratchGui.menus[MENU_MODE];
-
 const openSettingsMenu = () => openMenu(MENU_SETTINGS);
 const closeSettingsMenu = () => closeMenu(MENU_SETTINGS);
 const settingsMenuOpen = state => state.scratchGui.menus[MENU_SETTINGS];
@@ -177,9 +170,6 @@ export {
     openLoginMenu,
     closeLoginMenu,
     loginMenuOpen,
-    openModeMenu,
-    closeModeMenu,
-    modeMenuOpen,
     openSettingsMenu,
     closeSettingsMenu,
     settingsMenuOpen,

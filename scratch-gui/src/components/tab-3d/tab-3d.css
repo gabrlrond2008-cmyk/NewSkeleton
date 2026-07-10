@@ -1,0 +1,29 @@
+.container {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    width: 100%;
+}
+
+.placeholder {
+    text-align: center;
+    color: #999;
+}
+
+.icon {
+    margin-bottom: 16px;
+}
+
+.title {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0 0 8px 0;
+    color: #575E75;
+}
+
+.subtitle {
+    font-size: 1rem;
+    margin: 0;
+    color: #999;
+}

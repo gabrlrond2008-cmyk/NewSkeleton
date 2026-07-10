@@ -6,7 +6,7 @@ import {intlShape, injectIntl} from 'react-intl';
 
 import {connect} from 'react-redux';
 import {openBackdropLibrary} from '../reducers/modals';
-import {activateTab, COSTUMES_TAB_INDEX} from '../reducers/editor-tab';
+import {activateTab, openTab, COSTUMES_TAB} from '../reducers/editor-tab';
 import {showStandardAlert, closeAlertWithId} from '../reducers/alerts';
 import {setHoveredSprite} from '../reducers/hovered-target';
 import DragConstants from '../lib/drag-constants';
@@ -86,7 +86,7 @@ class StageSelector extends React.Component {
             this.props.vm.addBackdrop(backdrop.md5, backdrop)
         )).then(() => {
             if (shouldActivateTab) {
-                return this.props.onActivateTab(COSTUMES_TAB_INDEX);
+                return this.props.onActivateTab(COSTUMES_TAB);
             }
         });
     }
@@ -201,6 +201,7 @@ const mapDispatchToProps = dispatch => ({
     },
     onActivateTab: tabIndex => {
         dispatch(activateTab(tabIndex));
+        dispatch(openTab(tabIndex));
     },
     dispatchSetHoveredSprite: spriteId => {
         dispatch(setHoveredSprite(spriteId));

@@ -12,14 +12,17 @@ import {
     getIsShowingProject
 } from '../reducers/project-state';
 import {
-    activateTab,
+    openTab,
+    closeTab,
+    setActiveTab,
     setSecondaryTab,
     setSplitRatio,
     swapTabs,
     reorderTabs,
-    BLOCKS_TAB_INDEX,
+    CODE_TAB,
     setExplainPending,
-    setProjectKey
+    setProjectKey,
+    restoreTabs
 } from '../reducers/editor-tab';
 
 import {
@@ -31,6 +34,10 @@ import {
     openDeviceLibrary,
     closeDeviceLibrary
 } from '../reducers/modals';
+import {
+    setSelectedDevice,
+    clearSelectedDevice
+} from '../reducers/device';
 
 import FontLoaderHOC from '../lib/font-loader-hoc.jsx';
 import LocalizationHOC from '../lib/localization-hoc.jsx';
@@ -63,7 +70,6 @@ const setProjectIdMetadata = projectId => {
 class GUI extends React.Component {
     componentDidMount () {
         setIsScratchDesktop(this.props.isScratchDesktop);
-        this.props.onStorageInit(storage);
         this.props.onVmInit(this.props.vm);
         setProjectIdMetadata(this.props.projectId);
     }
@@ -98,7 +104,6 @@ class GUI extends React.Component {
             isScratchDesktop,
             isShowingProject,
             onProjectLoaded,
-            onStorageInit,
             onUpdateProjectId,
             onVmInit,
             projectHost,
@@ -136,7 +141,6 @@ GUI.propTypes = {
     loadingStateVisible: PropTypes.bool,
     onProjectLoaded: PropTypes.func,
     onSeeCommunity: PropTypes.func,
-    onStorageInit: PropTypes.func,
     onUpdateProjectId: PropTypes.func,
     onVmInit: PropTypes.func,
     projectHost: PropTypes.string,
@@ -149,7 +153,6 @@ GUI.propTypes = {
 GUI.defaultProps = {
     isScratchDesktop: false,
     isTotallyNormal: false,
-    onStorageInit: storageInstance => storageInstance.addOfficialScratchWebStores(),
     onProjectLoaded: () => {},
     onUpdateProjectId: () => {},
     onVmInit: (/* vm */) => {}
@@ -157,18 +160,22 @@ GUI.defaultProps = {
 
 const mapStateToProps = state => {
     const loadingState = state.scratchGui.projectState.loadingState;
+    const activeTabId = state.scratchGui.editorTab.activeTabId;
+    const secondaryTabId = state.scratchGui.editorTab.secondaryTabId;
+    const openTabs = state.scratchGui.editorTab.openTabs;
+    const hiddenTabs = state.scratchGui.editorTab.hiddenTabs;
     return {
-        activeTabIndex: state.scratchGui.editorTab.activeTabIndex,
-        secondaryTabIndex: state.scratchGui.editorTab.secondaryTabIndex,
+        activeTabId: activeTabId,
+        openTabs: openTabs,
+        hiddenTabs: hiddenTabs,
+        secondaryTabId: secondaryTabId,
         splitPrimaryIndex: state.scratchGui.editorTab.splitPrimaryIndex,
-        splitMode: state.scratchGui.editorTab.secondaryTabIndex !== null,
+        splitMode: secondaryTabId !== null,
         splitRatio: state.scratchGui.editorTab.splitRatio,
-        tabOrder: state.scratchGui.editorTab.tabOrder,
         alertsVisible: state.scratchGui.alerts.visible,
         backdropLibraryVisible: state.scratchGui.modals.backdropLibrary,
-        blocksTabVisible: state.scratchGui.editorTab.activeTabIndex === BLOCKS_TAB_INDEX ||
-            (state.scratchGui.editorTab.secondaryTabIndex !== null &&
-             state.scratchGui.editorTab.secondaryTabIndex === BLOCKS_TAB_INDEX),
+        blocksTabVisible: activeTabId === CODE_TAB ||
+            (secondaryTabId !== null && secondaryTabId === CODE_TAB),
         cardsVisible: state.scratchGui.cards.visible,
         connectionModalVisible: state.scratchGui.modals.connectionModal,
         costumeLibraryVisible: state.scratchGui.modals.costumeLibrary,
@@ -196,19 +203,24 @@ const mapStateToProps = state => {
 
 const mapDispatchToProps = dispatch => ({
     onExtensionButtonClick: () => dispatch(openExtensionLibrary()),
-    onActivateTab: tab => dispatch(activateTab(tab)),
+    onActivateTab: tabId => dispatch(setActiveTab(tabId)),
+    onOpenTab: tabId => dispatch(openTab(tabId)),
+    onCloseTab: tabId => dispatch(closeTab(tabId)),
     onRequestCloseBackdropLibrary: () => dispatch(closeBackdropLibrary()),
     onRequestCloseCostumeLibrary: () => dispatch(closeCostumeLibrary()),
     onRequestCloseDebugModal: () => dispatch(closeDebugModal()),
     onRequestCloseTelemetryModal: () => dispatch(closeTelemetryModal()),
     onRequestOpenDeviceLibrary: () => dispatch(openDeviceLibrary()),
     onRequestCloseDeviceLibrary: () => dispatch(closeDeviceLibrary()),
-    onSetSecondaryTab: tabIndex => dispatch(setSecondaryTab(tabIndex)),
+    onSelectDevice: device => dispatch(setSelectedDevice(device)),
+    onClearDevice: () => dispatch(clearSelectedDevice()),
+    onSetSecondaryTab: tabId => dispatch(setSecondaryTab(tabId)),
     onSetSplitRatio: ratio => dispatch(setSplitRatio(ratio)),
     onSwapTabs: () => dispatch(swapTabs()),
     onReorderTabs: order => dispatch(reorderTabs(order)),
     onClearExplain: () => dispatch(setExplainPending(null)),
-    onSetProjectKey: key => dispatch(setProjectKey(key))
+    onSetProjectKey: key => dispatch(setProjectKey(key)),
+    onRestoreTabs: data => dispatch(restoreTabs(data))
 });
 
 const ConnectedGUI = injectIntl(connect(

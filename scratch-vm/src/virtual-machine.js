@@ -410,9 +410,10 @@ class VirtualMachine extends EventEmitter {
     /**
      * Save a project as .flynt — wraps .sb3 contents + AI data in a single zip.
      * @param {object} aiData Optional AI data: {training, session, settings}
+     * @param {object} deviceData Optional device data: {deviceId, name, ...}
      * @return {!Promise} Promise that resolves with a Blob of the .flynt zip.
      */
-    saveProjectFlynt (aiData) {
+    saveProjectFlynt (aiData, deviceData) {
         const soundDescs = serializeSounds(this.runtime);
         const costumeDescs = serializeCostumes(this.runtime);
         const projectJson = this.toJSON();
@@ -446,6 +447,15 @@ class VirtualMachine extends EventEmitter {
                     aiData.settings : JSON.stringify(aiData.settings, null, 2));
             }
         }
+
+        // Electronics data (device selection)
+        if (deviceData) {
+            zip.file('electronica/device.json', typeof deviceData === 'string' ?
+                deviceData : JSON.stringify(deviceData, null, 2));
+        }
+
+        // Programming data (placeholder)
+        zip.file('programacion/data.json', JSON.stringify({}, null, 2));
 
         return zip.generateAsync({
             type: 'blob',
@@ -1414,8 +1424,10 @@ class VirtualMachine extends EventEmitter {
      * of the current editing target's blocks.
      */
     emitWorkspaceUpdate () {
+        const stage = this.runtime.getTargetForStage();
+        if (!stage || !this.editingTarget) return;
         // Create a list of broadcast message Ids according to the stage variables
-        const stageVariables = this.runtime.getTargetForStage().variables;
+        const stageVariables = stage.variables;
         let messageIds = [];
         for (const varId in stageVariables) {
             if (stageVariables[varId].type === Variable.BROADCAST_MESSAGE_TYPE) {
@@ -1676,6 +1688,29 @@ class VirtualMachine extends EventEmitter {
             return Promise.all(promises).then(function () {
                 return aiData;
             });
+        }).catch(function () {
+            return null;
+        });
+    }
+
+    /**
+     * Extract device data from a .flynt zip.
+     * @param {ArrayBuffer} buffer The .flynt zip content.
+     * @return {!Promise<object|null>} Device data object or null.
+     */
+    static extractFlyntDeviceData (buffer) {
+        return JSZip.loadAsync(buffer).then(function (zip) {
+            var file = zip.files['electronica/device.json'];
+            if (file && !file.dir) {
+                return file.async('string').then(function (text) {
+                    try {
+                        return JSON.parse(text);
+                    } catch (e) {
+                        return text;
+                    }
+                });
+            }
+            return null;
         }).catch(function () {
             return null;
         });

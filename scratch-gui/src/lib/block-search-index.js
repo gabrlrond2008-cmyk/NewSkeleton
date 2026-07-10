@@ -185,14 +185,29 @@ export function searchBlocks(index, query, limit) {
     return results.slice(0, limit || 50);
 }
 
+function xmlEscape(str) {
+    return String(str).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+
 export function buildSearchToolboxXML(results) {
     if (!results || results.length === 0) return null;
-    const blockElements = results
-        .filter(r => r.blockType === 'static')
-        .map(r => `<block type="${r.type}"/>`)
-        .join('');
+    const blockElements = results.map(function (r) {
+        if (r.blockType === 'static') {
+            return '<block type="' + xmlEscape(r.type) + '"/>';
+        }
+        if (r.blockType === 'variable') {
+            return '<block type="data_variable"><field name="VARIABLE">' + xmlEscape(r.name) + '</field></block>';
+        }
+        if (r.blockType === 'list') {
+            return '<block type="data_listcontents"><field name="VARIABLE">' + xmlEscape(r.name) + '</field></block>';
+        }
+        if (r.blockType === 'procedure') {
+            return '<block type="procedures_call">' + (r.mutationXml || '') + '</block>';
+        }
+        return '';
+    }).join('');
     if (!blockElements) return null;
-    return `<xml style="display: none"><category name="Results" id="searchResults" colour="#4C97FF" secondaryColour="#3373CC">${blockElements}</category></xml>`;
+    return '<xml style="display: none"><category name="Results" id="searchResults" colour="#4C97FF" secondaryColour="#3373CC">' + blockElements + '</category></xml>';
 }
 
 export function buildSingleCategoryXML(fullXML, categoryId) {

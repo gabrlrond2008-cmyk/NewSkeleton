@@ -1,10 +1,29 @@
 import PropTypes from 'prop-types';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
 import ReactDOM from 'react-dom';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 import styles from './ai-select.css';
 
+var messages = defineMessages({
+    placeholder: {
+        id: 'gui.aiSelect.placeholder',
+        defaultMessage: 'Select...',
+        description: 'Default placeholder for AI select'
+    },
+    searchPlaceholder: {
+        id: 'gui.aiSelect.searchPlaceholder',
+        defaultMessage: 'Search model...',
+        description: 'Search placeholder for AI model selector'
+    },
+    noResults: {
+        id: 'gui.aiSelect.noResults',
+        defaultMessage: 'No results',
+        description: 'No results message in AI select dropdown'
+    }
+});
+
 var AiSelect = function (props) {
-    var {value, options, onChange, placeholder} = props;
+    var {intl, value, options, onChange, placeholder} = props;
     var [open, setOpen] = useState(false);
     var [position, setPosition] = useState({top: 0, left: 0});
     var [search, setSearch] = useState('');
@@ -117,7 +136,7 @@ var AiSelect = function (props) {
                 onClick={handleTrigger}
                 type="button"
             >
-                <span>{selectedLabel || placeholder || 'Seleccionar...'}</span>
+                <span>{selectedLabel || placeholder || intl.formatMessage(messages.placeholder)}</span>
                 <span className={styles.arrow}>{'>'}</span>
             </button>
             {open && ReactDOM.createPortal(
@@ -135,7 +154,7 @@ var AiSelect = function (props) {
                             ref={searchRef}
                             className={styles.search}
                             type="text"
-                            placeholder="Buscar modelo..."
+                            placeholder={intl.formatMessage(messages.searchPlaceholder)}
                             value={search}
                             onChange={function (e) { setSearch(e.target.value); }}
                             onKeyDown={handleSearchKeyDown}
@@ -143,7 +162,7 @@ var AiSelect = function (props) {
                     </div>
                     <div className={styles.list}>
                         {filtered.length === 0 && (
-                            <div className={styles.empty}>Sin resultados</div>
+                            <div className={styles.empty}>{intl.formatMessage(messages.noResults)}</div>
                         )}
                         {filtered.map(function (opt) {
                             if (opt.disabled) {
@@ -173,6 +192,7 @@ var AiSelect = function (props) {
 };
 
 AiSelect.propTypes = {
+    intl: intlShape,
     value: PropTypes.string,
     options: PropTypes.arrayOf(PropTypes.shape({
         value: PropTypes.string,
@@ -182,4 +202,4 @@ AiSelect.propTypes = {
     placeholder: PropTypes.string
 };
 
-export default AiSelect;
+export default injectIntl(AiSelect);

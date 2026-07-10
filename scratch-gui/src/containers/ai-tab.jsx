@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 import VM from 'scratch-vm';
 import AiTabComponent from '../components/ai-tab/ai-tab.jsx';
 import AiService from '../lib/ai-service.js';
@@ -12,6 +13,94 @@ import {validate} from '../lib/ai-block-validator.js';
 import {getDetailedBlockInfo} from '../lib/ai-block-library';
 import {TrainingEngine, extractOpcodes, categorizeOpcodes, descriptorToStructure, compressExamples} from '../lib/ai-training-engine';
 import {getSharedMessages, setSharedMessages, clearSharedMessages} from '../lib/ai-shared-state';
+
+var systemMessages = defineMessages({
+    noProvider: {
+        id: 'gui.aiTab.noProvider',
+        defaultMessage: 'Configure an AI provider and API key in the AI menu on the top bar.',
+        description: 'System message when no AI provider is configured'
+    },
+    emptyResponse: {
+        id: 'gui.aiTab.emptyResponse',
+        defaultMessage: 'The AI returned an empty response. Try rephrasing your question or change provider/model in Settings > AI.',
+        description: 'System message when AI returns empty response'
+    },
+    blocksReady: {
+        id: 'gui.aiTab.blocksReady',
+        defaultMessage: 'Ready. The blocks are ready to create.',
+        description: 'Fallback display text when blocks descriptor is empty'
+    },
+    error413: {
+        id: 'gui.aiTab.error413',
+        defaultMessage: 'The message is too large for this provider. Try Groq (large model) or OpenCode Zen.',
+        description: 'Error when message is too large (413)'
+    },
+    error429: {
+        id: 'gui.aiTab.error429',
+        defaultMessage: 'Too many requests. Wait a few seconds and try again.',
+        description: 'Error when rate limited (429)'
+    },
+    error401: {
+        id: 'gui.aiTab.error401',
+        defaultMessage: 'Invalid API Key. Check your key in Settings > AI.',
+        description: 'Error when API key is invalid (401)'
+    },
+    errorFetch: {
+        id: 'gui.aiTab.errorFetch',
+        defaultMessage: 'Connection error. Check your internet or the provider URL.',
+        description: 'Error when network/fetch fails'
+    },
+    errorPrefix: {
+        id: 'gui.aiTab.errorPrefix',
+        defaultMessage: 'Error: {msg}',
+        description: 'Error message prefix'
+    },
+    unknownError: {
+        id: 'gui.aiTab.unknownError',
+        defaultMessage: 'Unknown error',
+        description: 'Unknown error fallback'
+    },
+    noBlocksFound: {
+        id: 'gui.aiTab.noBlocksFound',
+        defaultMessage: 'No blocks found in the response. Try rephrasing your question.',
+        description: 'Error when no blocks found in AI response'
+    },
+    blocksReplaced: {
+        id: 'gui.aiTab.blocksReplaced',
+        defaultMessage: 'Replaced {count} blocks.',
+        description: 'Success message when blocks are replaced'
+    },
+    blocksAdded: {
+        id: 'gui.aiTab.blocksAdded',
+        defaultMessage: 'Added {count} blocks.',
+        description: 'Success message when blocks are added'
+    },
+    blocksSkipped: {
+        id: 'gui.aiTab.blocksSkipped',
+        defaultMessage: '{count} block(s) skipped: {details}',
+        description: 'Warning when some blocks were skipped'
+    },
+    creatingBlocks: {
+        id: 'gui.aiTab.creatingBlocks',
+        defaultMessage: 'Creating blocks...',
+        description: 'Status message while creating blocks'
+    },
+    mentorAnalysis: {
+        id: 'gui.aiTab.mentorAnalysis',
+        defaultMessage: '🧠 **Mentor Analysis:**\n{msg}',
+        description: 'Mentor analysis header in chat'
+    },
+    mentorError: {
+        id: 'gui.aiTab.mentorError',
+        defaultMessage: '🧠 **Quick Analysis:**\n{msg}',
+        description: 'Mentor error header in chat'
+    },
+    couldNotAnalyze: {
+        id: 'gui.aiTab.couldNotAnalyze',
+        defaultMessage: 'Could not analyze.',
+        description: 'Fallback when mentor returns empty'
+    }
+});
 
 var LS_PROVIDER = 'ai_provider';
 var LS_API_KEY = function (p) { return p + '_api_key'; };
@@ -59,6 +148,7 @@ function compressSession(entries) {
 }
 
 var AiTab = function (props) {
+    var intl = props.intl;
     var [messages, setMessages] = useState([]);
     var [sending, setSending] = useState(false);
     var [verifyingIndex, setVerifyingIndex] = useState(null);
@@ -109,8 +199,9 @@ var AiTab = function (props) {
         if (!serviceRef.current ||
             serviceRef.current.provider !== provider ||
             serviceRef.current.apiKey !== apiKey ||
-            serviceRef.current.model !== model) {
-            serviceRef.current = new AiService(provider, apiKey, model, td);
+            serviceRef.current.model !== model ||
+            serviceRef.current.locale !== intl.locale) {
+            serviceRef.current = new AiService(provider, apiKey, model, td, intl.locale);
         } else if (td && td.length > 0) {
             serviceRef.current.setTrainingData(td);
         }
@@ -221,7 +312,10 @@ var AiTab = function (props) {
     useEffect(function () {
         if (props.pendingExplain) {
             var data = props.pendingExplain;
-            var explainText = 'Analizá este proyecto y explicá de qué trata, qué hace cada script y cómo funcionan en conjunto:\n\n' + data;
+            var isEn = intl.locale && intl.locale.indexOf('en') === 0;
+            var explainText = isEn ?
+                'Analyze this project and explain what it is about, what each script does, and how they work together:\n\n' + data :
+                'Analizá este proyecto y explicá de qué trata, qué hace cada script y cómo funcionan en conjunto:\n\n' + data;
             if (props.onClearExplain) {
                 props.onClearExplain();
             }
@@ -243,7 +337,7 @@ var AiTab = function (props) {
             setMessages(function (prev) {
                 return prev.concat([{
                     role: 'system',
-                    content: 'Configurá un proveedor de IA y API key en el menú AI de la barra superior.'
+                    content: intl.formatMessage(systemMessages.noProvider)
                 }]);
             });
             return;
@@ -281,7 +375,7 @@ var AiTab = function (props) {
                 setMessages(function (prev) {
                     return prev.concat([{
                         role: 'system',
-                        content: 'La IA devolvió una respuesta vacía. Probá reformular la pregunta o cambiá de proveedor/modelo en Settings > AI.'
+                        content: intl.formatMessage(systemMessages.emptyResponse)
                     }]);
                 });
                 setSending(false);
@@ -289,7 +383,7 @@ var AiTab = function (props) {
             }
             var displayText = stripBlockDescriptor(cleanResponse);
             if (!displayText) {
-                displayText = 'Listo. Los bloques están listos para crear.';
+                displayText = intl.formatMessage(systemMessages.blocksReady);
             }
 
             sessionRef.current.push({u: text, a: displayText.substring(0, 120)});
@@ -316,24 +410,25 @@ var AiTab = function (props) {
             // Auto-create blocks (normal mode only, sync with typing)
             if (!mentorMode && props.vm && props.vm.editingTarget) {
                 setCreatingIndex(assIdx);
-                setCreateStatus({type: 'loading', message: 'Creando bloques...'});
-                setTimeout(function () { doCreate(cleanResponse); }, 0);
+setCreateStatus({type: 'loading', message: intl.formatMessage(systemMessages.creatingBlocks)});
+                setTimeout(function () { doCreate(cleanResponse, intl); }, 0);
             }
         }).catch(function (err) {
-            var errorMsg = err.message || 'Error desconocido';
+            var unknownError = intl.formatMessage(systemMessages.unknownError);
+            var errorMsg = err.message || unknownError;
             if (errorMsg.indexOf('413') !== -1) {
-                errorMsg = 'El mensaje es muy grande para este proveedor. Probá con Groq (modelo grande) u OpenCode Zen.';
+                errorMsg = intl.formatMessage(systemMessages.error413);
             } else if (errorMsg.indexOf('429') !== -1) {
-                errorMsg = 'Demasiadas solicitudes. Esperá unos segundos y volvé a intentar.';
+                errorMsg = intl.formatMessage(systemMessages.error429);
             } else if (errorMsg.indexOf('401') !== -1 || errorMsg.indexOf('Unauthorized') !== -1) {
-                errorMsg = 'API Key inválida. Revisá tu clave en Settings > AI.';
+                errorMsg = intl.formatMessage(systemMessages.error401);
             } else if (errorMsg.indexOf('fetch') !== -1 || errorMsg.indexOf('NetworkError') !== -1) {
-                errorMsg = 'Error de conexión. Verificá tu internet o la URL del proveedor.';
+                errorMsg = intl.formatMessage(systemMessages.errorFetch);
             }
             setMessages(function (prev) {
                 return prev.concat([{
                     role: 'system',
-                    content: 'Error: ' + errorMsg
+                    content: intl.formatMessage(systemMessages.errorPrefix, {msg: errorMsg})
                 }]);
             });
             setSending(false);
@@ -370,11 +465,11 @@ var AiTab = function (props) {
                         if (!parsed.blockMap[id].shadow) blockCheck.intendedCount++;
                     }
                     var corrected = autoCorrect(parsed);
-                    var validationResult = validate(corrected);
+                    var validationResult = validate(corrected, intl);
                     blockCheck.valid = validationResult.valid;
                     blockCheck.validationErrors = validationResult.errors || [];
                     if (props.vm && props.vm.editingTarget) {
-                        var vResult = verifyBlocks(corrected, props.vm);
+                        var vResult = verifyBlocks(corrected, props.vm, intl);
                         blockCheck.created = vResult.ok;
                         blockCheck.creationIssues = vResult.issues || [];
                         var ab = props.vm.editingTarget.blocks;
@@ -438,7 +533,7 @@ var AiTab = function (props) {
         }
     }
 
-    function doCreate(assistantContent) {
+    function doCreate(assistantContent, intl) {
         console.log('[AI Blocks] doCreate');
         var replace = false;
         var jsonObj = null;
@@ -460,7 +555,7 @@ var AiTab = function (props) {
 
         var parsed = parseDescriptor(assistantContent);
         if (!parsed) {
-            setCreateStatus({type: 'error', message: 'No se encontraron bloques en la respuesta. Probá reformular la pregunta.'});
+            setCreateStatus({type: 'error', message: intl.formatMessage(systemMessages.noBlocksFound)});
             setTimeout(function () { setCreateStatus(null); setCreatingIndex(null); }, 5000);
             return;
         }
@@ -504,11 +599,11 @@ var AiTab = function (props) {
             }
 
             // Verify: read back and compare
-            var verification = verifyBlocks(parsed, props.vm);
+            var verification = verifyBlocks(parsed, props.vm, intl);
             if (verification.ok && chainErrors.length === 0) {
                 setCreateStatus({
                     type: 'success',
-                    message: (replace ? 'Reemplazados' : 'Agregados') + ' ' + nonShadow + ' bloques.'
+                    message: intl.formatMessage(replace ? systemMessages.blocksReplaced : systemMessages.blocksAdded, {count: nonShadow})
                 });
             } else {
                 var issueMsgs = [];
@@ -516,12 +611,12 @@ var AiTab = function (props) {
                     issueMsgs = issueMsgs.concat(verification.issues);
                 }
                 for (var ei = 0; ei < chainErrors.length; ei++) {
-                    issueMsgs.push('Error: ' + chainErrors[ei]);
+                    issueMsgs.push(intl.formatMessage(systemMessages.errorPrefix, {msg: chainErrors[ei]}));
                 }
                 console.warn('[AI Blocks] Problemas:', issueMsgs);
                 setCreateStatus({
                     type: 'warning',
-                    message: issueMsgs.length + ' bloque(s) omitidos: ' + issueMsgs.join('; ')
+                    message: intl.formatMessage(systemMessages.blocksSkipped, {count: issueMsgs.length, details: issueMsgs.join('; ')})
                 });
             }
         } catch (e) {
@@ -543,8 +638,8 @@ var AiTab = function (props) {
         if (!assistantMsg.content) return;
 
         setCreatingIndex(msgIndex);
-        setCreateStatus({type: 'loading', message: 'Creando bloques...'});
-        setTimeout(function () { doCreate(assistantMsg.content); }, 0);
+        setCreateStatus({type: 'loading', message: intl.formatMessage(systemMessages.creatingBlocks)});
+        setTimeout(function () { doCreate(assistantMsg.content, intl); }, 0);
     }, [props.vm, messages, creatingIndex]);
 
     var handleInstruct = useCallback(function (msgIndex) {
@@ -578,7 +673,19 @@ var AiTab = function (props) {
         var workspaceText = '';
         try { workspaceText = readWorkspace(props.vm); } catch (e) {}
 
-        var promptText = 'Esta es la guía que le diste al estudiante:\n' +
+        var isEn = intl.locale && intl.locale.indexOf('en') === 0;
+        var promptText = isEn ?
+            'This is the guide you gave the student:\n' +
+            (assistantMsg.content || '') +
+            '\n\nStudent\'s current blocks (Scratch code):\n' +
+            (workspaceText || '(no blocks)') +
+            '\n\nAnalyze:\n' +
+            '- Is the project on the right track?\n' +
+            '- If the student followed another strategy, validate and congratulate them.\n' +
+            '- Detect if they are using **literal numbers** in operators (e.g.: `1 + 2`, `< 50`, `* 3`) where they should use **variables**. Clearly differentiate between a fixed literal number (ok for constant values) and one that should be a variable.\n' +
+            '- What\'s missing or could be improved? Is it complete?\n' +
+            'Answer in 4-5 sentences max. Use **bold** and other Markdown formatting if helpful. Respond ONLY in English.' :
+            'Esta es la guía que le diste al estudiante:\n' +
             (assistantMsg.content || '') +
             '\n\nBloques actuales del estudiante (código Scratch):\n' +
             (workspaceText || '(sin bloques)') +
@@ -591,7 +698,7 @@ var AiTab = function (props) {
 
         service.ask(promptText, '').then(function (response) {
             setInstructing(false);
-            var clean = stripBlockDescriptor(response || '') || 'No se pudo analizar.';
+            var clean = stripBlockDescriptor(response || '') || intl.formatMessage(systemMessages.couldNotAnalyze);
             if (props.onMentorGuidance) {
                 props.onMentorGuidance(clean);
             }
@@ -599,19 +706,20 @@ var AiTab = function (props) {
             setMessages(function (prev) {
                 return prev.concat([{
                     role: 'assistant',
-                    content: '🧠 **Análisis del Mentor:**\n' + clean
+                    content: intl.formatMessage(systemMessages.mentorAnalysis, {msg: clean})
                 }]);
             });
         }).catch(function (err) {
             setInstructing(false);
-            var errMsg = 'Error: ' + (err.message || 'desconocido');
+            var unknownError = intl.formatMessage(systemMessages.unknownError);
+            var errMsg = intl.formatMessage(systemMessages.errorPrefix, {msg: err.message || unknownError});
             if (props.onMentorGuidance) {
                 props.onMentorGuidance(errMsg);
             }
             setMessages(function (prev) {
                 return prev.concat([{
                     role: 'assistant',
-                    content: '🧠 **Análisis rápido:**\n' + errMsg
+                    content: intl.formatMessage(systemMessages.mentorError, {msg: errMsg})
                 }]);
             });
         });
@@ -712,6 +820,7 @@ var AiTab = function (props) {
 };
 
 AiTab.propTypes = {
+    intl: intlShape,
     vm: PropTypes.instanceOf(VM).isRequired,
     pendingExplain: PropTypes.string,
     projectKey: PropTypes.number,
@@ -721,4 +830,4 @@ AiTab.propTypes = {
     reanalyzeTick: PropTypes.number
 };
 
-export default AiTab;
+export default injectIntl(AiTab);

@@ -1,5 +1,5 @@
 import React, {useState, useCallback, useEffect} from 'react';
-import {defineMessages, FormattedMessage} from 'react-intl';
+import {defineMessages, FormattedMessage, injectIntl, intlShape} from 'react-intl';
 import PropTypes from 'prop-types';
 import ReactModal from 'react-modal';
 import classNames from 'classnames';
@@ -18,6 +18,16 @@ const messages = defineMessages({
         id: 'gui.debugModal.title',
         defaultMessage: 'Debugging | Getting Unstuck',
         description: 'title for the debugging modal'
+    },
+    previous: {
+        id: 'gui.debugModal.previous',
+        defaultMessage: 'Previous',
+        description: 'Alt text for previous button'
+    },
+    next: {
+        id: 'gui.debugModal.next',
+        defaultMessage: 'Next',
+        description: 'Alt text for next button'
     }
 });
 
@@ -28,7 +38,7 @@ const logTopicChange = topicIndex => {
     });
 };
 
-const DebugModal = ({isOpen, onClose = () => {}}) => {
+const DebugModal = ({intl, isOpen, onClose = () => {}}) => {
     const [selectedTopicIndex, setSelectedTopicIndex] = useState(0);
 
     // Preload images
@@ -145,7 +155,7 @@ const DebugModal = ({isOpen, onClose = () => {}}) => {
                     <div className={styles.navigationButtons}>
                         <img
                             src={prevIcon}
-                            alt="Previous"
+                            alt={intl.formatMessage(messages.previous)}
                             onClick={handlePrevious}
                             className={classNames(styles.previousIcon, {
                                 [styles.hidden]: selectedTopicIndex === 0
@@ -153,7 +163,7 @@ const DebugModal = ({isOpen, onClose = () => {}}) => {
                         />
                         <img
                             src={nextIcon}
-                            alt="Next"
+                            alt={intl.formatMessage(messages.next)}
                             onClick={handleNext}
                             className={classNames(styles.nextIcon, {
                                 [styles.hidden]: selectedTopicIndex === sections.length - 1
@@ -167,8 +177,9 @@ const DebugModal = ({isOpen, onClose = () => {}}) => {
 };
 
 DebugModal.propTypes = {
+    intl: intlShape,
     isOpen: PropTypes.bool,
     onClose: PropTypes.func
 };
 
-export default DebugModal;
+export default injectIntl(DebugModal);

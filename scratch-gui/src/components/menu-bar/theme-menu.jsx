@@ -4,7 +4,6 @@ import React from 'react';
 import {FormattedMessage} from 'react-intl';
 import {connect} from 'react-redux';
 
-import caturdayIcon from './icon--caturday.svg';
 import check from './check.svg';
 import {MenuItem, Submenu} from '../menu/menu.jsx';
 import {DEFAULT_THEME, HIGH_CONTRAST_THEME, themeMap} from '../../lib/themes';
@@ -42,17 +41,42 @@ ThemeMenuItem.propTypes = {
     theme: PropTypes.string
 };
 
+const TimeTravelMenuItem = props => (
+    <MenuItem onClick={props.onClick}>
+        <div className={styles.option}>
+            <img
+                className={classNames(styles.check, {[styles.selected]: props.isSelected})}
+                src={check}
+            />
+            <span className={styles.submenuLabel}>{props.label}</span>
+        </div>
+    </MenuItem>
+);
+
+TimeTravelMenuItem.propTypes = {
+    isSelected: PropTypes.bool,
+    onClick: PropTypes.func,
+    label: PropTypes.node
+};
+
 const ThemeMenu = ({
     isRtl,
     menuOpen,
     onChangeTheme,
     onRequestOpen,
+    onRequestCloseSettings,
     theme,
-    caturdayMode,
-    onToggleCaturday
+    timeTravelMode,
+    onSetMode
 }) => {
     const enabledThemes = [DEFAULT_THEME, HIGH_CONTRAST_THEME];
     const themeInfo = themeMap[theme];
+
+    const handleSetMode = mode => e => {
+        e.stopPropagation();
+        onSetMode(mode);
+        onRequestCloseSettings();
+    };
 
     return (
         <MenuItem expanded={menuOpen} onClick={onRequestOpen}>
@@ -83,16 +107,62 @@ const ThemeMenu = ({
                         theme={enabledTheme}
                     />)
                 )}
-                <MenuItem onClick={function (e) { e.stopPropagation(); onToggleCaturday(); }}>
-                    <div className={styles.option}>
-                        <img
-                            className={classNames(styles.check, {[styles.selected]: caturdayMode})}
-                            src={check}
+                <div style={{height: 1, background: 'rgba(0,0,0,0.15)', margin: '4px 8px'}} />
+                <TimeTravelMenuItem
+                    isSelected={timeTravelMode === 'NOW'}
+                    onClick={handleSetMode('NOW')}
+                    label={
+                        <FormattedMessage
+                            defaultMessage="Normal"
+                            description="Normal mode option"
+                            id="gui.menuBar.normalMode"
                         />
-                        <img className={styles.icon} src={caturdayIcon} />
-                        <span className={styles.submenuLabel}>Caturday</span>
-                    </div>
-                </MenuItem>
+                    }
+                />
+                <TimeTravelMenuItem
+                    isSelected={timeTravelMode === '2020'}
+                    onClick={handleSetMode('2020')}
+                    label={
+                            <FormattedMessage
+                                defaultMessage="Caturday"
+                                description="Caturday mode option"
+                                id="gui.menuBar.caturdayMode"
+                            />
+                    }
+                />
+                <TimeTravelMenuItem
+                    isSelected={timeTravelMode === '1990'}
+                    onClick={handleSetMode('1990')}
+                    label={
+                        <FormattedMessage
+                            defaultMessage="Nineties (1990)"
+                            description="Nineties time travel mode"
+                            id="gui.menuBar.ninetiesMode"
+                        />
+                    }
+                />
+                <TimeTravelMenuItem
+                    isSelected={timeTravelMode === '1920'}
+                    onClick={handleSetMode('1920')}
+                    label={
+                        <FormattedMessage
+                            defaultMessage="Old Timey (1920)"
+                            description="Old Timey vintage time travel mode"
+                            id="gui.menuBar.oldtimeyMode"
+                        />
+                    }
+                />
+                <TimeTravelMenuItem
+                    isSelected={timeTravelMode === '220022BC'}
+                    onClick={handleSetMode('220022BC')}
+                    label={
+                        <FormattedMessage
+                            defaultMessage="Prehistoric"
+                            description="Prehistoric time travel mode"
+                            id="gui.menuBar.prehistoricMode"
+                        />
+                    }
+                />
             </Submenu>
         </MenuItem>
     );
@@ -102,12 +172,11 @@ ThemeMenu.propTypes = {
     isRtl: PropTypes.bool,
     menuOpen: PropTypes.bool,
     onChangeTheme: PropTypes.func,
-    // eslint-disable-next-line react/no-unused-prop-types
     onRequestCloseSettings: PropTypes.func,
     onRequestOpen: PropTypes.func,
     theme: PropTypes.string,
-    caturdayMode: PropTypes.bool,
-    onToggleCaturday: PropTypes.func
+    timeTravelMode: PropTypes.string,
+    onSetMode: PropTypes.func
 };
 
 var mapStateToProps = function (state) {
@@ -115,7 +184,7 @@ var mapStateToProps = function (state) {
         isRtl: state.locales.isRtl,
         menuOpen: themeMenuOpen(state),
         theme: state.scratchGui.theme.theme,
-        caturdayMode: state.scratchGui.timeTravel.year === '2020'
+        timeTravelMode: state.scratchGui.timeTravel.year
     };
 };
 
@@ -131,12 +200,25 @@ var mapDispatchToProps = function (dispatch, ownProps) {
     };
 };
 
+var applyModeFilter = function (mode) {
+    if (mode === '1920') {
+        document.documentElement.style.filter = 'brightness(.9)contrast(.8)sepia(1.0)';
+        document.documentElement.style.height = '100%';
+    } else if (mode === '1990') {
+        document.documentElement.style.filter = 'hue-rotate(40deg)';
+        document.documentElement.style.height = '100%';
+    } else {
+        document.documentElement.style.filter = '';
+        document.documentElement.style.height = '';
+    }
+};
+
 var mergeProps = function (stateProps, dispatchProps, ownProps) {
     return Object.assign({}, ownProps, stateProps, dispatchProps, {
-        onToggleCaturday: function () {
-            dispatchProps.dispatch(setTimeTravel(
-                stateProps.caturdayMode ? 'NOW' : '2020'
-            ));
+        onSetMode: function (mode) {
+            document.documentElement.dataset.timeTravel = mode;
+            applyModeFilter(mode);
+            dispatchProps.dispatch(setTimeTravel(mode));
         }
     });
 };

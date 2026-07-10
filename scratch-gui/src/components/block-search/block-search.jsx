@@ -1,18 +1,22 @@
 import PropTypes from 'prop-types';
-import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 
 import {buildSearchIndex, searchBlocks} from '../../lib/block-search-index.js';
 import styles from './block-search.css';
 
-const BlockSearch = ({workspace, ScratchBlocks, toolboxXML, onSearch}) => {
+var messages = defineMessages({
+    search: {
+        id: 'gui.blockSearch.search',
+        defaultMessage: 'Search',
+        description: 'Placeholder for block search input'
+    }
+});
+
+const BlockSearch = ({intl, workspace, ScratchBlocks, toolboxXML, onSearch}) => {
     const [query, setQuery] = useState('');
     const inputRef = useRef(null);
     const debounceRef = useRef(null);
-
-    const index = useMemo(() => {
-        if (!workspace || !ScratchBlocks) return null;
-        return buildSearchIndex(workspace, ScratchBlocks, toolboxXML);
-    }, [workspace, ScratchBlocks, toolboxXML]);
 
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -20,15 +24,17 @@ const BlockSearch = ({workspace, ScratchBlocks, toolboxXML, onSearch}) => {
             onSearch('', []);
             return;
         }
-        if (!index) return;
+        if (!workspace || !ScratchBlocks) return;
         debounceRef.current = setTimeout(() => {
-            const res = searchBlocks(index, query);
+            const idx = buildSearchIndex(workspace, ScratchBlocks, toolboxXML);
+            if (!idx) return;
+            const res = searchBlocks(idx, query);
             onSearch(query, res);
         }, 80);
         return () => {
             if (debounceRef.current) clearTimeout(debounceRef.current);
         };
-    }, [query, index, onSearch]);
+    }, [query, workspace, ScratchBlocks, toolboxXML, onSearch]);
 
     const handleInputChange = useCallback((e) => {
         setQuery(e.target.value);
@@ -51,7 +57,7 @@ const BlockSearch = ({workspace, ScratchBlocks, toolboxXML, onSearch}) => {
                     ref={inputRef}
                     className={styles.input}
                     type="text"
-                    placeholder="Search"
+                    placeholder={intl.formatMessage(messages.search)}
                     value={query}
                     onChange={handleInputChange}
                 />
@@ -64,10 +70,11 @@ const BlockSearch = ({workspace, ScratchBlocks, toolboxXML, onSearch}) => {
 };
 
 BlockSearch.propTypes = {
+    intl: intlShape,
     workspace: PropTypes.object,
     ScratchBlocks: PropTypes.object,
     toolboxXML: PropTypes.string,
     onSearch: PropTypes.func
 };
 
-export default React.memo(BlockSearch);
+export default React.memo(injectIntl(BlockSearch));

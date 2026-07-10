@@ -152,7 +152,13 @@ export default [
         internetConnectionRequired: true
     },
     {
-        name: 'Makey Makey',
+        name: (
+            <FormattedMessage
+                defaultMessage="Makey Makey"
+                description="Name for the 'Makey Makey' extension"
+                id="gui.extension.makeymakey.name"
+            />
+        ),
         extensionId: 'makeymakey',
         collaborator: 'JoyLabz',
         iconURL: makeymakeyIconURL,
@@ -167,7 +173,13 @@ export default [
         featured: true
     },
     {
-        name: 'micro:bit',
+        name: (
+            <FormattedMessage
+                defaultMessage="micro:bit"
+                description="Name for the 'micro:bit' extension"
+                id="gui.extension.microbit.name"
+            />
+        ),
         extensionId: 'microbit',
         collaborator: 'micro:bit',
         iconURL: microbitIconURL,
@@ -197,7 +209,13 @@ export default [
         helpLink: 'https://scratch.mit.edu/microbit'
     },
     {
-        name: 'LEGO MINDSTORMS EV3',
+        name: (
+            <FormattedMessage
+                defaultMessage="LEGO MINDSTORMS EV3"
+                description="Name for the 'LEGO MINDSTORMS EV3' extension"
+                id="gui.extension.ev3.name"
+            />
+        ),
         extensionId: 'ev3',
         collaborator: 'LEGO',
         iconURL: ev3IconURL,
@@ -227,7 +245,13 @@ export default [
         helpLink: 'https://scratch.mit.edu/ev3'
     },
     {
-        name: 'LEGO BOOST',
+        name: (
+            <FormattedMessage
+                defaultMessage="LEGO BOOST"
+                description="Name for the 'LEGO BOOST' extension"
+                id="gui.extension.boost.name"
+            />
+        ),
         extensionId: 'boost',
         collaborator: 'LEGO',
         iconURL: boostIconURL,
@@ -258,7 +282,13 @@ export default [
         helpLink: 'https://scratch.mit.edu/boost'
     },
     {
-        name: 'LEGO Education WeDo 2.0',
+        name: (
+            <FormattedMessage
+                defaultMessage="LEGO Education WeDo 2.0"
+                description="Name for the 'LEGO WeDo 2.0' extension"
+                id="gui.extension.wedo2.name"
+            />
+        ),
         extensionId: 'wedo2',
         collaborator: 'LEGO',
         iconURL: wedo2IconURL,
@@ -289,7 +319,13 @@ export default [
         helpLink: 'https://scratch.mit.edu/wedo'
     },
     {
-        name: 'Go Direct Force & Acceleration',
+        name: (
+            <FormattedMessage
+                defaultMessage="Go Direct Force & Acceleration"
+                description="Name for the Vernier Go Direct Force and Acceleration sensor extension"
+                id="gui.extension.gdxfor.name"
+            />
+        ),
         extensionId: 'gdxfor',
         collaborator: 'Vernier',
         iconURL: gdxforIconURL,

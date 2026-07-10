@@ -1,3 +1,5 @@
+@import "../../css/colors.css";
+
 .container {
     position: absolute;
     bottom: 16px;
@@ -14,21 +16,21 @@
     width: 48px;
     height: 48px;
     border-radius: 50%;
-    background: #f0ebff;
-    border: 2px solid #d4c5f9;
+    background: $ui-primary;
+    border: 2px solid $looks-light-transparent;
     display: flex;
     align-items: center;
     justify-content: center;
     cursor: grab;
     transition: transform 0.2s ease, box-shadow 0.2s ease;
-    box-shadow: 0 3px 12px rgba(133, 92, 214, 0.2);
+    box-shadow: 0 3px 12px $looks-transparent;
     user-select: none;
     position: relative;
 }
 
 .face:hover {
     transform: scale(1.1);
-    box-shadow: 0 5px 18px rgba(133, 92, 214, 0.35);
+    box-shadow: 0 5px 18px $looks-transparent;
 }
 
 .face:active {
@@ -37,8 +39,8 @@
 }
 
 .analyzing {
-    border-color: #b794f4;
-    box-shadow: 0 0 0 4px rgba(133, 92, 214, 0.12);
+    border-color: $motion-primary;
+    box-shadow: 0 0 0 4px $looks-light-transparent;
 }
 
 .emoji {
@@ -51,17 +53,17 @@
     position: absolute;
     inset: -5px;
     border-radius: 50%;
-    border: 2.5px solid #855CD6;
+    border: 2.5px solid $looks-secondary;
     animation: pulseAnim 1.4s ease-in-out infinite;
 }
 
 .bubble {
     max-width: 360px;
-    background: #fff;
+    background: $ui-white;
     border-radius: 14px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.13);
+    box-shadow: 0 8px 32px $ui-black-transparent;
     overflow: hidden;
-    border: 1px solid #ececec;
+    border: 1px solid $ui-black-transparent-10;
     transform-origin: left center;
 }
 
@@ -77,7 +79,7 @@
     padding: 14px 16px;
     font-size: 0.85rem;
     line-height: 1.6;
-    color: #333;
+    color: $text-primary;
     white-space: pre-wrap;
 }
 
@@ -89,17 +91,17 @@
     width: 100%;
     padding: 9px 14px;
     border: none;
-    border-top: 1px solid #eee;
-    background: #fafafa;
+    border-top: 1px solid $ui-black-transparent-10;
+    background: $ui-white-dim;
     cursor: pointer;
     font-size: 0.78rem;
-    color: #5c3d9e;
+    color: $looks-secondary;
     font-weight: 600;
     transition: background 0.15s;
 }
 
 .reanalyzeBtn:hover {
-    background: #f0ebff;
+    background: $ui-primary;
 }
 
 .reanalyzeBtn svg {

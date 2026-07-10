@@ -100,7 +100,7 @@ var SettingsMenu = ({
                             </span>
                             <span className={styles.submenuLabel}>
                                 <FormattedMessage
-                                    defaultMessage="Rendimiento (sin animaciones)"
+                                    defaultMessage="Performance (no animations)"
                                     description="Toggle to disable animations for performance"
                                     id="gui.menuBar.reducedMotion"
                                 />

@@ -38,6 +38,16 @@ const messages = defineMessages({
         id: 'gui.SpriteInfo.hideSpriteAction',
         defaultMessage: 'Hide sprite',
         description: 'Tooltip for hide sprite button'
+    },
+    xPlaceholder: {
+        id: 'gui.SpriteInfo.xPlaceholder',
+        defaultMessage: 'x',
+        description: 'Placeholder for x coordinate input'
+    },
+    yPlaceholder: {
+        id: 'gui.SpriteInfo.yPlaceholder',
+        defaultMessage: 'y',
+        description: 'Placeholder for y coordinate input'
     }
 });
 
@@ -115,11 +125,11 @@ class SpriteInfo extends React.Component {
                         </div> :
                         null
                 }
-                <Label text="x">
+                <Label text={this.props.intl.formatMessage(messages.xPlaceholder)}>
                     <BufferedInput
                         small
                         disabled={this.props.disabled}
-                        placeholder="x"
+                        placeholder={this.props.intl.formatMessage(messages.xPlaceholder)}
                         tabIndex="0"
                         type="text"
                         value={this.props.disabled ? '' : Math.round(this.props.x)}
@@ -142,11 +152,11 @@ class SpriteInfo extends React.Component {
                         </div> :
                         null
                 }
-                <Label text="y">
+                <Label text={this.props.intl.formatMessage(messages.yPlaceholder)}>
                     <BufferedInput
                         small
                         disabled={this.props.disabled}
-                        placeholder="y"
+                        placeholder={this.props.intl.formatMessage(messages.yPlaceholder)}
                         tabIndex="0"
                         type="text"
                         value={this.props.disabled ? '' : Math.round(this.props.y)}

@@ -8,7 +8,7 @@ import {
     openSpriteLibrary,
     closeSpriteLibrary
 } from '../reducers/modals';
-import {activateTab, COSTUMES_TAB_INDEX, BLOCKS_TAB_INDEX} from '../reducers/editor-tab';
+import {activateTab, COSTUMES_TAB, CODE_TAB} from '../reducers/editor-tab';
 import {setReceivedBlocks} from '../reducers/hovered-target';
 import {showStandardAlert, closeAlertWithId} from '../reducers/alerts';
 import {setRestore} from '../reducers/restore-deletion';
@@ -106,13 +106,42 @@ class TargetPane extends React.Component {
         }
     }
     handleSurpriseSpriteClick () {
-        const surpriseSprites = spriteLibraryContent.filter(sprite =>
-            (sprite.tags.indexOf('letters') === -1) && (sprite.tags.indexOf('numbers') === -1)
-        );
-        const item = surpriseSprites[Math.floor(Math.random() * surpriseSprites.length)];
-        randomizeSpritePosition(item);
-        this.props.vm.addSprite(JSON.stringify(item))
-            .then(this.handleActivateBlocksTab);
+        const formatMessage = this.props.intl.formatMessage;
+        const spriteData = {
+            objName: formatMessage(sharedMessages.sprite, {index: 1}),
+            sounds: [{
+                soundName: formatMessage(sharedMessages.pop),
+                soundID: -1,
+                md5: '83a9787d4cb6f3b7632b4ddfebf74367.wav',
+                sampleCount: 258,
+                rate: 11025,
+                format: ''
+            }],
+            costumes: [{
+                costumeName: formatMessage(sharedMessages.costume, {index: 1}),
+                baseLayerID: -1,
+                baseLayerMD5: 'cd21514d0531fdffb22204e0ec5ed84a.svg',
+                bitmapResolution: 1,
+                rotationCenterX: 0,
+                rotationCenterY: 0
+            }],
+            currentCostumeIndex: 0,
+            scratchX: Math.floor((200 * Math.random()) - 100),
+            scratchY: Math.floor((100 * Math.random()) - 50),
+            scale: 1,
+            direction: 90,
+            rotationStyle: 'normal',
+            isDraggable: false,
+            visible: true,
+            spriteInfo: {}
+        };
+        this.props.vm.addSprite(JSON.stringify(spriteData)).then(() => {
+            setTimeout(() => {
+                this.props.onActivateTab(CODE_TAB);
+            });
+        }).catch(err => {
+            console.error('[SurpriseSprite] addSprite failed:', err);
+        });
     }
     handlePaintSpriteClick () {
         const formatMessage = this.props.intl.formatMessage;
@@ -123,12 +152,12 @@ class TargetPane extends React.Component {
         );
         this.props.vm.addSprite(JSON.stringify(emptyItem)).then(() => {
             setTimeout(() => { // Wait for targets update to propagate before tab switching
-                this.props.onActivateTab(COSTUMES_TAB_INDEX);
+                this.props.onActivateTab(COSTUMES_TAB);
             });
         });
     }
     handleActivateBlocksTab () {
-        this.props.onActivateTab(BLOCKS_TAB_INDEX);
+        this.props.onActivateTab(CODE_TAB);
     }
     handleNewSprite (spriteJSONString) {
         return this.props.vm.addSprite(spriteJSONString)

@@ -30,5 +30,20 @@ export default defineMessages({
         id: 'gui.sharedMessages.loadFromComputerTitle',
         defaultMessage: 'Load from your computer',
         description: 'Title for uploading a project from your computer'
+    },
+    scratchProject: {
+        id: 'gui.sharedMessages.scratchProject',
+        defaultMessage: 'Scratch Project',
+        description: 'Default filename for a new project'
+    },
+    selectDevice: {
+        id: 'gui.sharedMessages.selectDevice',
+        defaultMessage: 'Select device',
+        description: 'Label for device selector button'
+    },
+    download: {
+        id: 'gui.sharedMessages.download',
+        defaultMessage: 'Download',
+        description: 'Label for download button'
     }
 });

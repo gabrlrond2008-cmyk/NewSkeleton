@@ -9,10 +9,12 @@ import Renderer from 'scratch-render';
 
 import Blocks from '../../containers/blocks.jsx';
 import AiTab from '../../containers/ai-tab.jsx';
-import SchemaTab from '../../containers/schema-tab.jsx';
 import CostumeTab from '../../containers/costume-tab.jsx';
 import SoundTab from '../../containers/sound-tab.jsx';
 import StageWrapper from '../../containers/stage-wrapper.jsx';
+import SimulationTab from '../../containers/simulation-tab.jsx';
+import CircuitosTab from '../../containers/circuitos-tab.jsx';
+import Tab3D from '../../containers/tab-3d.jsx';
 import Loader from '../loader/loader.jsx';
 import Box from '../box/box.jsx';
 import MenuBar from '../menu-bar/menu-bar.jsx';
@@ -28,65 +30,135 @@ import DragLayer from '../../containers/drag-layer.jsx';
 import ConnectionModal from '../../containers/connection-modal.jsx';
 import TelemetryModal from '../telemetry-modal/telemetry-modal.jsx';
 
-import layout, {STAGE_SIZE_MODES} from '../../lib/layout-constants';
+import layout, {STAGE_SIZE_MODES, STAGE_DISPLAY_SIZES} from '../../lib/layout-constants';
 import {resolveStageSize} from '../../lib/screen-utils';
 import {themeMap} from '../../lib/themes';
 
 import styles from './gui.css';
 import addExtensionIcon from './icon--extensions.svg';
 import aiIcon from './icon--ai.svg';
-import schemaIcon from './icon--schema.svg';
 import codeIcon from './icon--code.svg';
 import costumesIcon from './icon--costumes.svg';
 import soundsIcon from './icon--sounds.svg';
+import simulationIcon from './icon--simulation.svg';
+import controlIcon from './icon--control.svg';
+import circuitosIcon from './icon--circuitos.svg';
+import icon3d from './icon--3d.svg';
 import DebugModal from '../debug-modal/debug-modal.jsx';
 import DeviceSelector from '../device-selector/device-selector.jsx';
-import deviceData from '../../lib/libraries/devices/devices.jsx';
+import getDevices from '../../lib/libraries/devices/devices.jsx';
 import TabBar from '../tab-bar/tab-bar.jsx';
 import SplitContainer from '../split-container/split-container.jsx';
 import MentorGuide from '../mentor-guide/mentor-guide.jsx';
+import OldtimeyMode from '../oldtimey-mode/oldtimey-mode.jsx';
+import NinetiesMode from '../nineties-mode/nineties-mode.jsx';
+import PrehistoricMode from '../prehistoric-mode/prehistoric-mode.jsx';
+import {ALL_TABS} from '../../reducers/editor-tab';
 
 const messages = defineMessages({
     addExtension: {
         id: 'gui.gui.addExtension',
         description: 'Button to add an extension in the target pane',
         defaultMessage: 'Add Extension'
+    },
+    aiTab: {
+        id: 'gui.gui.aiTab',
+        defaultMessage: 'AI',
+        description: 'Tab label for AI tab'
+    },
+    simulationTab: {
+        id: 'gui.gui.simulationTab',
+        defaultMessage: 'Simulation',
+        description: 'Tab label for simulation tab'
+    },
+    controlTab: {
+        id: 'gui.gui.controlTab',
+        defaultMessage: 'Control',
+        description: 'Tab label for control tab'
+    },
+    circuitosTab: {
+        id: 'gui.gui.circuitosTab',
+        defaultMessage: 'Circuits',
+        description: 'Tab label for circuits tab'
+    },
+    tab3d: {
+        id: 'gui.gui.tab3d',
+        defaultMessage: '3D',
+        description: 'Tab label for 3D tab'
+    },
+    dropToSplit: {
+        id: 'gui.gui.dropToSplit',
+        defaultMessage: 'Drop here for split screen',
+        description: 'Text shown when dragging a tab to split the view'
+    },
+    selectDevice: {
+        id: 'gui.gui.selectDevice',
+        defaultMessage: 'Select Device',
+        description: 'Title for the device selection library'
     }
 });
 
-let isRendererSupported = null;
+const TAB_REGISTRY = {
+    code: {
+        id: 'code',
+        label: <FormattedMessage defaultMessage="Code" id="gui.gui.codeTab" />,
+        icon: codeIcon,
+        canClose: false
+    },
+    costumes: {
+        id: 'costumes',
+        label: null,
+        icon: costumesIcon,
+        canClose: true
+    },
+    sounds: {
+        id: 'sounds',
+        label: <FormattedMessage defaultMessage="Sounds" id="gui.gui.soundsTab" />,
+        icon: soundsIcon,
+        canClose: true
+    },
+    ai: {
+        id: 'ai',
+        label: <FormattedMessage {...messages.aiTab} />,
+        icon: aiIcon,
+        canClose: true
+    },
+    simulacion: {
+        id: 'simulacion',
+        label: <FormattedMessage {...messages.simulationTab} />,
+        icon: simulationIcon,
+        canClose: true
+    },
+    control: {
+        id: 'control',
+        label: <FormattedMessage {...messages.controlTab} />,
+        icon: controlIcon,
+        canClose: true
+    },
+    circuitos: {
+        id: 'circuitos',
+        label: <FormattedMessage {...messages.circuitosTab} />,
+        icon: circuitosIcon,
+        canClose: true
+    },
+    '3d': {
+        id: '3d',
+        label: <FormattedMessage {...messages.tab3d} />,
+        icon: icon3d,
+        canClose: true
+    }
+};
 
-const TABS_CONFIG = [
-    {id: 'code',
-        label: <FormattedMessage
-            defaultMessage="Code"
-            id="gui.gui.codeTab"
-        />,
-        icon: codeIcon},
-    {id: 'costumes', label: null, icon: costumesIcon},
-    {id: 'sounds',
-        label: <FormattedMessage
-            defaultMessage="Sounds"
-            id="gui.gui.soundsTab"
-        />,
-        icon: soundsIcon},
-    {id: 'ai',
-        label: 'AI',
-        icon: aiIcon},
-    {id: 'schema',
-        label: 'Esquema',
-        icon: schemaIcon}
-];
+let isRendererSupported = null;
 
 const GUIComponent = props => {
     const {
-        activeTabIndex,
+        activeTabId,
         alertsVisible,
         authorId,
         authorThumbnailUrl,
         authorUsername,
         basePath,
-        backdropLibraryVisible,
         blocksId,
         blocksTabVisible,
         cardsVisible,
@@ -113,11 +185,12 @@ const GUIComponent = props => {
         isRtl,
         isShared,
         isTelemetryEnabled,
-        isTotallyNormal,
         loading,
         reducedMotion,
         onClickAbout,
         onActivateTab,
+        onOpenTab,
+        onCloseTab,
         onExtensionButtonClick,
         onProjectTelemetryEvent,
         onRequestCloseBackdropLibrary,
@@ -125,6 +198,9 @@ const GUIComponent = props => {
         onRequestCloseDebugModal,
         onRequestCloseDeviceLibrary,
         onRequestOpenDeviceLibrary,
+        onSelectDevice,
+        onClearDevice,
+        selectedDevice,
         onRequestCloseTelemetryModal,
         onSeeCommunity,
         onShare,
@@ -133,12 +209,13 @@ const GUIComponent = props => {
         onTelemetryModalCancel,
         onTelemetryModalOptIn,
         onTelemetryModalOptOut,
-        secondaryTabIndex,
+        openTabs,
+        hiddenTabs,
+        backdropLibraryVisible,
+        secondaryTabId,
         showComingSoon,
-        splitPrimaryIndex,
         splitMode,
         splitRatio,
-        tabOrder,
         stageSizeMode,
         targetIsStage,
         telemetryModalVisible,
@@ -155,13 +232,14 @@ const GUIComponent = props => {
         onClearExplain,
         onSetProjectKey,
         onSetHasBeenSaved,
+        onRestoreTabs,
+        splitPrimaryIndex,
         ...componentProps
     } = omit(props, 'dispatch');
     if (children) {
         return <Box {...componentProps}>{children}</Box>;
     }
 
-    const [selectedDevice, setSelectedDevice] = useState(null);
     const [workspaceHandle, setWorkspaceHandle] = useState(null);
     const [mentorGuidanceMsg, setMentorGuidanceMsg] = useState();
     const handleMentorGuidance = useCallback(d => setMentorGuidanceMsg(d), []);
@@ -176,7 +254,6 @@ const GUIComponent = props => {
             window.matchMedia(`(min-width: ${layout.fullSizeMinWidth}px)`).matches :
             true
     );
-
     useEffect(() => {
         if (typeof window === 'undefined') return;
         const mql = window.matchMedia(`(min-width: ${layout.fullSizeMinWidth}px)`);
@@ -190,6 +267,11 @@ const GUIComponent = props => {
         document.body.classList.toggle('reduced-motion', reducedMotion);
         return () => document.body.classList.remove('reduced-motion');
     }, [reducedMotion]);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        document.documentElement.dataset.timeTravel = blocksId;
+    }, [blocksId]);
 
     const stageSize = resolveStageSize(stageSizeMode, isFullSize);
 
@@ -209,10 +291,18 @@ const GUIComponent = props => {
                 id="gui.gui.costumesTab"
             />
         );
-        return TABS_CONFIG.map((t, i) => i === 1 ? {...t, label: costsmesLabel} : t);
+        return {
+            code: TAB_REGISTRY.code,
+            costumes: Object.assign({}, TAB_REGISTRY.costumes, {label: costsmesLabel}),
+            sounds: TAB_REGISTRY.sounds,
+            ai: TAB_REGISTRY.ai,
+            simulacion: TAB_REGISTRY.simulacion,
+            control: TAB_REGISTRY.control,
+            circuitos: TAB_REGISTRY.circuitos,
+            '3d': TAB_REGISTRY['3d']
+        };
     }, [targetIsStage]);
 
-    // Pre-rendered panels — always mounted, visibility toggled via CSS
     const codePanel = useMemo(() => (
         <Box className={styles.blocksWrapper}>
             <Blocks
@@ -234,32 +324,71 @@ const GUIComponent = props => {
     const costumePanel = useMemo(() => <CostumeTab vm={vm} />, [vm]);
     const soundPanel = useMemo(() => <SoundTab vm={vm} />, [vm]);
     const aiPanel = useMemo(() => <AiTab vm={vm} pendingExplain={pendingExplain} projectKey={projectKey} onClearExplain={onClearExplain} onMentorGuidance={handleMentorGuidance} onActivateTab={onActivateTab} reanalyzeTick={reanalyzeTick} />, [vm, pendingExplain, projectKey, onClearExplain, handleMentorGuidance, onActivateTab, reanalyzeTick]);
-    const schemaPanel = useMemo(() => (
-        <SchemaTab
+    const simulationPanel = useMemo(() => (
+        <SimulationTab
+            isFullScreen={isFullScreen}
+            isRendererSupported={isRendererSupported}
+            isRtl={isRtl}
+            loading={loading}
+            stageSize={STAGE_SIZE_MODES.large}
             vm={vm}
-            options={{
-                media: `${basePath}static/${themeMap[theme].blocksMediaFolder}/`
-            }}
         />
-    ), [vm, basePath, theme]);
+    ), [isFullScreen, isRendererSupported, isRtl, loading, vm]);
 
-    const panels = useMemo(() => [codePanel, costumePanel, soundPanel, aiPanel, schemaPanel],
-        [codePanel, costumePanel, soundPanel, aiPanel]);
+    const controlPanel = useMemo(() => (
+        <Box className={styles.blocksWrapper}>
+            <Blocks
+                key={'control/' + theme}
+                canUseCloud={canUseCloud}
+                grow={1}
+                isVisible={true}
+                options={{
+                    media: basePath + 'static/' + themeMap[theme].blocksMediaFolder + '/'
+                }}
+                stageSize={stageSize}
+                theme={theme}
+                vm={vm}
+            />
+        </Box>
+    ), [theme, canUseCloud, vm, basePath, stageSize]);
 
-    const handleTabClick = useCallback(index => {
-        if (index === -1) {
+    const circuitosPanel = useMemo(() => <CircuitosTab vm={vm} />, [vm]);
+    const tab3dPanel = useMemo(() => <Tab3D vm={vm} />, [vm]);
+
+    const allPanels = useMemo(function () {
+        return {
+            code: codePanel,
+            costumes: costumePanel,
+            sounds: soundPanel,
+            ai: aiPanel,
+            simulacion: simulationPanel,
+            control: controlPanel,
+            circuitos: circuitosPanel,
+            '3d': tab3dPanel
+        };
+    }, [codePanel, costumePanel, soundPanel, aiPanel, simulationPanel, controlPanel, circuitosPanel, tab3dPanel]);
+
+    const [panels, panelsList] = useMemo(function () {
+        const list = openTabs.slice();
+        hiddenTabs.forEach(function (tid) {
+            if (list.indexOf(tid) === -1) list.push(tid);
+        });
+        return [list.map(function (tabId) { return allPanels[tabId]; }), list];
+    }, [openTabs, hiddenTabs, allPanels]);
+
+    var primaryIdx = panelsList.indexOf(activeTabId);
+    var secondaryIdx = secondaryTabId ? panelsList.indexOf(secondaryTabId) : null;
+    var partnerIdx = (splitMode && secondaryIdx != null && primaryIdx >= 0) ?
+        secondaryIdx : null;
+    var showSplit = partnerIdx != null && primaryIdx >= 0 && secondaryIdx >= 0;
+
+    const handleTabClick = useCallback(function (tabId) {
+        if (tabId === -1) {
             if (splitMode) onActivateTab(splitPrimaryIndex);
             return;
         }
-        onActivateTab(index);
-    }, [splitMode, splitPrimaryIndex, onActivateTab]);
-
-    const isInSplit = splitMode && splitPrimaryIndex != null &&
-        (activeTabIndex === splitPrimaryIndex || activeTabIndex === secondaryTabIndex);
-    const partnerIndex = isInSplit ?
-        (activeTabIndex === splitPrimaryIndex ? secondaryTabIndex : splitPrimaryIndex) :
-        null;
-    const showSplit = partnerIndex != null;
+        onActivateTab(tabId);
+    }, [splitMode, onActivateTab, splitPrimaryIndex]);
 
     const handleCloseSecondary = useCallback(() => {
         onSetSecondaryTab(null);
@@ -288,23 +417,24 @@ const GUIComponent = props => {
                 <Box className={styles.editorWrapper}>
                     <TabBar
                         tabs={tabsConfig}
-                        tabOrder={tabOrder}
-                        activeTabIndex={activeTabIndex}
-                        secondaryTabIndex={secondaryTabIndex}
-                        splitPrimaryIndex={splitPrimaryIndex}
+                        openTabs={openTabs}
+                        activeTabId={activeTabId}
+                        secondaryTabId={secondaryTabId}
                         splitMode={splitMode}
                         onTabClick={handleTabClick}
                         onTabReorder={handleTabReorder}
-                        onSetSecondaryTab={onSetSecondaryTab}
+                        onOpenTab={onOpenTab}
+                        onCloseTab={onCloseTab}
                         onActivateTab={onActivateTab}
+                        onSetSecondaryTab={onSetSecondaryTab}
                         onDragToSplitPanel={handleDragToSplitPanel}
                         rtl={isRtl}
                     />
                     <div className={styles.tabsBody} data-tabs-body>
                         <SplitContainer
                             panels={panels}
-                            primaryIndex={activeTabIndex}
-                            secondaryIndex={partnerIndex}
+                            primaryIndex={primaryIdx >= 0 ? primaryIdx : 0}
+                            secondaryIndex={partnerIdx}
                             splitMode={showSplit}
                             splitRatio={splitRatio}
                             splitDirection="horizontal"
@@ -314,10 +444,10 @@ const GUIComponent = props => {
                         />
                         {isDragToSplit && !showSplit && dragZone && (
                             <div className={classNames(styles.dropIndicator, dragZone === 'left' ? styles.dropLeft : styles.dropRight)}>
-                                <span>Soltar aquí para pantalla dividida</span>
+                                <span><FormattedMessage {...messages.dropToSplit} /></span>
                             </div>
                         )}
-                        {!showSplit && activeTabIndex === 0 && (
+                        {!showSplit && activeTabId === 'code' && (
                             <Box className={styles.extensionButtonContainer}>
                                 <button
                                     className={styles.extensionButton}
@@ -332,12 +462,12 @@ const GUIComponent = props => {
                                 </button>
                             </Box>
                         )}
-                        {!showSplit && activeTabIndex === 0 && (
+                        {!showSplit && activeTabId === 'code' && (
                             <Box className={styles.watermark}>
                                 <Watermark selectedDevice={selectedDevice} />
                             </Box>
                         )}
-                        {activeTabIndex === 0 && (
+                        {activeTabId === 'code' && (
                             <MentorGuide message={mentorGuidanceMsg} onReanalyze={handleReanalyze} />
                         )}
                     </div>
@@ -414,20 +544,21 @@ const GUIComponent = props => {
                 />
             ) : null}
             <DeviceSelector
-                deviceData={deviceData}
+                deviceData={getDevices(intl)}
                 onRequestClose={onRequestCloseDeviceLibrary}
                 onDeviceSelected={device => {
                     if (device.deviceId !== 'null') {
-                        setSelectedDevice(device);
+                        onSelectDevice(device);
                     } else {
-                        setSelectedDevice(null);
+                        onClearDevice();
                     }
                     onRequestCloseDeviceLibrary();
                 }}
-                title="Select Device"
+                title={intl.formatMessage(messages.selectDevice)}
                 visible={deviceLibraryVisible}
             />
             <MenuBar
+                activeTabId={activeTabId}
                 authorId={authorId}
                 authorThumbnailUrl={authorThumbnailUrl}
                 authorUsername={authorUsername}
@@ -443,7 +574,6 @@ const GUIComponent = props => {
                 className={styles.menuBarPosition}
                 enableCommunity={enableCommunity}
                 isShared={isShared}
-                isTotallyNormal={isTotallyNormal}
                 showComingSoon={showComingSoon}
                 onClickAbout={onClickAbout}
                 onProjectTelemetryEvent={onProjectTelemetryEvent}
@@ -455,12 +585,15 @@ const GUIComponent = props => {
             />
             {renderEditor()}
             <DragLayer />
+            <OldtimeyMode />
+            <NinetiesMode />
+            <PrehistoricMode />
         </Box>
     );
 };
 
 GUIComponent.propTypes = {
-    activeTabIndex: PropTypes.number,
+    activeTabId: PropTypes.string,
     authorId: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
     authorThumbnailUrl: PropTypes.string,
     authorUsername: PropTypes.oneOfType([PropTypes.string, PropTypes.bool]),
@@ -490,10 +623,11 @@ GUIComponent.propTypes = {
     isPlayerOnly: PropTypes.bool,
     isRtl: PropTypes.bool,
     isShared: PropTypes.bool,
-    isTotallyNormal: PropTypes.bool,
     loading: PropTypes.bool,
     logo: PropTypes.string,
     onActivateTab: PropTypes.func,
+    onOpenTab: PropTypes.func,
+    onCloseTab: PropTypes.func,
     onExtensionButtonClick: PropTypes.func,
     onRequestCloseBackdropLibrary: PropTypes.func,
     onRequestCloseCostumeLibrary: PropTypes.func,
@@ -508,11 +642,10 @@ GUIComponent.propTypes = {
     onTelemetryModalCancel: PropTypes.func,
     onTelemetryModalOptIn: PropTypes.func,
     onTelemetryModalOptOut: PropTypes.func,
-    secondaryTabIndex: PropTypes.number,
+    openTabs: PropTypes.arrayOf(PropTypes.string),
+    secondaryTabId: PropTypes.string,
     splitMode: PropTypes.bool,
-    splitPrimaryIndex: PropTypes.number,
     splitRatio: PropTypes.number,
-    tabOrder: PropTypes.arrayOf(PropTypes.number),
     stageSizeMode: PropTypes.oneOf(Object.keys(STAGE_SIZE_MODES)),
     targetIsStage: PropTypes.bool,
     telemetryModalVisible: PropTypes.bool,
@@ -524,7 +657,10 @@ GUIComponent.propTypes = {
     onSetSecondaryTab: PropTypes.func,
     onSetSplitRatio: PropTypes.func,
     onSwapTabs: PropTypes.func,
-    onReorderTabs: PropTypes.func
+    onReorderTabs: PropTypes.func,
+    onClearExplain: PropTypes.func,
+    onSetProjectKey: PropTypes.func,
+    selectedDevice: PropTypes.object
 };
 
 GUIComponent.defaultProps = {
@@ -543,11 +679,11 @@ GUIComponent.defaultProps = {
     enableCommunity: false,
     isCreating: false,
     isShared: false,
-    isTotallyNormal: false,
     loading: false,
     showComingSoon: false,
     stageSizeMode: STAGE_SIZE_MODES.large,
-    splitRatio: 0.5
+    splitRatio: 0.5,
+    selectedDevice: null
 };
 
 const mapStateToProps = state => ({
@@ -555,7 +691,8 @@ const mapStateToProps = state => ({
     stageSizeMode: state.scratchGui.stageSize.stageSize,
     theme: state.scratchGui.theme.theme,
     toolboxXML: state.scratchGui.toolbox.toolboxXML,
-    reducedMotion: state.scratchGui.animations.reducedMotion
+    reducedMotion: state.scratchGui.animations.reducedMotion,
+    selectedDevice: state.scratchGui.device.selectedDevice
 });
 
 export default injectIntl(connect(

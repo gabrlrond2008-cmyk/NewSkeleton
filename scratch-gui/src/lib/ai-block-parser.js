@@ -1,4 +1,5 @@
-import AI_KNOWLEDGE from './ai-knowledge';
+import {getKnowledge} from './ai-knowledge';
+var AI_KNOWLEDGE = getKnowledge();
 
 function uid() {
     var soup = '!#%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';

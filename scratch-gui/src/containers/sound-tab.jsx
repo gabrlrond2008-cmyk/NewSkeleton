@@ -33,7 +33,7 @@ import {
 
 import {
     activateTab,
-    COSTUMES_TAB_INDEX
+    COSTUMES_TAB
 } from '../reducers/editor-tab';
 
 import {setRestore} from '../reducers/restore-deletion';
@@ -314,7 +314,7 @@ const mapStateToProps = state => ({
 });
 
 const mapDispatchToProps = dispatch => ({
-    onActivateCostumesTab: () => dispatch(activateTab(COSTUMES_TAB_INDEX)),
+    onActivateCostumesTab: () => dispatch(activateTab(COSTUMES_TAB)),
     onNewSoundFromLibraryClick: e => {
         e.preventDefault();
         dispatch(openSoundLibrary());

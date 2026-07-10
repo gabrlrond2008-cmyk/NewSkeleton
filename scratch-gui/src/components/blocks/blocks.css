@@ -6,6 +6,15 @@
     height: 100%;
 }
 
+/* Keep block input text readable during time travel modes */
+html[data-time-travel]:not([data-time-travel="NOW"]) .blocklyNonEditableText > text,
+html[data-time-travel]:not([data-time-travel="NOW"]) .blocklyEditableText > text {
+    fill: #111 !important;
+}
+html[data-time-travel]:not([data-time-travel="NOW"]) .blocklyHtmlInput {
+    color: #000 !important;
+}
+
 .drag-over:after {
     content: '';
     position: absolute;

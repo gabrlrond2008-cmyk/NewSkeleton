@@ -44,6 +44,11 @@ const messages = defineMessages({
         defaultMessage: 'Full Screen Control',
         description: 'Button to enter/exit full screen mode',
         id: 'gui.stageHeader.fullscreenControl'
+    },
+    scratchLogo: {
+        defaultMessage: 'Scratch',
+        description: 'Alt text for Scratch logo',
+        id: 'gui.stageHeader.scratchLogo'
     }
 });
 
@@ -73,7 +78,7 @@ const StageHeaderComponent = function (props) {
                     target="_blank"
                 >
                     <img
-                        alt="Scratch"
+                        alt={props.intl.formatMessage(messages.scratchLogo)}
                         src={scratchLogo}
                     />
                 </a>

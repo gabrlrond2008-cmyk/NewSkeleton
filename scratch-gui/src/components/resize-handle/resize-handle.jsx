@@ -1,13 +1,22 @@
 import PropTypes from 'prop-types';
 import React, {useCallback, useEffect, useRef} from 'react';
 import classNames from 'classnames';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 
 import styles from './resize-handle.css';
 
 var SNAP_POINTS = [1 / 3, 1 / 2, 2 / 3];
 var SNAP_THRESHOLD = 0.08;
 
-const ResizeHandle = ({direction, containerRef, onRatioChange, onSwap}) => {
+var messages = defineMessages({
+    swapPanels: {
+        id: 'gui.resizeHandle.swapPanels',
+        defaultMessage: 'Swap panels',
+        description: 'Title for swap panels button'
+    }
+});
+
+const ResizeHandle = ({direction, containerRef, intl, onRatioChange, onSwap}) => {
     const draggingRef = useRef(false);
     const rafRef = useRef(null);
 
@@ -81,7 +90,7 @@ const ResizeHandle = ({direction, containerRef, onRatioChange, onSwap}) => {
                 className={styles.swapButton}
                 onPointerDown={(e) => e.stopPropagation()}
                 onClick={onSwap}
-                title="Swap panels"
+                title={intl.formatMessage(messages.swapPanels)}
                 type="button"
             >
                 &#x21C4;
@@ -93,6 +102,7 @@ const ResizeHandle = ({direction, containerRef, onRatioChange, onSwap}) => {
 ResizeHandle.propTypes = {
     direction: PropTypes.oneOf(['horizontal', 'vertical']),
     containerRef: PropTypes.shape({current: PropTypes.any}).isRequired,
+    intl: intlShape,
     onRatioChange: PropTypes.func.isRequired,
     onSwap: PropTypes.func
 };
@@ -101,4 +111,4 @@ ResizeHandle.defaultProps = {
     direction: 'horizontal'
 };
 
-export default React.memo(ResizeHandle);
+export default React.memo(injectIntl(ResizeHandle));

@@ -16,7 +16,7 @@ const LanguageSelector = ({currentLocale, label, onChange}) => (
     >
         {
             Object.keys(locales)
-                .filter(l => !ignore.includes(l))
+                .filter(l => l === 'en' || l === 'es')
                 .map(locale => (
                     <option
                         key={locale}

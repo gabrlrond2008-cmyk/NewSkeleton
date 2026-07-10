@@ -38,8 +38,8 @@ import {
     activateTab,
     setSecondaryTab,
     setExplainPending,
-    SOUNDS_TAB_INDEX,
-    AI_TAB_INDEX
+    SOUNDS_TAB,
+    AI_TAB
 } from '../reducers/editor-tab';
 import {readWorkspace} from '../lib/ai-workspace-reader.js';
 import {saveStacks, restoreStacks} from '../lib/block-undo-manager';
@@ -214,6 +214,11 @@ class Blocks extends React.Component {
         addFunctionListener(this.workspace, 'zoom', this.onWorkspaceMetricsChange);
 
         this.attachVM();
+        try {
+            this.props.vm.emitWorkspaceUpdate();
+        } catch (e) {
+            console.warn(e);
+        }
 
         // Override workspace context menu to add split screen option
         const ws = this.workspace;
@@ -324,7 +329,7 @@ class Blocks extends React.Component {
                             var workspaceData = readWorkspace(blocksThis.props.vm);
                             if (workspaceData) {
                                 blocksThis.props.onSetExplainPending(workspaceData);
-                                blocksThis.props.onActivateTab(AI_TAB_INDEX);
+                                blocksThis.props.onActivateTab(AI_TAB);
                             }
                         } catch (_e) {}
                     }
@@ -1153,7 +1158,7 @@ const mapDispatchToProps = dispatch => ({
         dispatch(openConnectionModal());
     },
     onOpenSoundRecorder: () => {
-        dispatch(activateTab(SOUNDS_TAB_INDEX));
+        dispatch(activateTab(SOUNDS_TAB));
         dispatch(openSoundRecorder());
     },
     onRequestCloseExtensionLibrary: () => {

@@ -1,0 +1,13 @@
+diff --git a/node_modules/react-popover/source/index.js b/node_modules/react-popover/source/index.js
+index 7cc8c1e..6081705 100644
+--- a/node_modules/react-popover/source/index.js
++++ b/node_modules/react-popover/source/index.js
+@@ -96,7 +96,7 @@ class Popover extends React.Component {
+     this.targetEl = ReactDOM.findDOMNode(this)
+     if (this.props.isOpen) this.enter()
+   }
+-  componentWillReceiveProps(propsNext) {
++  UNSAFE_componentWillReceiveProps(propsNext) {
+     const willOpen = !this.props.isOpen && propsNext.isOpen
+     const willClose = this.props.isOpen && !propsNext.isOpen
+     if (willOpen) this.open()

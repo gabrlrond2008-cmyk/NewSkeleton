@@ -18,7 +18,9 @@ const StageWrapperComponent = function (props) {
         isRendererSupported,
         loading,
         stageSize,
-        vm
+        vm,
+        useEditorDragStyle,
+        allDraggable
     } = props;
 
     return (
@@ -41,6 +43,8 @@ const StageWrapperComponent = function (props) {
                         <Stage
                             stageSize={stageSize}
                             vm={vm}
+                            useEditorDragStyle={useEditorDragStyle}
+                            allDraggable={allDraggable}
                         /> :
                         null
                 }

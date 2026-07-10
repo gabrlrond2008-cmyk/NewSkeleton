@@ -1,4 +1,5 @@
 @import "../../css/units.css";
+@import "../../css/colors.css";
 
 .container {
     display: flex;
@@ -74,7 +75,7 @@
 }
 
 .userMsg .avatar {
-    background: #855CD6;
+    background: $looks-secondary;
 }
 
 .bubble {
@@ -89,7 +90,7 @@
 }
 
 .userMsg .bubble {
-    background: #855CD6;
+    background: $looks-secondary;
     color: #fff;
     border-bottom-right-radius: 4px;
 }
@@ -205,8 +206,8 @@
 }
 
 .createBtn:hover {
-    border-color: #855CD6;
-    color: #855CD6;
+    border-color: $looks-secondary;
+    color: $looks-secondary;
     background: #f3eefb;
 }
 
@@ -216,8 +217,8 @@
 }
 
 .creating {
-    border-color: #855CD6;
-    color: #855CD6;
+    border-color: $looks-secondary;
+    color: $looks-secondary;
     background: #f3eefb;
     animation: pulse 0.8s infinite;
 }
@@ -450,7 +451,7 @@
 }
 
 .input:focus {
-    border-color: #855CD6;
+    border-color: $looks-secondary;
 }
 
 .sendButton {
@@ -461,7 +462,7 @@
     justify-content: center;
     border: none;
     border-radius: 50%;
-    background: #855CD6;
+    background: $looks-secondary;
     color: #fff;
     cursor: pointer;
     flex-shrink: 0;
@@ -469,7 +470,7 @@
 }
 
 .sendButton:hover {
-    background: #6F45C0;
+    background: $looks-secondary-dark;
 }
 
 .sendButton:disabled {
@@ -490,7 +491,7 @@
     display: inline-block;
     width: 2px;
     height: 1em;
-    background: #855CD6;
+    background: $looks-secondary;
     margin-left: 1px;
     vertical-align: text-bottom;
     animation: cursorBlink 0.6s step-end infinite;

@@ -348,7 +348,7 @@ class Stage extends React.Component {
         const target = this.props.vm.runtime.getTargetById(targetId);
 
         // Do not start drag unless in editor drag mode or target is draggable
-        if (!(this.props.useEditorDragStyle || target.draggable)) return;
+        if (!(this.props.useEditorDragStyle || target.draggable || this.props.allDraggable)) return;
 
         // Dragging always brings the target to the front
         target.goToFront();
@@ -426,6 +426,7 @@ class Stage extends React.Component {
 }
 
 Stage.propTypes = {
+    allDraggable: PropTypes.bool,
     isColorPicking: PropTypes.bool,
     isFullScreen: PropTypes.bool.isRequired,
     isStarted: PropTypes.bool,
@@ -441,13 +442,15 @@ Stage.defaultProps = {
     useEditorDragStyle: true
 };
 
-const mapStateToProps = state => ({
+const mapStateToProps = (state, ownProps) => ({
     isColorPicking: state.scratchGui.colorPicker.active,
     isFullScreen: state.scratchGui.mode.isFullScreen,
     isStarted: state.scratchGui.vmStatus.started,
     micIndicator: state.scratchGui.micIndicator,
     // Do not use editor drag style in fullscreen or player mode.
-    useEditorDragStyle: !(state.scratchGui.mode.isFullScreen || state.scratchGui.mode.isPlayerOnly)
+    useEditorDragStyle: ownProps.useEditorDragStyle !== undefined ?
+        ownProps.useEditorDragStyle :
+        !(state.scratchGui.mode.isFullScreen || state.scratchGui.mode.isPlayerOnly)
 });
 
 const mapDispatchToProps = dispatch => ({

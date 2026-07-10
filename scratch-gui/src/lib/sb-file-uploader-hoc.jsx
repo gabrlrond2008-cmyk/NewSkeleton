@@ -21,6 +21,10 @@ import {
 import {
     closeFileMenu
 } from '../reducers/menus';
+import {
+    setSelectedDevice
+} from '../reducers/device';
+import getDevices from '../lib/libraries/devices/devices.jsx';
 
 const messages = defineMessages({
     loadError: {
@@ -150,21 +154,27 @@ const SBFileUploaderHOC = function (WrappedComponent) {
                 var buffer = this.fileReader.result;
                 var filename = this.fileToUpload && this.fileToUpload.name;
 
-                // Check if .flynt format and extract AI data before loading project
-                var aiDataPromise = Promise.resolve(null);
+                // Check if .flynt format and extract AI + device data before loading project
+                var flyntDataPromise = Promise.resolve({aiData: null, deviceData: null});
                 if (buffer && typeof buffer === 'object') {
                     var VMClass = self.props.vm && self.props.vm.constructor;
                     if (VMClass && VMClass.isFlynt) {
-                        aiDataPromise = VMClass.isFlynt(buffer).then(function (isFlynt) {
-                            if (isFlynt && VMClass.extractFlyntAiData) {
-                                return VMClass.extractFlyntAiData(buffer);
-                            }
-                            return null;
+                        flyntDataPromise = VMClass.isFlynt(buffer).then(function (isFlynt) {
+                            if (!isFlynt) return {aiData: null, deviceData: null};
+                            var aiPromise = VMClass.extractFlyntAiData ?
+                                VMClass.extractFlyntAiData(buffer) : Promise.resolve(null);
+                            var devicePromise = VMClass.extractFlyntDeviceData ?
+                                VMClass.extractFlyntDeviceData(buffer) : Promise.resolve(null);
+                            return Promise.all([aiPromise, devicePromise]).then(function (results) {
+                                return {aiData: results[0], deviceData: results[1]};
+                            });
                         });
                     }
                 }
 
-                aiDataPromise.then(function (aiData) {
+                flyntDataPromise.then(function (flyntData) {
+                    var aiData = flyntData.aiData;
+                    var deviceData = flyntData.deviceData;
                     self.props.onLoadingStarted();
                     try { localStorage.removeItem('ai_messages'); } catch (e) {}
                     var loadingSuccess = false;
@@ -175,6 +185,19 @@ const SBFileUploaderHOC = function (WrappedComponent) {
                                 self.props.onSetProjectTitle(uploadedProjectTitle);
                             }
                             loadingSuccess = true;
+
+                            // Restore device selection from .flynt
+                            if (deviceData && deviceData.deviceId) {
+                                try {
+                                    var deviceList = getDevices(self.props.intl);
+                                    var found = deviceList.filter(function (d) {
+                                        return d.deviceId === deviceData.deviceId;
+                                    });
+                                    if (found.length > 0) {
+                                        self.props.onSelectDevice(found[0]);
+                                    }
+                                } catch (_) {}
+                            }
 
                             // Restore AI data from .flynt to localStorage
                             if (aiData) {
@@ -268,6 +291,7 @@ const SBFileUploaderHOC = function (WrappedComponent) {
         loadingState: PropTypes.oneOf(LoadingStates),
         onLoadingFinished: PropTypes.func,
         onLoadingStarted: PropTypes.func,
+        onSelectDevice: PropTypes.func,
         onSetProjectTitle: PropTypes.func,
         projectChanged: PropTypes.shape({changed: PropTypes.bool, hasBeenSaved: PropTypes.bool}),
         requestProjectUpload: PropTypes.func,
@@ -302,6 +326,7 @@ const SBFileUploaderHOC = function (WrappedComponent) {
         // show project loading screen
         onLoadingStarted: () => dispatch(openLoadingProject()),
         onSetProjectTitle: title => dispatch(setProjectTitle(title)),
+        onSelectDevice: device => dispatch(setSelectedDevice(device)),
         // step 4: transition the project state so we're ready to handle the new
         // project data. When this is done, the project state transition will be
         // noticed by componentDidUpdate()

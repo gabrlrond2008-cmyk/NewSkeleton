@@ -1,0 +1,133 @@
+@import "../../css/colors.css";
+
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+}
+
+.blurBackdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.3);
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
+}
+
+.modalContent {
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 360px;
+  max-width: 420px;
+  box-shadow: 0 8px 8px 0 $ui-black-transparent;
+
+  transform-origin: top center;
+  animation: menuDrop 0.25s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+.modalContent.exit {
+  animation: menuExit 0.2s cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes menuDrop {
+  from {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1);
+  }
+}
+
+@keyframes menuExit {
+  from {
+    opacity: 1;
+    transform: translateX(-50%) scaleY(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-50%) scaleY(0);
+  }
+}
+
+.headerBar {
+  background: $looks-secondary;
+  color: $ui-white;
+  padding: 14px 28px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  border: 1px solid $ui-black-transparent;
+  border-bottom: none;
+  border-radius: 0;
+}
+
+.body {
+  background: $ui-white;
+  padding: 24px 28px 18px;
+  border: 1px solid $ui-black-transparent;
+  border-top: none;
+  border-radius: 0 0 8px 8px;
+}
+
+.message {
+  color: $text-primary;
+  font-size: 13px;
+  line-height: 1.5;
+  margin-bottom: 22px;
+  text-align: center;
+}
+
+.buttons {
+  display: flex;
+  gap: 10px;
+  justify-content: center;
+}
+
+.button {
+  padding: 8px 22px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+}
+
+.button:focus {
+  outline: none;
+}
+
+.cancelButton {
+  background: transparent;
+  border-color: $ui-black-transparent;
+  color: $text-primary;
+}
+
+.cancelButton:hover {
+  background: $ui-primary;
+  border-color: $ui-black-transparent;
+  color: $looks-secondary;
+}
+
+.continueButton {
+  background: $looks-secondary;
+  border-color: $looks-secondary;
+  color: $ui-white;
+}
+
+.continueButton:hover {
+  background: $looks-secondary-dark;
+  border-color: $looks-secondary-dark;
+  color: $ui-white;
+}

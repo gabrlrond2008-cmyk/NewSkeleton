@@ -1,8 +1,17 @@
 import PropTypes from 'prop-types';
 import React from 'react';
 import classNames from 'classnames';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 
 import styles from './device-selector.css';
+
+const messages = defineMessages({
+    selectDevice: {
+        id: 'gui.deviceSelector.selectDevice',
+        defaultMessage: 'Select Device',
+        description: 'Title for the device selector modal'
+    }
+});
 
 const ANIMATION_DURATION = 300;
 
@@ -10,6 +19,7 @@ const DeviceSelector = ({
     deviceData,
     onRequestClose,
     onDeviceSelected,
+    intl,
     title,
     visible
 }) => {
@@ -76,7 +86,7 @@ const DeviceSelector = ({
                 role="dialog"
             >
                 <div className={styles.header}>
-                    <span className={styles.headerTitle}>{title}</span>
+                    <span className={styles.headerTitle}>{title || intl.formatMessage(messages.selectDevice)}</span>
                     <button
                         className={styles.closeButton}
                         onClick={onRequestClose}
@@ -123,6 +133,7 @@ DeviceSelector.propTypes = {
         manufactor: PropTypes.string,
         description: PropTypes.string
     })).isRequired,
+    intl: intlShape,
     onRequestClose: PropTypes.func.isRequired,
     onDeviceSelected: PropTypes.func.isRequired,
     title: PropTypes.string,
@@ -130,8 +141,7 @@ DeviceSelector.propTypes = {
 };
 
 DeviceSelector.defaultProps = {
-    title: 'Select Device',
     visible: false
 };
 
-export default DeviceSelector;
+export default injectIntl(DeviceSelector);

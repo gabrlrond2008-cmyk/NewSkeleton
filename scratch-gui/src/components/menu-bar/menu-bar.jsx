@@ -22,11 +22,6 @@ import { save } from '@tauri-apps/plugin-dialog';
 import { invoke } from '@tauri-apps/api/core';
 
 import {
-    isTimeTravel2020,
-    isTimeTravelNow,
-    setTimeTravel
-} from '../../reducers/time-travel';
-import {
     manualUpdateProject,
     requestNewProject,
     remixProject,
@@ -39,9 +34,6 @@ import {
     openFileMenu,
     closeFileMenu,
     fileMenuOpen,
-    openModeMenu,
-    closeModeMenu,
-    modeMenuOpen,
     settingsMenuOpen,
     openSettingsMenu,
     closeSettingsMenu
@@ -57,6 +49,8 @@ import fileIcon from './icon--file.svg';
 import deviceIcon from './icon--device.svg';
 
 import sharedMessages from '../../lib/shared-messages';
+
+var ELECTRONICS_TABS = ['control', 'circuitos', '3d'];
 
 const MenuBarItemTooltip = ({
     children,
@@ -114,7 +108,6 @@ class MenuBar extends React.Component {
             'handleClickRemix',
             'handleClickSave',
             'handleClickSaveAsCopy',
-            'handleSetMode',
             'handleKeyPress',
             'handleSaveToComputer'
         ]);
@@ -126,19 +119,15 @@ class MenuBar extends React.Component {
         document.removeEventListener('keydown', this.handleKeyPress);
     }
     handleClickNew () {
-        // if the project is dirty, and user owns the project, we will autosave.
-        // but if they are not logged in and can't save, user should consider
-        // downloading or logging in first.
-        // Note that if user is logged in and editing someone else's project,
-        // they'll lose their work.
-        const readyToReplaceProject = this.props.confirmReadyToReplaceProject(
-            this.props.intl.formatMessage(sharedMessages.replaceProjectWarning)
+        this.props.onRequestCloseFile();
+        this.props.confirmReadyToReplaceProject(
+            this.props.intl.formatMessage(sharedMessages.replaceProjectWarning),
+            function (ready) {
+                if (ready) {
+                    this.props.onClickNew(this.props.canSave && this.props.canCreateNew);
+                }
+            }.bind(this)
         );
-        this.props.onRequestCloseFile();
-        if (readyToReplaceProject) {
-            this.props.onClickNew(this.props.canSave && this.props.canCreateNew);
-        }
-        this.props.onRequestCloseFile();
     }
     handleClickRemix () {
         this.props.onClickRemix();
@@ -151,23 +140,6 @@ class MenuBar extends React.Component {
     handleClickSaveAsCopy () {
         this.props.onClickSaveAsCopy();
         this.props.onRequestCloseFile();
-    }
-    handleSetMode (mode) {
-        return () => {
-            // Turn on/off filters for modes.
-            if (mode === '1920') {
-                document.documentElement.style.filter = 'brightness(.9)contrast(.8)sepia(1.0)';
-                document.documentElement.style.height = '100%';
-            } else if (mode === '1990') {
-                document.documentElement.style.filter = 'hue-rotate(40deg)';
-                document.documentElement.style.height = '100%';
-            } else {
-                document.documentElement.style.filter = '';
-                document.documentElement.style.height = '';
-            }
-
-            this.props.onSetTimeTravelMode(mode);
-        };
     }
     handleKeyPress (event) {
         const modifier = bowser.mac ? event.metaKey : event.ctrlKey;
@@ -194,7 +166,13 @@ class MenuBar extends React.Component {
                 };
             } catch (_) {}
 
-            const content = await this.props.vm.saveProjectFlynt(aiData);
+            var deviceData = this.props.selectedDevice ? {
+                deviceId: this.props.selectedDevice.deviceId,
+                name: this.props.selectedDevice.name,
+                manufactor: this.props.selectedDevice.manufactor
+            } : null;
+
+            const content = await this.props.vm.saveProjectFlynt(aiData, deviceData);
             const filename = this.getProjectFilename();
 
             const defaultPath = localStorage.getItem('scratchDefaultPath');
@@ -226,10 +204,11 @@ class MenuBar extends React.Component {
             this.props.onProjectTelemetryEvent('projectDidSave', metadata);
         }
     }
+
     getProjectFilename () {
         let filenameTitle = this.props.projectTitle;
         if (!filenameTitle || filenameTitle.length === 0) {
-            filenameTitle = 'Scratch Project';
+            filenameTitle = this.props.intl.formatMessage(sharedMessages.scratchProject);
         }
         return `${filenameTitle.substring(0, 100)}.flynt`;
     }
@@ -398,62 +377,18 @@ class MenuBar extends React.Component {
                             </div>
                         )}
 
-                        <div
-                            className={classNames(styles.menuBarItem, styles.hoverable)}
-                            onMouseUp={this.props.onRequestOpenDeviceLibrary}
-                        >
-                            <img src={deviceIcon} />
-                            <span className={classNames(styles.collapsibleLabel)}>
-                                {this.props.selectedDevice ? this.props.selectedDevice.name : 'Select device'}
-                            </span>
-                        </div>
-                        {this.props.isTotallyNormal && (
+                        {ELECTRONICS_TABS.indexOf(this.props.activeTabId) !== -1 && (
                             <div
-                                className={classNames(styles.menuBarItem, styles.hoverable, {
-                                    [styles.active]: this.props.modeMenuOpen
-                                })}
-                                onMouseUp={this.props.onClickMode}
+                                className={classNames(styles.menuBarItem, styles.hoverable)}
+                                onMouseUp={this.props.onRequestOpenDeviceLibrary}
                             >
-                                <div className={classNames(styles.editMenu)}>
-                                    <FormattedMessage
-                                        defaultMessage="Mode"
-                                        description="Mode menu item in the menu bar"
-                                        id="gui.menuBar.modeMenu"
-                                    />
-                                </div>
-                                <MenuBarMenu
-                                    className={classNames(styles.menuBarMenu)}
-                                    open={this.props.modeMenuOpen}
-                                    place={this.props.isRtl ? 'left' : 'right'}
-                                    onRequestClose={this.props.onRequestCloseMode}
-                                >
-                                    <MenuSection>
-                                        <MenuItem onClick={this.handleSetMode('NOW')}>
-                                            <span className={classNames({[styles.inactive]: !this.props.modeNow})}>
-                                                {'✓'}
-                                            </span>
-                                            {' '}
-                                            <FormattedMessage
-                                                defaultMessage="Normal mode"
-                                                description="April fools: resets editor to not have any pranks"
-                                                id="gui.menuBar.normalMode"
-                                            />
-                                        </MenuItem>
-                                        <MenuItem onClick={this.handleSetMode('2020')}>
-                                            <span className={classNames({[styles.inactive]: !this.props.mode2020})}>
-                                                {'✓'}
-                                            </span>
-                                            {' '}
-                                            <FormattedMessage
-                                                defaultMessage="Caturday mode"
-                                                description="April fools: Cat blocks mode"
-                                                id="gui.menuBar.caturdayMode"
-                                            />
-                                        </MenuItem>
-                                    </MenuSection>
-                                </MenuBarMenu>
+                                <img className={styles.deviceIconImg} src={this.props.selectedDevice ? this.props.selectedDevice.iconURL : deviceIcon} />
+                                <span className={classNames(styles.collapsibleLabel)}>
+                                    {this.props.selectedDevice ? this.props.selectedDevice.name : this.props.intl.formatMessage(sharedMessages.selectDevice)}
+                                </span>
                             </div>
                         )}
+
                     </div>
                 </div>
                 {this.props.canEditTitle ? (
@@ -494,17 +429,14 @@ MenuBar.propTypes = {
     canEditTitle: PropTypes.bool,
     canManageFiles: PropTypes.bool,
     canRemix: PropTypes.bool,
+    activeTabId: PropTypes.string,
     canSave: PropTypes.bool,
     className: PropTypes.string,
     confirmReadyToReplaceProject: PropTypes.func,
     fileMenuOpen: PropTypes.bool,
     intl: intlShape,
     isRtl: PropTypes.bool,
-    isTotallyNormal: PropTypes.bool,
     locale: PropTypes.string.isRequired,
-    mode2020: PropTypes.bool,
-    modeMenuOpen: PropTypes.bool,
-    modeNow: PropTypes.bool,
     onClickAbout: PropTypes.oneOfType([
         PropTypes.func, // button mode: call this callback when the About button is clicked
         PropTypes.arrayOf( // menu mode: list of items in the About menu
@@ -515,7 +447,6 @@ MenuBar.propTypes = {
         )
     ]),
     onClickFile: PropTypes.func,
-    onClickMode: PropTypes.func,
     onClickNew: PropTypes.func,
     onClickRemix: PropTypes.func,
     onClickSave: PropTypes.func,
@@ -524,14 +455,12 @@ MenuBar.propTypes = {
     onProjectTelemetryEvent: PropTypes.func,
     onRequestCloseAbout: PropTypes.func,
     onRequestCloseFile: PropTypes.func,
-    onRequestCloseMode: PropTypes.func,
     onRequestCloseSettings: PropTypes.func,
     onRequestOpenDeviceLibrary: PropTypes.func,
     onRequestOpenAbout: PropTypes.func,
     selectedDevice: PropTypes.shape({
         name: PropTypes.string
     }),
-    onSetTimeTravelMode: PropTypes.func,
     onStartSelectingFileUpload: PropTypes.func,
     projectTitle: PropTypes.string,
     settingsMenuOpen: PropTypes.bool,
@@ -549,21 +478,17 @@ const mapStateToProps = (state, ownProps) => {
         fileMenuOpen: fileMenuOpen(state),
         isRtl: state.locales.isRtl,
         locale: state.locales.locale,
-        modeMenuOpen: modeMenuOpen(state),
         projectTitle: state.scratchGui.projectTitle,
         settingsMenuOpen: settingsMenuOpen(state),
         username: user ? user.username : null,
         vm: state.scratchGui.vm,
-        mode2020: isTimeTravel2020(state),
-        modeNow: isTimeTravelNow(state)
+        selectedDevice: state.scratchGui.device.selectedDevice
     };
 };
 
 const mapDispatchToProps = dispatch => ({
     onClickFile: () => dispatch(openFileMenu()),
     onRequestCloseFile: () => dispatch(closeFileMenu()),
-    onClickMode: () => dispatch(openModeMenu()),
-    onRequestCloseMode: () => dispatch(closeModeMenu()),
     onRequestOpenAbout: () => dispatch(openAboutMenu()),
     onRequestCloseAbout: () => dispatch(closeAboutMenu()),
     onClickSettings: () => dispatch(openSettingsMenu()),
@@ -571,8 +496,7 @@ const mapDispatchToProps = dispatch => ({
     onClickNew: needSave => dispatch(requestNewProject(needSave)),
     onClickRemix: () => dispatch(remixProject()),
     onClickSave: () => dispatch(manualUpdateProject()),
-    onClickSaveAsCopy: () => dispatch(saveProjectAsCopy()),
-    onSetTimeTravelMode: mode => dispatch(setTimeTravel(mode))
+    onClickSaveAsCopy: () => dispatch(saveProjectAsCopy())
 });
 
 export default compose(

@@ -1,5 +1,6 @@
 import PropTypes from 'prop-types';
 import React from 'react';
+import {connect} from 'react-redux';
 
 import WatermarkComponent from '../components/watermark/watermark.jsx';
 
@@ -15,4 +16,8 @@ Watermark.propTypes = {
     })
 };
 
-export default Watermark;
+const mapStateToProps = state => ({
+    selectedDevice: state.scratchGui.device.selectedDevice
+});
+
+export default connect(mapStateToProps)(Watermark);

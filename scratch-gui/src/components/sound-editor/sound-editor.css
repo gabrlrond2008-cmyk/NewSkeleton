@@ -60,7 +60,7 @@
 
     position: relative;
 
-    background: hsla(300, 53%, 60%, 0.15);
+    background: $looks-light-transparent;
     border: 1px solid $ui-black-transparent;
     border-radius: 5px;
 

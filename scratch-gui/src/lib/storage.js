@@ -10,6 +10,8 @@ class Storage extends ScratchStorage {
     constructor () {
         super();
         this.cacheDefaultProject();
+        this.setAssetHost('https://assets.scratch.mit.edu');
+        this.addOfficialScratchWebStores();
     }
     addOfficialScratchWebStores () {
         this.addWebStore(

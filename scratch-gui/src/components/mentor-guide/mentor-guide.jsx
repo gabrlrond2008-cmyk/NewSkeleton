@@ -1,9 +1,33 @@
 import PropTypes from 'prop-types';
 import React, {useEffect, useRef, useState} from 'react';
+import {defineMessages, injectIntl, intlShape} from 'react-intl';
 import styles from './mentor-guide.css';
 
+const messages = defineMessages({
+    analyzing: {
+        id: 'gui.mentorGuide.analyzing',
+        defaultMessage: 'Analyzing...',
+        description: 'Tooltip when mentor is analyzing'
+    },
+    clickToView: {
+        id: 'gui.mentorGuide.clickToView',
+        defaultMessage: 'Click to view guide',
+        description: 'Tooltip when mentor has a message'
+    },
+    reanalyze: {
+        id: 'gui.mentorGuide.reanalyze',
+        defaultMessage: 'Re-analyze',
+        description: 'Button to re-analyze blocks'
+    },
+    reanalyzeTitle: {
+        id: 'gui.mentorGuide.reanalyzeTitle',
+        defaultMessage: 'Re-analyze current blocks',
+        description: 'Tooltip for re-analyze button'
+    }
+});
+
 var MentorGuide = function (props) {
-    var {message, onReanalyze} = props;
+    var {intl, message, onReanalyze} = props;
     var [visible, setVisible] = useState(false);
     var [bubbleOpen, setBubbleOpen] = useState(false);
     var [closing, setClosing] = useState(false);
@@ -116,7 +140,7 @@ var MentorGuide = function (props) {
                 onClick={handleFaceClick}
                 role="button"
                 tabIndex="0"
-                title={isAnalyzing ? 'Analizando...' : (hasMessage ? 'Haz clic para ver la guía' : '')}
+                title={isAnalyzing ? intl.formatMessage(messages.analyzing) : (hasMessage ? intl.formatMessage(messages.clickToView) : '')}
             >
                 <span className={styles.emoji}>🤖</span>
                 {isAnalyzing && <span className={styles.pulse} />}
@@ -124,12 +148,12 @@ var MentorGuide = function (props) {
             {bubbleOpen && hasMessage && (
                 <div className={bubbleClass}>
                     <div className={styles.message}>{message}</div>
-                    <button className={styles.reanalyzeBtn} onClick={onReanalyze} type="button" title="Re-analizar los bloques actuales">
+                    <button className={styles.reanalyzeBtn} onClick={onReanalyze} type="button" title={intl.formatMessage(messages.reanalyzeTitle)}>
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                             <path d="M1 4v6h6M23 20v-6h-6"/>
                             <path d="M20.49 9A9 9 0 005.64 5.64L1 10m22 4l-4.64 4.36A9 9 0 013.51 15"/>
                         </svg>
-                        Re-analizar
+{intl.formatMessage(messages.reanalyze)}
                     </button>
                 </div>
             )}
@@ -138,8 +162,9 @@ var MentorGuide = function (props) {
 };
 
 MentorGuide.propTypes = {
+    intl: intlShape,
     message: PropTypes.string,
     onReanalyze: PropTypes.func
 };
 
-export default MentorGuide;
+export default injectIntl(MentorGuide);
