@@ -213,10 +213,12 @@ export default {
                 'Then you choose the Model: available models load automatically when you enter the key.',
                 'Free models appear at the top, separated from paid ones. So you know which ones cost nothing.',
                 'If models don\'t load (for example, if there\'s no internet), it uses a fallback list.',
-                'Groq: fast and all its models are free. Key starts with gsk_...',
-                'OpenAI: the creator of ChatGPT. Key starts with sk-... Models: GPT-4o, GPT-4o Mini.',
-                'OpenRouter: lets you use many models with one key. Key: sk-or-...',
-                'Gemini: from Google. Key starts with AIza... Models: Gemini 2.0 Flash, 1.5 Flash.',
+                'Groq: fast and all its models are free. Key starts with gsk_... Models: Llama 3.3 70B, Llama 3.1 8B, Qwen 2.5 Coder 32B, DeepSeek R1.',
+                'SambaNova Cloud: ultra-fast inference powered by SN40L RDUs (up to 1000 tokens/sec). Key starts with sn-... Models: Llama 3.3 70B, DeepSeek R1, Qwen 2.5 Coder 32B, Llama 3.1 405B.',
+                'NVIDIA NIM: free accelerated models with build.nvidia.com credits. Key starts with nvapi-... Models: Llama 3.3 70B, DeepSeek R1, Nemotron 70B, Qwen 2.5 Coder 32B.',
+                'OpenAI: the creator of ChatGPT. Key starts with sk-... Models: GPT-4o, GPT-4o Mini, o3 Mini.',
+                'OpenRouter: lets you use many models with one key. Key: sk-or-... Models: Claude 3.7 Sonnet, Gemini 2.5 Flash, Llama 3.3, DeepSeek R1.',
+                'Gemini: from Google. Key starts with AIza... Models: Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.0 Flash.',
                 'OpenCode Zen: the OpenCode provider. Key obtained at opencode.ai/auth, starts with oc_... Pay-as-you-go, add balance. Free models: DeepSeek V4 Flash Free, Big Pickle, etc. Paid models: DeepSeek V4 Flash, GPT 5.4 Mini, Claude Sonnet 4.6, Gemini 3 Flash, and more.',
                 'Everything saves automatically. Next time you open the app, it\'s already configured.'
             ]
@@ -227,7 +229,6 @@ export default {
         {label: 'Costumes / Backdrops', description: 'Image editor to create and edit sprite costumes or stage backdrops. Includes vector and bitmap drawing tools.'},
         {label: 'Sounds', description: 'Audio editor to record, import, trim and apply effects to the project\'s sounds.'},
         {label: 'AI', description: 'AI chat assistant to ask questions about how to use the app. Requires an API Key configured in Settings > AI.'},
-        {label: 'Simulation', description: 'Simulation tab for running and testing electronics projects with connected devices.'},
         {label: 'Control', description: 'Control tab for programming connected devices with block-based logic.'},
         {label: 'Circuits', description: 'Circuits tab for designing and simulating electronic circuits.'},
         {label: '3D', description: '3D modeling and visualization tab for creating three-dimensional objects.'}
@@ -242,6 +243,8 @@ export default {
     aiSettings: {
         providers: {
             groq: 'Groq: fast, all models are free. API Key starts with "gsk_".',
+            sambanova: 'SambaNova Cloud: ultra-fast SN40L RDU inference. API Key starts with "sn-". Includes Llama 3.3 70B, DeepSeek R1, Qwen 2.5 Coder 32B, Llama 3.1 405B.',
+            nvidia: 'NVIDIA NIM: free accelerated models with build.nvidia.com credits. API Key starts with "nvapi-". Includes Llama 3.3 70B, DeepSeek R1, Nemotron 70B, Qwen 2.5 Coder.',
             openai: 'OpenAI (ChatGPT). API Key starts with "sk-". Models: GPT-4o (paid), GPT-4o Mini (free).',
             gemini: 'Gemini (Google). API Key starts with "AIza". Free models: Gemini 2.0 Flash, 2.0 Flash Lite, 1.5 Flash.',
             openrouter: 'OpenRouter: access to many models. API Key starts with "sk-or-". Includes Claude, GPT-4o, Gemini.',

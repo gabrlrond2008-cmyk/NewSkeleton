@@ -39,7 +39,7 @@ import {
     setSecondaryTab,
     setExplainPending,
     SOUNDS_TAB,
-    AI_TAB
+    CODE_TAB
 } from '../reducers/editor-tab';
 import {readWorkspace} from '../lib/ai-workspace-reader.js';
 import {saveStacks, restoreStacks} from '../lib/block-undo-manager';
@@ -329,7 +329,7 @@ class Blocks extends React.Component {
                             var workspaceData = readWorkspace(blocksThis.props.vm);
                             if (workspaceData) {
                                 blocksThis.props.onSetExplainPending(workspaceData);
-                                blocksThis.props.onActivateTab(AI_TAB);
+                                blocksThis.props.onActivateTab(CODE_TAB);
                             }
                         } catch (_e) {}
                     }

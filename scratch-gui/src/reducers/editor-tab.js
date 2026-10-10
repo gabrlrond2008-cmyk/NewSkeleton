@@ -13,14 +13,13 @@ const CODE_TAB = 'code';
 const COSTUMES_TAB = 'costumes';
 const SOUNDS_TAB = 'sounds';
 const AI_TAB = 'ai';
-const SIMULATION_TAB = 'simulacion';
 const CONTROL_TAB = 'control';
 const CIRCUITOS_TAB = 'circuitos';
 const TAB_3D = '3d';
 
 var projectKeyCounter = 0;
 
-const ALL_TABS = [CODE_TAB, COSTUMES_TAB, SOUNDS_TAB, AI_TAB, SIMULATION_TAB, CONTROL_TAB, CIRCUITOS_TAB, TAB_3D];
+const ALL_TABS = [CODE_TAB, COSTUMES_TAB, SOUNDS_TAB, CONTROL_TAB, CIRCUITOS_TAB, TAB_3D];
 
 const initialState = {
     activeTabId: CODE_TAB,
@@ -176,7 +175,6 @@ export {
     COSTUMES_TAB,
     SOUNDS_TAB,
     AI_TAB,
-    SIMULATION_TAB,
     CONTROL_TAB,
     CIRCUITOS_TAB,
     TAB_3D,

@@ -28,6 +28,10 @@
     background-color: hsla(0, 100%, 100%, 0.5);
 }
 
+[data-theme="dark"] .inputWrapper:hover {
+    background-color: var(--bg-tertiary, #262626);
+}
+
 .inputWrapper:focus-within {
     outline: none;
     border: 1px solid transparent;

@@ -6,7 +6,7 @@ import {defineMessages, injectIntl, intlShape} from 'react-intl';
 import styles from './tab-bar.css';
 import {ALL_TABS} from '../../reducers/editor-tab';
 
-var PROGRAMMING_TABS = ['code', 'costumes', 'sounds', 'ai', 'simulacion'];
+var PROGRAMMING_TABS = ['code', 'costumes', 'sounds', 'ai'];
 var ELECTRONICS_TABS = ['control', 'circuitos', '3d'];
 
 const GHOST_OFFSET_X = 16;
@@ -33,11 +33,6 @@ const tabNameMessages = defineMessages({
         id: 'gui.tabBar.ai',
         defaultMessage: 'AI',
         description: 'Tab label for AI tab'
-    },
-    simulacion: {
-        id: 'gui.tabBar.simulacion',
-        defaultMessage: 'Simulation',
-        description: 'Tab label for simulation tab'
     },
     control: {
         id: 'gui.tabBar.control',

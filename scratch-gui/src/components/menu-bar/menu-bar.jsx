@@ -40,6 +40,9 @@ import {
 } from '../../reducers/menus';
 
 import collectMetadata from '../../lib/collect-metadata';
+import {getSharedMessages} from '../../lib/ai-shared-state';
+import {serializeConversation} from '../../lib/ai-flynt-data';
+import controlVm from '../../lib/control-vm';
 
 import styles from './menu-bar.css';
 
@@ -172,7 +175,27 @@ class MenuBar extends React.Component {
                 manufactor: this.props.selectedDevice.manufactor
             } : null;
 
-            const content = await this.props.vm.saveProjectFlynt(aiData, deviceData);
+            // Gather live AI conversation + generated media for the .flynt bundle
+            try {
+                var liveMessages = getSharedMessages();
+                var convData = await serializeConversation(liveMessages);
+                if (convData.conversation.length > 0) {
+                    aiData.conversation = convData.conversation;
+                    aiData.media = convData.media;
+                }
+            } catch (_) {}
+
+            // Robotics program (tabs control/circuitos) → second project file
+            var controlProgram = null;
+            try {
+                if (controlVm && controlVm.toJSON) {
+                    controlProgram = controlVm.toJSON();
+                }
+            } catch (_) {}
+
+            const content = await this.props.vm.saveProjectFlynt(aiData, deviceData, controlProgram);
+            // Blob -> bytes (new Uint8Array(blob) produces an empty array, so read the ArrayBuffer first)
+            const contentBytes = Array.from(new Uint8Array(await content.arrayBuffer()));
             const filename = this.getProjectFilename();
 
             const defaultPath = localStorage.getItem('scratchDefaultPath');
@@ -180,14 +203,14 @@ class MenuBar extends React.Component {
 
             if (defaultPathEnabled && defaultPath) {
                 const filePath = `${defaultPath}\\${filename}`;
-                await invoke('save_file', { path: filePath, content: Array.from(new Uint8Array(content)) });
+                await invoke('save_file', { path: filePath, content: contentBytes });
             } else {
                 const filePath = await save({
                     defaultPath: filename,
                     filters: [{ name: 'Flynt Project', extensions: ['flynt'] }]
                 });
                 if (filePath) {
-                    await invoke('save_file', { path: filePath, content: Array.from(new Uint8Array(content)) });
+                    await invoke('save_file', { path: filePath, content: contentBytes });
                 }
             }
         } catch (e) {

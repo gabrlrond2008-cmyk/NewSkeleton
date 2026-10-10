@@ -15,3 +15,13 @@
 .baseline {
     stroke: $looks-secondary-dark;
 }
+
+[data-theme="dark"] .waveform-path {
+    fill: #00357a;
+    fill-opacity: 0.3;
+    stroke: #002859;
+}
+
+[data-theme="dark"] .baseline {
+    stroke: #002859;
+}

@@ -213,10 +213,12 @@ export default {
                 'Después elegís el Modelo: los modelos disponibles se cargan solos cuando pones la clave.',
                 'Los modelos gratis aparecen arriba, separados de los de pago. Así sabés cuáles no te cuestan nada.',
                 'Si los modelos no se cargan (por ejemplo, si no hay internet), usa una lista de respaldo.',
-                'Groq: es rápido y todos sus modelos son gratis. Clave: empieza con gsk_...',
-                'OpenAI: el creador de ChatGPT. Clave empieza con sk-... Modelos: GPT-4o, GPT-4o Mini.',
-                'OpenRouter: te deja usar muchos modelos con una sola clave. Clave: sk-or-...',
-                'Gemini: de Google. Clave empieza con AIza... Modelos: Gemini 2.0 Flash, 1.5 Flash.',
+                'Groq: es rápido y todos sus modelos son gratis. Clave: empieza con gsk_... Modelos: Llama 3.3 70B, Llama 3.1 8B, Qwen 2.5 Coder 32B, DeepSeek R1.',
+                'SambaNova Cloud: inferencia ultra rápida con hardware RDU SN40L (hasta 1000 tokens/segundo). Clave empieza con sn-... Modelos: Llama 3.3 70B, DeepSeek R1, Qwen 2.5 Coder 32B, Llama 3.1 405B.',
+                'NVIDIA NIM: modelos acelerados gratuitos con créditos de build.nvidia.com. Clave empieza con nvapi-... Modelos: Llama 3.3 70B, DeepSeek R1, Nemotron 70B, Qwen 2.5 Coder 32B.',
+                'OpenAI: el creador de ChatGPT. Clave empieza con sk-... Modelos: GPT-4o, GPT-4o Mini, o3 Mini.',
+                'OpenRouter: te deja usar muchos modelos con una sola clave. Clave: sk-or-... Modelos: Claude 3.7 Sonnet, Gemini 2.5 Flash, Llama 3.3, DeepSeek R1.',
+                'Gemini: de Google. Clave empieza con AIza... Modelos: Gemini 2.5 Flash, Gemini 2.5 Pro, Gemini 2.0 Flash.',
                 'OpenCode Zen: el proveedor de OpenCode. Clave se obtiene en opencode.ai/auth, empieza con oc_... Es de pago (pay-as-you-go, agregás saldo). Tiene modelos gratuitos: DeepSeek V4 Flash Free, Big Pickle, etc. Modelos de pago: DeepSeek V4 Flash, GPT 5.4 Mini, Claude Sonnet 4.6, Gemini 3 Flash, y más.',
                 'Todo se guarda solo. La próxima vez que abras la app, ya está configurado.'
             ]
@@ -227,7 +229,6 @@ export default {
         {label: 'Disfraces / Fondos', description: 'Editor de imágenes para crear y editar disfraces de los objetos o fondos del escenario. Incluye herramientas de dibujo vectorial y bitmap.'},
         {label: 'Sonidos', description: 'Editor de audio para grabar, importar, recortar y aplicar efectos a los sonidos del proyecto.'},
         {label: 'AI', description: 'Asistente de IA tipo chat para hacer preguntas sobre cómo usar la app. Requiere una API Key configurada en Settings > AI.'},
-        {label: 'Simulación', description: 'Pestaña de simulación para ejecutar y probar proyectos de electrónica con dispositivos conectados.'},
         {label: 'Control', description: 'Pestaña de control para programar dispositivos conectados con lógica basada en bloques.'},
         {label: 'Circuitos', description: 'Pestaña de circuitos para diseñar y simular circuitos electrónicos.'},
         {label: '3D', description: 'Pestaña de modelado y visualización 3D para crear objetos tridimensionales.'}
@@ -242,6 +243,8 @@ export default {
     aiSettings: {
         providers: {
             groq: 'Groq: rápido, todos los modelos son gratis. API Key empieza con "gsk_".',
+            sambanova: 'SambaNova Cloud: inferencia ultra rápida con RDUs SN40L. API Key empieza con "sn-". Incluye Llama 3.3 70B, DeepSeek R1, Qwen 2.5 Coder 32B, Llama 3.1 405B.',
+            nvidia: 'NVIDIA NIM: modelos acelerados gratuitos con créditos de build.nvidia.com. API Key empieza con "nvapi-". Incluye Llama 3.3 70B, DeepSeek R1, Nemotron 70B, Qwen 2.5 Coder.',
             openai: 'OpenAI (ChatGPT). API Key empieza con "sk-". Modelos: GPT-4o (pago), GPT-4o Mini (gratis).',
             gemini: 'Gemini (Google). API Key empieza con "AIza". Modelos gratis: Gemini 2.0 Flash, 2.0 Flash Lite, 1.5 Flash.',
             openrouter: 'OpenRouter: acceso a muchos modelos. API Key empieza con "sk-or-". Incluye Claude, GPT-4o, Gemini.',

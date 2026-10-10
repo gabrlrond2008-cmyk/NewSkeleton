@@ -27,6 +27,21 @@ const vmManagerHOC = function (WrappedComponent) {
             bindAll(this, [
                 'loadProject'
             ]);
+            if (props.vm && !props.vm.initialized) {
+                this.audioEngine = new AudioEngine();
+                props.vm.attachAudioEngine(this.audioEngine);
+                props.vm.setCompatibilityMode(true);
+                props.vm.initialized = true;
+                props.vm.setLocale(props.locale, props.messages);
+            }
+            if (props.vm && !props.vm.renderer) {
+                const canvas = document.createElement('canvas');
+                canvas.width = 480;
+                canvas.height = 360;
+                const renderer = new Renderer(canvas);
+                props.vm.attachRenderer(renderer);
+                renderer.draw();
+            }
         }
         componentDidMount () {
             if (!this.props.vm.initialized) {

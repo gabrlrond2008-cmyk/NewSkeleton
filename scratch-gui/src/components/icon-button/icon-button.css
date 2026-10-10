@@ -28,3 +28,11 @@
 .container:active {
     background-color: $looks-light-transparent;
 }
+
+[data-theme="dark"] .container {
+    color: var(--text-primary, #f5f5f5);
+}
+
+[data-theme="dark"] .title {
+    color: var(--text-primary, #f5f5f5);
+}

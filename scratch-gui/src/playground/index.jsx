@@ -9,6 +9,7 @@ import ReactDOM from 'react-dom';
 
 import AppStateHOC from '../lib/app-state-hoc.jsx';
 import BrowserModalComponent from '../components/browser-modal/browser-modal.jsx';
+import Splash from '../components/splash/splash.jsx';
 import supportedBrowser from '../lib/supported-browser';
 
 import styles from './index.css';
@@ -16,6 +17,14 @@ import styles from './index.css';
 const appTarget = document.createElement('div');
 appTarget.className = styles.app;
 document.body.appendChild(appTarget);
+
+const splashTarget = document.createElement('div');
+document.body.appendChild(splashTarget);
+ReactDOM.render(<Splash />, splashTarget);
+setTimeout(() => {
+    ReactDOM.unmountComponentAtNode(splashTarget);
+    splashTarget.remove();
+}, 3100);
 
 if (supportedBrowser()) {
     // require needed here to avoid importing unsupported browser-crashing code

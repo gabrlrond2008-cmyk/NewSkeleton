@@ -63,8 +63,12 @@ const getStageDimensions = (stageSize, isFullScreen) => {
         }
 
         stageDimensions.scale = stageDimensions.width / stageDimensions.widthDefault;
+    } else if (typeof stageSize === 'object' && stageSize !== null && stageSize.width) {
+        stageDimensions.width = Math.round(stageSize.width);
+        stageDimensions.height = Math.round(stageSize.height || (stageSize.width * 0.75));
+        stageDimensions.scale = stageSize.scale || (stageDimensions.width / stageDimensions.widthDefault);
     } else {
-        stageDimensions.scale = STAGE_DISPLAY_SCALES[stageSize];
+        stageDimensions.scale = STAGE_DISPLAY_SCALES[stageSize] || 1;
         stageDimensions.height = stageDimensions.scale * stageDimensions.heightDefault;
         stageDimensions.width = stageDimensions.scale * stageDimensions.widthDefault;
     }

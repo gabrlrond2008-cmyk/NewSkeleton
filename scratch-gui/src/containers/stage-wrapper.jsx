@@ -8,7 +8,10 @@ const StageWrapper = props => <StageWrapperComponent {...props} />;
 
 StageWrapper.propTypes = {
     isRendererSupported: PropTypes.bool.isRequired,
-    stageSize: PropTypes.oneOf(Object.keys(STAGE_DISPLAY_SIZES)).isRequired,
+    stageSize: PropTypes.oneOfType([
+        PropTypes.string,
+        PropTypes.object
+    ]).isRequired,
     vm: PropTypes.instanceOf(VM).isRequired
 };
 

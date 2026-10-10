@@ -1,8 +1,8 @@
 {
   "$schema": "../node_modules/@tauri-apps/cli/config.schema.json",
-  "productName": "scratch-gui",
+  "productName": "Fist",
   "version": "0.1.0",
-  "identifier": "com.tauri.dev",
+  "identifier": "com.fist.app",
   "build": {
     "frontendDist": "../scratch-gui/build",
     "devUrl": "http://localhost:8601",
@@ -12,9 +12,11 @@
   "app": {
     "windows": [
       {
-        "title": "Scratch 3.0",
-        "width": 800,
-        "height": 600,
+        "title": "Fist",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 1024,
+        "minHeight": 640,
         "resizable": true,
         "fullscreen": false
       }

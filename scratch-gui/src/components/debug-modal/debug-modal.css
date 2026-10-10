@@ -14,7 +14,7 @@
 }
   
 .debug-modal-container {
-    background: white;
+    background: var(--bg-secondary, white);
     border-radius: 8px;
     width: 1000px;
     max-height: 90%;

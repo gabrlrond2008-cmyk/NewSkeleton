@@ -1,6 +1,6 @@
 import omit from 'lodash.omit';
 import PropTypes from 'prop-types';
-import React, {useCallback, useEffect, useMemo, useState} from 'react';
+import React, {useCallback, useEffect, useMemo, useRef, useState} from 'react';
 import classNames from 'classnames';
 import {defineMessages, FormattedMessage, injectIntl, intlShape} from 'react-intl';
 import {connect} from 'react-redux';
@@ -8,11 +8,11 @@ import VM from 'scratch-vm';
 import Renderer from 'scratch-render';
 
 import Blocks from '../../containers/blocks.jsx';
-import AiTab from '../../containers/ai-tab.jsx';
 import CostumeTab from '../../containers/costume-tab.jsx';
+import FloatingAiChat from '../floating-ai-chat/floating-ai-chat.jsx';
 import SoundTab from '../../containers/sound-tab.jsx';
 import StageWrapper from '../../containers/stage-wrapper.jsx';
-import SimulationTab from '../../containers/simulation-tab.jsx';
+import TargetPane from '../../containers/target-pane.jsx';
 import CircuitosTab from '../../containers/circuitos-tab.jsx';
 import Tab3D from '../../containers/tab-3d.jsx';
 import Loader from '../loader/loader.jsx';
@@ -36,40 +36,26 @@ import {themeMap} from '../../lib/themes';
 
 import styles from './gui.css';
 import addExtensionIcon from './icon--extensions.svg';
-import aiIcon from './icon--ai.svg';
 import codeIcon from './icon--code.svg';
 import costumesIcon from './icon--costumes.svg';
 import soundsIcon from './icon--sounds.svg';
-import simulationIcon from './icon--simulation.svg';
 import controlIcon from './icon--control.svg';
 import circuitosIcon from './icon--circuitos.svg';
 import icon3d from './icon--3d.svg';
 import DebugModal from '../debug-modal/debug-modal.jsx';
 import DeviceSelector from '../device-selector/device-selector.jsx';
 import getDevices from '../../lib/libraries/devices/devices.jsx';
+import controlVm from '../../lib/control-vm';
 import TabBar from '../tab-bar/tab-bar.jsx';
 import SplitContainer from '../split-container/split-container.jsx';
-import MentorGuide from '../mentor-guide/mentor-guide.jsx';
 import OldtimeyMode from '../oldtimey-mode/oldtimey-mode.jsx';
 import NinetiesMode from '../nineties-mode/nineties-mode.jsx';
 import PrehistoricMode from '../prehistoric-mode/prehistoric-mode.jsx';
-import {ALL_TABS} from '../../reducers/editor-tab';
-
 const messages = defineMessages({
     addExtension: {
         id: 'gui.gui.addExtension',
         description: 'Button to add an extension in the target pane',
         defaultMessage: 'Add Extension'
-    },
-    aiTab: {
-        id: 'gui.gui.aiTab',
-        defaultMessage: 'AI',
-        description: 'Tab label for AI tab'
-    },
-    simulationTab: {
-        id: 'gui.gui.simulationTab',
-        defaultMessage: 'Simulation',
-        description: 'Tab label for simulation tab'
     },
     controlTab: {
         id: 'gui.gui.controlTab',
@@ -115,18 +101,6 @@ const TAB_REGISTRY = {
         id: 'sounds',
         label: <FormattedMessage defaultMessage="Sounds" id="gui.gui.soundsTab" />,
         icon: soundsIcon,
-        canClose: true
-    },
-    ai: {
-        id: 'ai',
-        label: <FormattedMessage {...messages.aiTab} />,
-        icon: aiIcon,
-        canClose: true
-    },
-    simulacion: {
-        id: 'simulacion',
-        label: <FormattedMessage {...messages.simulationTab} />,
-        icon: simulationIcon,
         canClose: true
     },
     control: {
@@ -241,11 +215,9 @@ const GUIComponent = props => {
     }
 
     const [workspaceHandle, setWorkspaceHandle] = useState(null);
-    const [mentorGuidanceMsg, setMentorGuidanceMsg] = useState();
-    const handleMentorGuidance = useCallback(d => setMentorGuidanceMsg(d), []);
-    const [reanalyzeTick, setReanalyzeTick] = useState(0);
-    const handleReanalyze = useCallback(function () {
-        setReanalyzeTick(function (t) { return t + 1; });
+    const [aiChatOpen, setAiChatOpen] = useState(false);
+    const handleAiChatToggle = useCallback(function (open) {
+        setAiChatOpen(open);
     }, []);
     const [isDragToSplit, setIsDragToSplit] = useState(false);
     const [dragZone, setDragZone] = useState(null);
@@ -268,10 +240,121 @@ const GUIComponent = props => {
         return () => document.body.classList.remove('reduced-motion');
     }, [reducedMotion]);
 
+    useEffect(function () {
+        if (pendingExplain && !aiChatOpen) {
+            setAiChatOpen(true);
+        }
+    }, [pendingExplain]);
+
     useEffect(() => {
         if (typeof document === 'undefined') return;
         document.documentElement.dataset.timeTravel = blocksId;
     }, [blocksId]);
+
+    useEffect(() => {
+        if (typeof document === 'undefined') return;
+        document.documentElement.dataset.theme = theme;
+    }, [theme]);
+
+    const flexWrapperRef = useRef(null);
+    const stageResizeRafRef = useRef(null);
+    const [stagePanelWidth, setStagePanelWidth] = useState(() => {
+        if (typeof window !== 'undefined') {
+            const saved = localStorage.getItem('scratch_stage_panel_width');
+            if (saved) {
+                const parsed = parseInt(saved, 10);
+                if (!isNaN(parsed) && parsed >= 340 && parsed <= 900) {
+                    return parsed;
+                }
+            }
+        }
+        return 430;
+    });
+    const [isDraggingStageResize, setIsDraggingStageResize] = useState(false);
+
+    const handleStageResizePointerDown = useCallback(e => {
+        e.preventDefault();
+        setIsDraggingStageResize(true);
+        const startX = e.clientX;
+        const startWidth = stagePanelWidth;
+        const isRtlMode = isRtl;
+
+        document.body.style.cursor = 'col-resize';
+        document.body.style.userSelect = 'none';
+
+        const onPointerMove = moveEvent => {
+            if (stageResizeRafRef.current) return;
+            stageResizeRafRef.current = requestAnimationFrame(() => {
+                stageResizeRafRef.current = null;
+                if (!flexWrapperRef.current) return;
+                const containerRect = flexWrapperRef.current.getBoundingClientRect();
+                const totalW = containerRect.width;
+
+                const deltaX = isRtlMode ? (moveEvent.clientX - startX) : (startX - moveEvent.clientX);
+                const nextWidth = startWidth + deltaX;
+
+                const minW = 340;
+                const maxW = Math.max(minW, Math.min(850, totalW - 320));
+                const clamped = Math.round(Math.min(maxW, Math.max(minW, nextWidth)));
+
+                setStagePanelWidth(clamped);
+                window.dispatchEvent(new Event('resize'));
+            });
+        };
+
+        const onPointerUp = () => {
+            setIsDraggingStageResize(false);
+            if (stageResizeRafRef.current) {
+                cancelAnimationFrame(stageResizeRafRef.current);
+                stageResizeRafRef.current = null;
+            }
+            document.removeEventListener('pointermove', onPointerMove);
+            document.removeEventListener('pointerup', onPointerUp);
+            document.body.style.cursor = '';
+            document.body.style.userSelect = '';
+            setStagePanelWidth(current => {
+                try {
+                    localStorage.setItem('scratch_stage_panel_width', current.toString());
+                } catch (err) {}
+                return current;
+            });
+            window.dispatchEvent(new Event('resize'));
+        };
+
+        document.addEventListener('pointermove', onPointerMove);
+        document.addEventListener('pointerup', onPointerUp);
+    }, [stagePanelWidth, isRtl]);
+
+    const handleStageResizeDoubleClick = useCallback(() => {
+        setStagePanelWidth(430);
+        try {
+            localStorage.setItem('scratch_stage_panel_width', '430');
+        } catch (err) {}
+        window.dispatchEvent(new Event('resize'));
+    }, []);
+
+    const dynamicStageDimensions = useMemo(() => {
+        if (isFullScreen) return null;
+        const availWidth = Math.max(200, stagePanelWidth - 16);
+        const maxH = typeof window !== 'undefined' ?
+            Math.max(160, window.innerHeight - 48 - 44 - 180) :
+            360;
+        const maxWByHeight = Math.round(maxH * (4 / 3));
+
+        let width;
+        if (stageSizeMode === STAGE_SIZE_MODES.small) {
+            width = Math.min(240, availWidth);
+        } else {
+            width = Math.min(availWidth, maxWByHeight, 640);
+            width = Math.max(200, width);
+        }
+        const height = Math.round(width * 0.75);
+        return {
+            width: Math.round(width),
+            height: Math.round(height),
+            scale: width / 480
+        };
+    }, [stagePanelWidth, stageSizeMode, isFullScreen]);
 
     const stageSize = resolveStageSize(stageSizeMode, isFullSize);
 
@@ -295,8 +378,6 @@ const GUIComponent = props => {
             code: TAB_REGISTRY.code,
             costumes: Object.assign({}, TAB_REGISTRY.costumes, {label: costsmesLabel}),
             sounds: TAB_REGISTRY.sounds,
-            ai: TAB_REGISTRY.ai,
-            simulacion: TAB_REGISTRY.simulacion,
             control: TAB_REGISTRY.control,
             circuitos: TAB_REGISTRY.circuitos,
             '3d': TAB_REGISTRY['3d']
@@ -323,17 +404,6 @@ const GUIComponent = props => {
 
     const costumePanel = useMemo(() => <CostumeTab vm={vm} />, [vm]);
     const soundPanel = useMemo(() => <SoundTab vm={vm} />, [vm]);
-    const aiPanel = useMemo(() => <AiTab vm={vm} pendingExplain={pendingExplain} projectKey={projectKey} onClearExplain={onClearExplain} onMentorGuidance={handleMentorGuidance} onActivateTab={onActivateTab} reanalyzeTick={reanalyzeTick} />, [vm, pendingExplain, projectKey, onClearExplain, handleMentorGuidance, onActivateTab, reanalyzeTick]);
-    const simulationPanel = useMemo(() => (
-        <SimulationTab
-            isFullScreen={isFullScreen}
-            isRendererSupported={isRendererSupported}
-            isRtl={isRtl}
-            loading={loading}
-            stageSize={STAGE_SIZE_MODES.large}
-            vm={vm}
-        />
-    ), [isFullScreen, isRendererSupported, isRtl, loading, vm]);
 
     const controlPanel = useMemo(() => (
         <Box className={styles.blocksWrapper}>
@@ -347,10 +417,10 @@ const GUIComponent = props => {
                 }}
                 stageSize={stageSize}
                 theme={theme}
-                vm={vm}
+                vm={controlVm}
             />
         </Box>
-    ), [theme, canUseCloud, vm, basePath, stageSize]);
+    ), [theme, canUseCloud, controlVm, basePath, stageSize]);
 
     const circuitosPanel = useMemo(() => <CircuitosTab vm={vm} />, [vm]);
     const tab3dPanel = useMemo(() => <Tab3D vm={vm} />, [vm]);
@@ -360,13 +430,11 @@ const GUIComponent = props => {
             code: codePanel,
             costumes: costumePanel,
             sounds: soundPanel,
-            ai: aiPanel,
-            simulacion: simulationPanel,
             control: controlPanel,
             circuitos: circuitosPanel,
             '3d': tab3dPanel
         };
-    }, [codePanel, costumePanel, soundPanel, aiPanel, simulationPanel, controlPanel, circuitosPanel, tab3dPanel]);
+    }, [codePanel, costumePanel, soundPanel, controlPanel, circuitosPanel, tab3dPanel]);
 
     const [panels, panelsList] = useMemo(function () {
         const list = openTabs.slice();
@@ -413,7 +481,7 @@ const GUIComponent = props => {
 
     const renderEditor = () => (
         <Box className={styles.bodyWrapper}>
-            <Box className={styles.flexWrapper}>
+            <Box className={styles.flexWrapper} componentRef={el => { flexWrapperRef.current = el; }}>
                 <Box className={styles.editorWrapper}>
                     <TabBar
                         tabs={tabsConfig}
@@ -467,10 +535,50 @@ const GUIComponent = props => {
                                 <Watermark selectedDevice={selectedDevice} />
                             </Box>
                         )}
-                        {activeTabId === 'code' && (
-                            <MentorGuide message={mentorGuidanceMsg} onReanalyze={handleReanalyze} />
-                        )}
+                        <FloatingAiChat
+                            isOpen={aiChatOpen}
+                            onToggle={handleAiChatToggle}
+                            vm={vm}
+                            pendingExplain={pendingExplain}
+                            projectKey={projectKey}
+                            onClearExplain={onClearExplain}
+                            onActivateTab={onActivateTab}
+                        />
                     </div>
+                </Box>
+                {!isFullScreen && (
+                    <div
+                        className={classNames(
+                            styles.stageResizeHandle,
+                            {[styles.isActive]: isDraggingStageResize}
+                        )}
+                        onPointerDown={handleStageResizePointerDown}
+                        onDoubleClick={handleStageResizeDoubleClick}
+                        role="separator"
+                        aria-orientation="vertical"
+                        tabIndex={0}
+                    />
+                )}
+                <Box
+                    className={classNames(styles.stageAndTargetWrapper, styles[stageSize])}
+                    style={{width: `${stagePanelWidth}px`}}
+                    data-stage-panel="true"
+                    data-panel-right="true"
+                >
+                    <StageWrapper
+                        isFullScreen={isFullScreen}
+                        isRendererSupported={isRendererSupported}
+                        isRtl={isRtl}
+                        loading={loading}
+                        stageSize={dynamicStageDimensions || stageSize}
+                        vm={vm}
+                    />
+                    <Box className={styles.targetWrapper}>
+                        <TargetPane
+                            stageSize={stageSize}
+                            vm={vm}
+                        />
+                    </Box>
                 </Box>
             </Box>
         </Box>

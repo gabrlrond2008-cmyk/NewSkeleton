@@ -25,8 +25,60 @@ var validatorMessages = defineMessages({
         id: 'gui.aiBlocks.validator.cBlockEmpty',
         defaultMessage: 'C-block "{opcode}" is empty (needs child blocks)',
         description: 'Error when a C-shaped block has no child blocks'
+    },
+    reporterInNext: {
+        id: 'gui.aiBlocks.validator.reporterInNext',
+        defaultMessage: 'Reporter/Boolean "{opcode}" cannot be in a block chain (only inside value inputs)',
+        description: 'Error when a reporter or boolean block appears in a next chain'
+    },
+    stackInValueInput: {
+        id: 'gui.aiBlocks.validator.stackInValueInput',
+        defaultMessage: 'Stack/Hat/C/End "{child}" cannot be inside value input "{input}" of "{parent}"',
+        description: 'Error when a stack block is placed inside a value input'
+    },
+    reporterInStatementInput: {
+        id: 'gui.aiBlocks.validator.reporterInStatementInput',
+        defaultMessage: 'Reporter/Boolean "{child}" cannot be inside statement input "{input}" of "{parent}"',
+        description: 'Error when a reporter/boolean is placed inside a statement input'
+    },
+    nonBooleanInBooleanInput: {
+        id: 'gui.aiBlocks.validator.nonBooleanInBooleanInput',
+        defaultMessage: 'Non-boolean "{child}" cannot be inside boolean input "{input}" of "{parent}"',
+        description: 'Error when a non-boolean block is placed in a boolean-typed input'
     }
 });
+
+// Statement inputs are inputs that expect stack/hat/c/end shaped blocks
+var STATEMENT_INPUTS = {
+    control_forever: {SUBSTACK: 1},
+    control_repeat: {SUBSTACK: 1},
+    control_if: {SUBSTACK: 1},
+    control_if_else: {SUBSTACK: 1, SUBSTACK2: 1},
+    control_repeat_until: {SUBSTACK: 1},
+    control_while: {SUBSTACK: 1},
+    procedures_definition: {ARGUMENTS: 1},
+    argument_editor_show: {ARGUMENTS: 1}
+};
+
+// Boolean inputs expect specifically boolean-shaped child blocks
+var BOOLEAN_INPUTS = {
+    control_if: {CONDITION: 1},
+    control_if_else: {CONDITION: 1},
+    control_wait_until: {CONDITION: 1},
+    control_repeat_until: {CONDITION: 1},
+    operator_and: {OPERAND1: 1, OPERAND2: 1},
+    operator_or: {OPERAND1: 1, OPERAND2: 1},
+    operator_not: {OPERAND: 1}
+};
+
+// NOTE: operator_gt, operator_lt, operator_equals and operator_contains are NOT
+// boolean inputs. They OUTPUT a boolean but their OPERAND1/OPERAND2 are VALUE
+// inputs: numbers, variables (data_variable) or any numeric/text reporter
+// (sensing_answer, operator_add, operator_join, ...). Marking them here as
+// boolean caused autoCorrect to silently disconnect those valid children.
+
+var STACK_LIKE = {stack: 1, hat: 1, c: 1, end: 1};
+var VALUE_LIKE = {reporter: 1, boolean: 1};
 
 var OPCODES = {
     event_whenflagclicked: 'hat', event_whenkeypressed: 'hat', event_whenstageclicked: 'hat',
@@ -120,15 +172,74 @@ function validate(blockData, intl) {
         }
 
         if (shape === 'c') {
+            var parentStmtDefs = STATEMENT_INPUTS[b.opcode];
             var hasStatementChild = false;
-            for (var iname in b.inputs) {
-                if (b.inputs[iname].block) {
-                    hasStatementChild = true;
-                    break;
+            if (parentStmtDefs) {
+                for (var sname in parentStmtDefs) {
+                    if (b.inputs[sname] && b.inputs[sname].block) {
+                        hasStatementChild = true;
+                        break;
+                    }
+                }
+            } else {
+                for (var iname in b.inputs) {
+                    if (b.inputs[iname] && b.inputs[iname].block) {
+                        hasStatementChild = true;
+                        break;
+                    }
                 }
             }
             if (!hasStatementChild) {
                 errors.push(intl ? intl.formatMessage(validatorMessages.cBlockEmpty, {opcode: b.opcode}) : validatorMessages.cBlockEmpty.defaultMessage.replace('{opcode}', b.opcode));
+            }
+        }
+
+        // Check 5: Reporter/boolean in next chain (should only be inside value inputs)
+        if ((shape === 'reporter' || shape === 'boolean') && !b.topLevel && b.parent) {
+            var parentOfReporter = blockMap[b.parent];
+            if (parentOfReporter && parentOfReporter.next === b.id) {
+                errors.push(intl ? intl.formatMessage(validatorMessages.reporterInNext, {opcode: b.opcode}) : validatorMessages.reporterInNext.defaultMessage.replace('{opcode}', b.opcode));
+            }
+        }
+
+        // Check 6: Input shape compatibility — walk each input of this block
+        var parentInputs = BOOLEAN_INPUTS[b.opcode];
+        var parentStatements = STATEMENT_INPUTS[b.opcode];
+        for (var inputName in b.inputs) {
+            var inputEntry = b.inputs[inputName];
+            if (!inputEntry.block) continue;
+            var childBlock = blockMap[inputEntry.block];
+            if (!childBlock || childBlock.shadow) continue;
+            var childShape = OPCODES[childBlock.opcode];
+            if (!childShape) continue;
+
+            var isStatement = parentStatements && parentStatements[inputName];
+            var isBoolean = parentInputs && parentInputs[inputName];
+
+            if (isStatement && VALUE_LIKE[childShape]) {
+                // Reporter/boolean inside a statement input (SUBSTACK)
+                errors.push(intl ? intl.formatMessage(validatorMessages.reporterInStatementInput, {
+                    child: childBlock.opcode, input: inputName, parent: b.opcode
+                }) : validatorMessages.reporterInStatementInput.defaultMessage
+                    .replace('{child}', childBlock.opcode)
+                    .replace('{input}', inputName)
+                    .replace('{parent}', b.opcode));
+            } else if (isBoolean && childShape !== 'boolean') {
+                // Non-boolean inside a boolean-specific input
+                errors.push(intl ? intl.formatMessage(validatorMessages.nonBooleanInBooleanInput, {
+                    child: childBlock.opcode, input: inputName, parent: b.opcode
+                }) : validatorMessages.nonBooleanInBooleanInput.defaultMessage
+                    .replace('{child}', childBlock.opcode)
+                    .replace('{input}', inputName)
+                    .replace('{parent}', b.opcode));
+            } else if (!isStatement && !isBoolean && STACK_LIKE[childShape]) {
+                // Stack/hat/c/end inside a value input
+                errors.push(intl ? intl.formatMessage(validatorMessages.stackInValueInput, {
+                    child: childBlock.opcode, input: inputName, parent: b.opcode
+                }) : validatorMessages.stackInValueInput.defaultMessage
+                    .replace('{child}', childBlock.opcode)
+                    .replace('{input}', inputName)
+                    .replace('{parent}', b.opcode));
             }
         }
     }
@@ -142,4 +253,4 @@ function validate(blockData, intl) {
     };
 }
 
-export {validate, OPCODES};
+export {validate, OPCODES, STATEMENT_INPUTS, BOOLEAN_INPUTS, STACK_LIKE, VALUE_LIKE};

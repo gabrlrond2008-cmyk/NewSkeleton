@@ -408,51 +408,79 @@ class VirtualMachine extends EventEmitter {
     }
 
     /**
-     * Save a project as .flynt — wraps .sb3 contents + AI data in a single zip.
-     * @param {object} aiData Optional AI data: {training, session, settings}
+     * Save a project as .flynt — wraps .sb3 contents + AI + electronics data
+     * in a single zip.
+     * Layout:
+     *   project.json + assets       → "código juego" (normal Scratch project)
+     *   ia/conversa.json + media    → full AI chat (conversa, sounds, audio, image)
+     *   ia/{session,settings,training}.json → AI configuration
+     *   electronica/*               → "código programación" (robotics: device, control, circuitos)
+     * @param {object} aiData Optional AI data:
+     *     {training, session, settings, conversation, media:[{path,data}]}
      * @param {object} deviceData Optional device data: {deviceId, name, ...}
+     * @param {(string|object)=} controlProgram Optional robotics program (tabs control
+     *     /circuitos) serialized as SB3 JSON. Saved as a second project file.
      * @return {!Promise} Promise that resolves with a Blob of the .flynt zip.
      */
-    saveProjectFlynt (aiData, deviceData) {
+    saveProjectFlynt (aiData, deviceData, controlProgram) {
         const soundDescs = serializeSounds(this.runtime);
         const costumeDescs = serializeCostumes(this.runtime);
         const projectJson = this.toJSON();
 
         const zip = new JSZip();
 
-        // Standard project files (same as .sb3)
+        // Standard project files (same as .sb3) — "código juego"
         zip.file('project.json', projectJson);
         this._addFileDescsToZip(soundDescs.concat(costumeDescs), zip);
 
         // Flynt metadata
         zip.file('flynt.json', JSON.stringify({
-            version: 1,
+            version: 2,
             format: 'flynt',
             created: new Date().toISOString(),
             generator: 'scratch-vm'
         }, null, 2));
 
-        // AI data
+        // AI data (ia/ folder)
         if (aiData) {
             if (aiData.training) {
-                zip.file('ai/training.json', typeof aiData.training === 'string' ?
+                zip.file('ia/training.json', typeof aiData.training === 'string' ?
                     aiData.training : JSON.stringify(aiData.training, null, 2));
             }
             if (aiData.session) {
-                zip.file('ai/session.json', typeof aiData.session === 'string' ?
+                zip.file('ia/session.json', typeof aiData.session === 'string' ?
                     aiData.session : JSON.stringify(aiData.session, null, 2));
             }
             if (aiData.settings) {
-                zip.file('ai/settings.json', typeof aiData.settings === 'string' ?
+                zip.file('ia/settings.json', typeof aiData.settings === 'string' ?
                     aiData.settings : JSON.stringify(aiData.settings, null, 2));
+            }
+            if (aiData.conversation) {
+                zip.file('ia/conversa.json', typeof aiData.conversation === 'string' ?
+                    aiData.conversation : JSON.stringify(aiData.conversation, null, 2));
+            }
+            if (aiData.media && aiData.media.length > 0) {
+                for (let i = 0; i < aiData.media.length; i++) {
+                    const m = aiData.media[i];
+                    if (m && m.path) {
+                        zip.file(m.path, m.data);
+                    }
+                }
             }
         }
 
-        // Electronics data (device selection)
+        // Electronics data (robotica: device selection + reserved control/circuitos)
         if (deviceData) {
             zip.file('electronica/device.json', typeof deviceData === 'string' ?
                 deviceData : JSON.stringify(deviceData, null, 2));
         }
+        // Robotics program (tabs control/circuitos) — a second project file, "código programación"
+        if (controlProgram) {
+            zip.file('electronica/program.json', typeof controlProgram === 'string' ?
+                controlProgram : JSON.stringify(controlProgram, null, 2));
+        }
+        zip.file('electronica/control.json', JSON.stringify({}, null, 2));
+        zip.file('electronica/circuitos.json', JSON.stringify({}, null, 2));
 
         // Programming data (placeholder)
         zip.file('programacion/data.json', JSON.stringify({}, null, 2));
@@ -735,6 +763,7 @@ class VirtualMachine extends EventEmitter {
                     target.getCostumes().length - 1
                 );
                 this.runtime.emitProjectChanged();
+                this.emitTargetsUpdate();
             });
         }
         // If the target cannot be found by id, return a rejected promise
@@ -1054,6 +1083,7 @@ class VirtualMachine extends EventEmitter {
             stage.addCostume(backdropObject);
             stage.setCostume(stage.getCostumes().length - 1);
             this.runtime.emitProjectChanged();
+            this.emitTargetsUpdate();
         });
     }
 
@@ -1659,6 +1689,7 @@ class VirtualMachine extends EventEmitter {
 
     /**
      * Extract AI data from a .flynt zip.
+     * Reads the ia/ folder (new format) with fallback to ai/ (old format).
      * @param {ArrayBuffer} buffer The .flynt zip content.
      * @return {!Promise<object|null>} AI data object: {training, session, settings} or null.
      */
@@ -1680,13 +1711,66 @@ class VirtualMachine extends EventEmitter {
                 }
             }
 
-            readFile('ai/training.json', 'training');
-            readFile('ai/session.json', 'session');
-            readFile('ai/settings.json', 'settings');
+            function pickFile(iaName, aiName, key) {
+                if (zip.files[iaName] && !zip.files[iaName].dir) {
+                    readFile(iaName, key);
+                } else if (zip.files[aiName] && !zip.files[aiName].dir) {
+                    readFile(aiName, key);
+                }
+            }
+
+            pickFile('ia/training.json', 'ai/training.json', 'training');
+            pickFile('ia/session.json', 'ai/session.json', 'session');
+            pickFile('ia/settings.json', 'ai/settings.json', 'settings');
 
             if (promises.length === 0) return null;
             return Promise.all(promises).then(function () {
                 return aiData;
+            });
+        }).catch(function () {
+            return null;
+        });
+    }
+
+    /**
+     * Extract the full AI conversation + media from a .flynt zip.
+     * @param {ArrayBuffer} buffer The .flynt zip content.
+     * @return {!Promise<object|null>} {conversation, media: {path: ArrayBuffer}} or null.
+     */
+    static extractFlyntConversation (buffer) {
+        return JSZip.loadAsync(buffer).then(function (zip) {
+            var file = zip.files['ia/conversa.json'];
+            if (!file || file.dir) return null;
+            return file.async('string').then(function (text) {
+                var conversation;
+                try {
+                    conversation = JSON.parse(text);
+                } catch (e) {
+                    return null;
+                }
+                if (!conversation || !Array.isArray(conversation)) return null;
+
+                var media = {};
+                var mediaPromises = [];
+                for (var i = 0; i < conversation.length; i++) {
+                    var msg = conversation[i];
+                    var refs = [msg.imageRef, msg.audioRef, msg.sfxRef, msg.musicRef];
+                    for (var r = 0; r < refs.length; r++) {
+                        var ref = refs[r];
+                        if (!ref) continue;
+                        var f = zip.files[ref];
+                        if (f && !f.dir) {
+                            (function (key, zfile) {
+                                mediaPromises.push(zfile.async('arraybuffer').then(function (buf) {
+                                    media[key] = buf;
+                                }));
+                            })(ref, f);
+                        }
+                    }
+                }
+                return Promise.all(mediaPromises).then(function () {
+                    return {conversation: conversation, media: media};
+                });
             });
         }).catch(function () {
             return null;
@@ -1709,6 +1793,23 @@ class VirtualMachine extends EventEmitter {
                         return text;
                     }
                 });
+            }
+            return null;
+        }).catch(function () {
+            return null;
+        });
+    }
+
+    /**
+     * Extract the robotics control program (tabs control/circuitos) from a .flynt zip.
+     * @param {ArrayBuffer} buffer The .flynt zip content.
+     * @return {!Promise<string|null>} SB3 JSON text or null.
+     */
+    static extractFlyControlProgram (buffer) {
+        return JSZip.loadAsync(buffer).then(function (zip) {
+            var file = zip.files['electronica/program.json'];
+            if (file && !file.dir) {
+                return file.async('string');
             }
             return null;
         }).catch(function () {

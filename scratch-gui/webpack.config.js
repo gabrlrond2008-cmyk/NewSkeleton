@@ -172,8 +172,14 @@ var finalConfig = buildDist ?
     [buildConfig.get(), distConfig.get()] :
     buildConfig.get();
 
-// Add devServer proxy for OpenCode Zen API (CORS fix for local dev)
+// Add devServer proxy for OpenCode Zen API and CORS headers
 if (!buildDist && finalConfig.devServer) {
+    finalConfig.devServer.headers = {
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Methods': 'GET, POST, PUT, DELETE, PATCH, OPTIONS',
+        'Access-Control-Allow-Headers': 'X-Requested-With, content-type, Authorization',
+        'Cross-Origin-Resource-Policy': 'cross-origin'
+    };
     var httpProxyMiddleware = require('http-proxy-middleware');
     var zenProxy = httpProxyMiddleware.createProxyMiddleware({
         target: 'https://opencode.ai',

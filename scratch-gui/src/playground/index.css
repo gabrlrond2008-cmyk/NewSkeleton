@@ -6,9 +6,12 @@ body,
     height: 100%;
     margin: 0;
 
-    /* Setting min height/width makes the UI scroll below those sizes */
+    /* Setting min height/width makes the UI scroll below those sizes.
+       Keep these below the Tauri window minimums (1024x640) to account
+       for OS window chrome (title bar), so the stage does not get
+       clipped by body scrollbars. */
     min-width: 1024px;
-    min-height: 640px; /* Min height to fit sprite/backdrop button */
+    min-height: 560px;
 }
 
 /* @todo: move globally? Safe / side FX, for blocks particularly? */

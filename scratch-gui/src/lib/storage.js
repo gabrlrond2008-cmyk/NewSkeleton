@@ -10,10 +10,27 @@ class Storage extends ScratchStorage {
     constructor () {
         super();
         this.cacheDefaultProject();
-        this.setAssetHost('https://assets.scratch.mit.edu');
+        this.setAssetHost('https://cdn.assets.scratch.mit.edu');
         this.addOfficialScratchWebStores();
     }
     addOfficialScratchWebStores () {
+        // 1. Local bundled library assets take priority (instant load, 0 timeout, offline)
+        this.addWebStore(
+            [this.AssetType.ImageVector, this.AssetType.ImageBitmap, this.AssetType.Sound],
+            asset => {
+                const origin = (typeof window !== 'undefined' && window.location && window.location.origin && window.location.origin !== 'null') ?
+                    window.location.origin : 'http://localhost:8601';
+                return `${origin}/static/library-assets/${asset.assetId}.${asset.dataFormat}`;
+            }
+        );
+        this.addWebStore(
+            [this.AssetType.ImageVector, this.AssetType.ImageBitmap, this.AssetType.Sound],
+            asset => `http://localhost:8601/static/library-assets/${asset.assetId}.${asset.dataFormat}`
+        );
+        this.addWebStore(
+            [this.AssetType.ImageVector, this.AssetType.ImageBitmap, this.AssetType.Sound],
+            asset => `static/library-assets/${asset.assetId}.${asset.dataFormat}`
+        );
         this.addWebStore(
             [this.AssetType.Project],
             this.getProjectGetConfig.bind(this),
@@ -61,7 +78,8 @@ class Storage extends ScratchStorage {
         this.assetHost = assetHost;
     }
     getAssetGetConfig (asset) {
-        return `${this.assetHost}/internalapi/asset/${asset.assetId}.${asset.dataFormat}/get/`;
+        // Modern Scratch 3.0 asset CDN endpoint
+        return `https://assets.scratch.mit.edu/${asset.assetId}.${asset.dataFormat}`;
     }
     getAssetCreateConfig (asset) {
         return {

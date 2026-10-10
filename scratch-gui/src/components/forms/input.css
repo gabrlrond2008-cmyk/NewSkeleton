@@ -46,3 +46,7 @@
     text-overflow: clip;
     text-align: center;
 }
+
+[data-theme="dark"] .input-form {
+    color: #575e75;
+}

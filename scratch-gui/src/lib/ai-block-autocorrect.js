@@ -1,4 +1,4 @@
-import {OPCODES} from './ai-block-validator';
+import {OPCODES, STATEMENT_INPUTS, BOOLEAN_INPUTS, STACK_LIKE, VALUE_LIKE} from './ai-block-validator';
 
 function uid() {
     var soup = '!#%()*+,-./:;=?@[]^_`{|}~ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -296,13 +296,8 @@ function autoCorrect(blockData) {
         }
     }
 
-    // Phase 7.5: Fix boolean inputs (CONDITION) — if non-boolean nested block, disconnect
-    var BOOLEAN_INPUTS = {
-        control_if: {CONDITION: 1},
-        control_if_else: {CONDITION: 1},
-        control_wait_until: {CONDITION: 1},
-        control_repeat_until: {CONDITION: 1}
-    };
+    // Phase 7.5: Fix boolean inputs — clear invalid shadows and disconnect non-boolean child blocks
+    // (uses BOOLEAN_INPUTS imported from ai-block-validator)
     for (var boolId in blockMap) {
         if (!Object.prototype.hasOwnProperty.call(blockMap, boolId)) continue;
         var boolBlock = blockMap[boolId];
@@ -312,14 +307,95 @@ function autoCorrect(blockData) {
         for (var boolIname in boolBlock.inputs) {
             if (!boolInputs[boolIname]) continue;
             var boolInput = boolBlock.inputs[boolIname];
+            boolInput.shadow = null;
             if (!boolInput.block) continue;
             var childBlock = blockMap[boolInput.block];
             if (!childBlock || childBlock.shadow) continue;
             var childShape = OPCODES[childBlock.opcode];
             if (childShape !== 'boolean') {
-                changes.push('CONDITION "' + childBlock.opcode + '" no es booleano → desconectado, usando shadow');
+                changes.push('"' + boolBlock.opcode + '"."' + boolIname + '" no es booleano → desconectado');
                 boolInput.block = null;
             }
+        }
+    }
+
+    // Phase 7.6: Fix reporter/boolean in next chain — disconnect them
+    for (id in blockMap) {
+        if (!Object.prototype.hasOwnProperty.call(blockMap, id)) continue;
+        b = blockMap[id];
+        if (!b || b.shadow || !b.next) continue;
+        var nextBlock = blockMap[b.next];
+        if (!nextBlock || nextBlock.shadow) continue;
+        var nextShape = OPCODES[nextBlock.opcode];
+        if (nextShape === 'reporter' || nextShape === 'boolean') {
+            changes.push('Reporter/booleano "' + nextBlock.opcode + '" en cadena next — desconectado');
+            b.next = null;
+            nextBlock.parent = null;
+        }
+    }
+
+    // Phase 7.7: Fix input shape incompatibilities:
+    //   - stack/hat/c/end in value inputs → disconnect
+    //   - reporter/boolean in statement inputs → disconnect
+    //   - non-boolean in boolean inputs → disconnect
+    for (id in blockMap) {
+        if (!Object.prototype.hasOwnProperty.call(blockMap, id)) continue;
+        b = blockMap[id];
+        if (!b || b.shadow) continue;
+        var parentInputs = BOOLEAN_INPUTS[b.opcode];
+        var parentStatements = STATEMENT_INPUTS[b.opcode];
+        for (var iname in b.inputs) {
+            var inputEntry = b.inputs[iname];
+            if (!inputEntry.block) continue;
+            var childBlock = blockMap[inputEntry.block];
+            if (!childBlock || childBlock.shadow) continue;
+            var childShape = OPCODES[childBlock.opcode];
+            if (!childShape) continue;
+
+            var isStatement = parentStatements && parentStatements[iname];
+            var isBoolean = parentInputs && parentInputs[iname];
+
+            if (isStatement && VALUE_LIKE[childShape]) {
+                changes.push('Reporter/booleano "' + childBlock.opcode + '" en statement input "' + iname + '" de "' + b.opcode + '" — desconectado');
+                inputEntry.block = null;
+            } else if (isBoolean && childShape !== 'boolean') {
+                changes.push('No-booleano "' + childBlock.opcode + '" en boolean input "' + iname + '" de "' + b.opcode + '" — desconectado');
+                inputEntry.block = null;
+            } else if (!isStatement && !isBoolean && STACK_LIKE[childShape]) {
+                changes.push('Stack/hat/c/end "' + childBlock.opcode + '" en value input "' + iname + '" de "' + b.opcode + '" — desconectado');
+                inputEntry.block = null;
+            }
+        }
+    }
+
+    // Phase 7.8: Fill missing numeric operands of arithmetic operators with 0,
+    // so operator_add/subtract/multiply/divide/random/mod never render broken.
+    var ARITH_OPERANDS = {
+        operator_add: ['NUM1', 'NUM2'],
+        operator_subtract: ['NUM1', 'NUM2'],
+        operator_multiply: ['NUM1', 'NUM2'],
+        operator_divide: ['NUM1', 'NUM2'],
+        operator_mod: ['NUM1', 'NUM2'],
+        operator_random: ['FROM', 'TO']
+    };
+    for (id in blockMap) {
+        if (!Object.prototype.hasOwnProperty.call(blockMap, id)) continue;
+        b = blockMap[id];
+        if (!b || b.shadow) continue;
+        var reqOperands = ARITH_OPERANDS[b.opcode];
+        if (!reqOperands) continue;
+        for (var oi = 0; oi < reqOperands.length; oi++) {
+            var opName = reqOperands[oi];
+            if (b.inputs[opName]) continue;
+            var shadowId = uid();
+            blockMap[shadowId] = {
+                id: shadowId, opcode: 'math_number',
+                fields: {NUM: {name: 'NUM', value: '0'}},
+                inputs: {}, next: null, parent: b.id,
+                topLevel: false, shadow: true, mutation: null
+            };
+            b.inputs[opName] = {name: opName, block: null, shadow: shadowId};
+            changes.push('Operador "' + b.opcode + '" sin "' + opName + '" → se completó con 0');
         }
     }
 
@@ -330,11 +406,15 @@ function autoCorrect(blockData) {
         console.log('[AI Blocks] Auto-correcciones aplicadas:', changes);
     }
 
+    // Preserve the parse errors produced earlier (auto-init warnings, bad
+    // symbols, empty conditions...). They must reach the UI and the fix loop.
+    var keptErrors = (blockData && blockData.errors) || [];
+
     return {
         blockMap: blockMap,
         topBlocks: topBlocks,
-        errors: [],
-        valid: true,
+        errors: keptErrors.slice(),
+        valid: keptErrors.length === 0,
         changes: changes
     };
 }

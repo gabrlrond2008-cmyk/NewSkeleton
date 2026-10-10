@@ -47,9 +47,15 @@ $fade-out-distance: 100px;
     /* Must have some height (recalculated by flex-grow) in order to scroll */
     height: 0;
     flex-grow: 1;
-    overflow-y: scroll;
+    overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     display: flex;
     flex-direction: column;
+}
+
+.list-area::-webkit-scrollbar {
+    display: none;
 }
 
 .list-area:after {
@@ -80,6 +86,6 @@ $fade-out-distance: 100px;
 
 
 .list-item.placeholder {
-    background: white;
+    background: var(--bg-white, white);
     filter: opacity(15%) brightness(0%);
 }

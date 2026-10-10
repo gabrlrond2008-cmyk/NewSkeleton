@@ -25,6 +25,10 @@ import {
     setSelectedDevice
 } from '../reducers/device';
 import getDevices from '../lib/libraries/devices/devices.jsx';
+import {setSharedMessages} from '../lib/ai-shared-state';
+import {deserializeConversation} from '../lib/ai-flynt-data';
+import {confirmDialog} from '../lib/dialog-helper';
+import controlVm from '../lib/control-vm';
 
 const messages = defineMessages({
     loadError: {
@@ -54,7 +58,8 @@ const SBFileUploaderHOC = function (WrappedComponent) {
                 'handleStartSelectingFileUpload',
                 'handleChange',
                 'onload',
-                'removeFileObjects'
+                'removeFileObjects',
+                'restoreConversation'
             ]);
         }
         componentDidUpdate (prevProps) {
@@ -106,20 +111,27 @@ const SBFileUploaderHOC = function (WrappedComponent) {
                 // we must confirm with the user that they really intend to
                 // replace it. (If they don't own the project and haven't
                 // changed it, no need to confirm.)
+                const finishUploadDecision = () => {
+                    if (uploadAllowed) {
+                        // cues step 4
+                        this.props.requestProjectUpload(loadingState);
+                    } else {
+                        // skips ahead to step 7
+                        this.removeFileObjects();
+                    }
+                    this.props.closeFileMenu();
+                };
                 let uploadAllowed = true;
                 if (userOwnsProject || (projectChanged.changed && isShowingWithoutId)) {
-                    uploadAllowed = confirm( // eslint-disable-line no-alert
+                    confirmDialog(
                         intl.formatMessage(sharedMessages.replaceProjectWarning)
-                    );
-                }
-                if (uploadAllowed) {
-                    // cues step 4
-                    this.props.requestProjectUpload(loadingState);
+                    ).then(allowed => {
+                        uploadAllowed = allowed;
+                        finishUploadDecision();
+                    });
                 } else {
-                    // skips ahead to step 7
-                    this.removeFileObjects();
+                    finishUploadDecision();
                 }
-                this.props.closeFileMenu();
             }
         }
         // step 4 is below, in mapDispatchToProps
@@ -154,20 +166,34 @@ const SBFileUploaderHOC = function (WrappedComponent) {
                 var buffer = this.fileReader.result;
                 var filename = this.fileToUpload && this.fileToUpload.name;
 
-                // Check if .flynt format and extract AI + device data before loading project
-                var flyntDataPromise = Promise.resolve({aiData: null, deviceData: null});
+                // Check if .flynt format and extract AI + device + conversation + control program
+                var flyntDataPromise = Promise.resolve(
+                    {aiData: null, deviceData: null, conversationData: null, controlProgram: null});
                 if (buffer && typeof buffer === 'object') {
                     var VMClass = self.props.vm && self.props.vm.constructor;
                     if (VMClass && VMClass.isFlynt) {
                         flyntDataPromise = VMClass.isFlynt(buffer).then(function (isFlynt) {
-                            if (!isFlynt) return {aiData: null, deviceData: null};
+                            if (!isFlynt) return {
+                                aiData: null, deviceData: null, conversationData: null, controlProgram: null
+                            };
                             var aiPromise = VMClass.extractFlyntAiData ?
                                 VMClass.extractFlyntAiData(buffer) : Promise.resolve(null);
                             var devicePromise = VMClass.extractFlyntDeviceData ?
                                 VMClass.extractFlyntDeviceData(buffer) : Promise.resolve(null);
-                            return Promise.all([aiPromise, devicePromise]).then(function (results) {
-                                return {aiData: results[0], deviceData: results[1]};
-                            });
+                            var conversationPromise = VMClass.extractFlyntConversation ?
+                                VMClass.extractFlyntConversation(buffer) : Promise.resolve(null);
+                            var controlPromise = VMClass.extractFlyControlProgram ?
+                                VMClass.extractFlyControlProgram(buffer) : Promise.resolve(null);
+                            return Promise.all([aiPromise, devicePromise, conversationPromise, controlPromise]).then(
+                                function (results) {
+                                    return {
+                                        aiData: results[0],
+                                        deviceData: results[1],
+                                        conversationData: results[2],
+                                        controlProgram: results[3]
+                                    };
+                                }
+                            );
                         });
                     }
                 }
@@ -175,8 +201,8 @@ const SBFileUploaderHOC = function (WrappedComponent) {
                 flyntDataPromise.then(function (flyntData) {
                     var aiData = flyntData.aiData;
                     var deviceData = flyntData.deviceData;
+                    var controlProgram = flyntData.controlProgram;
                     self.props.onLoadingStarted();
-                    try { localStorage.removeItem('ai_messages'); } catch (e) {}
                     var loadingSuccess = false;
                     self.props.vm.loadProject(buffer)
                         .then(function () {
@@ -235,12 +261,38 @@ const SBFileUploaderHOC = function (WrappedComponent) {
                         })
                         .then(function () {
                             self.props.onLoadingFinished(self.props.loadingState, loadingSuccess);
+                            // Restore the full AI conversation AFTER the project key change is
+                            // dispatched, so the chat is not wiped by the project reset.
+                            self.restoreConversation(flyntData.conversationData);
+                            // Restore the robotics control program into its own VM.
+                            if (loadingSuccess && flyntData.controlProgram && controlVm && controlVm.loadProject) {
+                                try {
+                                    controlVm.loadProject(flyntData.controlProgram).catch(function () {});
+                                } catch (e) {}
+                            }
                             // go back to step 7: whether project loading succeeded
                             // or failed, reset file objects
                             self.removeFileObjects();
                         });
                 });
             }
+        }
+        // Restore the full AI conversation + media into the live chat.
+        restoreConversation (conversationData) {
+            if (!conversationData) return;
+            var rebuilt;
+            try {
+                rebuilt = deserializeConversation(conversationData.conversation, conversationData.media);
+            } catch (e) {
+                return;
+            }
+            if (!rebuilt || !rebuilt.messages || rebuilt.messages.length === 0) return;
+            try {
+                setSharedMessages(rebuilt.messages, {restore: true});
+                if (rebuilt.session && rebuilt.session.length > 0) {
+                    localStorage.setItem('ai_session', JSON.stringify(rebuilt.session));
+                }
+            } catch (e) {}
         }
         // step 7: remove the <input> element from the DOM and clear reader and
         // fileToUpload reference, so those objects can be garbage collected

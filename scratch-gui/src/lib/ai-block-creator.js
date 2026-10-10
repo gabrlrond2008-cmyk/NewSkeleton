@@ -1,7 +1,48 @@
-function createBlocks(vm, blockData) {
-    if (!vm || !vm.editingTarget) {
-        console.error('[AI Blocks] No editing target');
-        return {success: false, error: 'No editing target', total: 0, errors: []};
+function resolveVarId(vm, varName, varType) {
+    if (!vm || !vm.runtime) return null;
+    var stage = vm.runtime.getTargetForStage ? vm.runtime.getTargetForStage() : null;
+    if (!stage) return null;
+    var type = varType || '';
+    var strName = String(varName);
+    var lowerName = strName.toLowerCase();
+
+    // 1. Look in stage.variables
+    if (stage.variables) {
+        for (var vid in stage.variables) {
+            var v = stage.variables[vid];
+            if ((v.name === strName || (type === 'broadcast_msg' && v.name.toLowerCase() === lowerName)) && (v.type || '') === type) {
+                return vid;
+            }
+        }
+    }
+    // 2. Look in editingTarget.variables
+    if (vm.editingTarget && vm.editingTarget.variables) {
+        for (var tid in vm.editingTarget.variables) {
+            var tv = vm.editingTarget.variables[tid];
+            if ((tv.name === strName || (type === 'broadcast_msg' && tv.name.toLowerCase() === lowerName)) && (tv.type || '') === type) {
+                return tid;
+            }
+        }
+    }
+
+    // 3. Not found: create it on stage so VM and Blockly have the exact matching variable!
+    var prefix = (type === 'broadcast_msg') ? 'msg_' : ((type === 'list') ? 'list_' : 'var_');
+    var newId = prefix + strName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Math.random().toString(36).substring(2, 8);
+    try {
+        if (typeof stage.createVariable === 'function') {
+            stage.createVariable(newId, strName, type, false);
+            return newId;
+        }
+    } catch (_cErr) {}
+
+    return newId;
+}
+
+function createBlocks(vm, blockData, customTarget) {
+    var target = customTarget || (vm && vm.editingTarget);
+    if (!vm || !target) {
+        console.error('[AI Blocks] No target for createBlocks');
+        return {success: false, error: 'No target for createBlocks', total: 0, errors: []};
     }
 
     if (!blockData || !blockData.blockMap) {
@@ -9,14 +50,18 @@ function createBlocks(vm, blockData) {
         return {success: false, error: 'No block data', total: 0, errors: []};
     }
 
-    var targetBlocks = vm.editingTarget.blocks;
+    var targetBlocks = target.blocks;
+    if (!targetBlocks || !targetBlocks._blocks) {
+        console.error('[AI Blocks] Target has no blocks store');
+        return {success: false, error: 'Target has no blocks store', total: 0, errors: []};
+    }
     var blockMap = blockData.blockMap;
     var total = 0;
     var errors = [];
     var scriptsBefore = targetBlocks._scripts ? targetBlocks._scripts.length : -1;
     var blocksBefore = Object.keys(targetBlocks._blocks).length;
 
-    console.group('[AI Blocks] createBlocks');
+    console.group('[AI Blocks] createBlocks (' + (target.getName ? target.getName() : target.id) + ')');
     console.log('Block map entries:', Object.keys(blockMap).length);
     console.log('Blocks in _blocks before:', blocksBefore);
     console.log('Scripts in _scripts before:', scriptsBefore);
@@ -79,11 +124,45 @@ function createBlocks(vm, blockData) {
             continue;
         }
 
+        // Resolve variable/list/broadcast field IDs from VM so Blockly FieldVariable works
+        var resolvedFields = {};
+        var rawFields = block.fields || {};
+        for (var fk in rawFields) {
+            if (!Object.prototype.hasOwnProperty.call(rawFields, fk)) continue;
+            var ff = rawFields[fk];
+            if (!ff) continue;
+            var val = typeof ff === 'object' ? ff.value : ff;
+            if (val === null || val === undefined) continue;
+
+            var targetFk = fk;
+            if (targetFk === 'CHOICE' || targetFk === 'BROADCAST_OPTION_MENU') targetFk = 'BROADCAST_OPTION';
+
+            if (targetFk === 'BROADCAST_OPTION') {
+                var bId = resolveVarId(vm, val, 'broadcast_msg');
+                resolvedFields[targetFk] = { name: targetFk, value: String(val), id: bId, variableType: 'broadcast_msg' };
+            } else if (targetFk === 'VARIABLE') {
+                var vId = resolveVarId(vm, val, '');
+                resolvedFields[targetFk] = { name: targetFk, value: String(val), id: vId, variableType: '' };
+            } else if (targetFk === 'LIST') {
+                var lId = resolveVarId(vm, val, 'list');
+                resolvedFields[targetFk] = { name: targetFk, value: String(val), id: lId, variableType: 'list' };
+            } else {
+                resolvedFields[targetFk] = typeof ff === 'object' ? { name: ff.name || targetFk, value: String(val) } : { name: targetFk, value: String(val) };
+            }
+        }
+
+        // Guarantee broadcast hat and menu blocks have BROADCAST_OPTION field properly initialized
+        if ((block.opcode === 'event_whenbroadcastreceived' || block.opcode === 'event_broadcast_menu') && !resolvedFields.BROADCAST_OPTION) {
+            var defMsg = 'mensaje1';
+            var defBId = resolveVarId(vm, defMsg, 'broadcast_msg');
+            resolvedFields.BROADCAST_OPTION = { name: 'BROADCAST_OPTION', value: defMsg, id: defBId, variableType: 'broadcast_msg' };
+        }
+
         var blockJSON = {
             id: block.id,
             opcode: block.opcode,
             inputs: block.inputs || {},
-            fields: block.fields || {},
+            fields: resolvedFields,
             next: block.next || null,
             parent: block.parent || null,
             topLevel: !!block.topLevel,
@@ -125,28 +204,11 @@ function createBlocks(vm, blockData) {
         }
     }
 
-    // Emit workspace update to refresh the UI
-    try {
-        vm.emitWorkspaceUpdate();
-        console.log('emitWorkspaceUpdate() OK');
-    } catch (e) {
-        errors.push('emitWorkspaceUpdate: ' + e.message);
-        console.error('emitWorkspaceUpdate() failed:', e);
-        // Fallback: try requestBlocksUpdate via runtime
+    if (typeof targetBlocks.resetCache === 'function') {
         try {
-            vm.runtime.requestBlocksUpdate();
-            console.log('requestBlocksUpdate() fallback OK');
-        } catch (e2) {
-            console.error('requestBlocksUpdate() also failed:', e2);
-        }
+            targetBlocks.resetCache();
+        } catch (_rcErr) {}
     }
-
-    // Extra fallback: directly set editing target to force UI update
-    // (setEditingTarget checks equal ID and returns early, but emit same event)
-    // Actually setEditingTarget returns if same targetId, so we emit the event directly
-    try {
-        vm.emit('workspaceUpdate', {xml: ''}); // will be ignored
-    } catch (_e) {}
 
     console.groupEnd();
 

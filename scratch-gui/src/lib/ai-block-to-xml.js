@@ -9,9 +9,20 @@ var STATEMENT_INPUTS = {
     argument_editor_show: {ARGUMENTS: 1}
 };
 
-var MUTATIONS = {
-    control_if_else: {haselse: 'true'},
-    control_if: {}
+// control_if / control_if_else expose their branches as fixed SUBSTACK/SUBSTACK2
+// inputs in scratch-blocks; they need no mutation element. Emitting one would
+// make the VM flag these blocks as dynamic (b.mutation truthy) and force the
+// whole chain out of the in-place diff.
+var MUTATIONS = {};
+
+var BOOLEAN_INPUTS = {
+    control_if: {CONDITION: 1},
+    control_if_else: {CONDITION: 1},
+    control_wait_until: {CONDITION: 1},
+    control_repeat_until: {CONDITION: 1},
+    operator_and: {OPERAND1: 1, OPERAND2: 1},
+    operator_or: {OPERAND1: 1, OPERAND2: 1},
+    operator_not: {OPERAND: 1}
 };
 
 function escapeXml(str) {
@@ -37,17 +48,22 @@ function blockToXML(id, blockMap, ctx) {
     var broadcastMap = (ctx && ctx.existingBroadcasts) || {};
 
     for (var f in block.fields) {
-        var val = block.fields[f].value;
+        var rawVal = block.fields[f].value;
+        if (rawVal === null || rawVal === undefined) continue;
+        var val = rawVal;
         var name = f;
         if (name === 'CHOICE') name = 'BROADCAST_OPTION';
 
         if (name === 'VARIABLE' || block.opcode === 'data_variable') {
+            if (String(val).trim() === '') continue;
             var varId = varMap[val] || val;
             xml += '<field name="VARIABLE" id="' + escapeXml(varId) + '" variabletype="">' + escapeXml(val) + '</field>';
         } else if (name === 'LIST') {
+            if (String(val).trim() === '') continue;
             var listId = listMap[val] || val;
             xml += '<field name="LIST" id="' + escapeXml(listId) + '" variabletype="list">' + escapeXml(val) + '</field>';
         } else if (name === 'BROADCAST_OPTION') {
+            if (String(val).trim() === '') continue;
             var msgId = broadcastMap[val] || val;
             xml += '<field name="BROADCAST_OPTION" id="' + escapeXml(msgId) + '" variabletype="broadcast_msg">' + escapeXml(val) + '</field>';
         } else {
@@ -55,11 +71,11 @@ function blockToXML(id, blockMap, ctx) {
         }
     }
 
-    var mut = MUTATIONS[block.opcode];
+    var mut = block.mutation || MUTATIONS[block.opcode];
     if (mut) {
         var mutAttrs = '';
         for (var mk in mut) {
-            mutAttrs += ' ' + mk + '="' + mut[mk] + '"';
+            mutAttrs += ' ' + mk + '="' + escapeXml(mut[mk]) + '"';
         }
         xml += '<mutation' + mutAttrs + '/>';
     }
@@ -68,13 +84,19 @@ function blockToXML(id, blockMap, ctx) {
         var input = block.inputs[iname];
         if (input.block || input.shadow) {
             var isStatement = STATEMENT_INPUTS[block.opcode] && STATEMENT_INPUTS[block.opcode][iname];
+            var isBoolean = BOOLEAN_INPUTS[block.opcode] && BOOLEAN_INPUTS[block.opcode][iname];
+            // Statements require a block child, don't emit empty statements
+            if (isStatement && !input.block) continue;
             var tag = isStatement ? 'statement' : 'value';
             xml += '<' + tag + ' name="' + iname + '">';
             if (input.block) {
                 xml += blockToXML(input.block, blockMap, ctx);
             }
-            if (input.shadow && input.shadow !== input.block) {
-                xml += blockToXML(input.shadow, blockMap, ctx);
+            if (!isStatement && !isBoolean && input.shadow && input.shadow !== input.block) {
+                var shadowBlock = blockMap[input.shadow];
+                if (shadowBlock && shadowBlock.opcode !== 'boolean') {
+                    xml += blockToXML(input.shadow, blockMap, ctx);
+                }
             }
             xml += '</' + tag + '>';
         }
@@ -88,7 +110,7 @@ function blockToXML(id, blockMap, ctx) {
     return xml;
 }
 
-function blocksToXML(blockData) {
+function blocksToXML(blockData, vm) {
     var blockMap = blockData.blockMap;
     var topBlocks = blockData.topBlocks;
     if (!blockMap || !topBlocks) return '';
@@ -103,12 +125,13 @@ function blocksToXML(blockData) {
         
         for (var f in b.fields) {
             var val = b.fields[f].value;
+            if (val === null || val === undefined) continue;
             if (f === 'VARIABLE' || b.opcode === 'data_variable') {
-                referencedVars[val] = true;
+                if (String(val).trim() !== '') referencedVars[val] = true;
             } else if (f === 'LIST') {
-                referencedLists[val] = true;
+                if (String(val).trim() !== '') referencedLists[val] = true;
             } else if (f === 'CHOICE' || f === 'BROADCAST_OPTION' || f === 'BROADCAST_OPTION_MENU') {
-                referencedBroadcasts[val] = true;
+                if (String(val).trim() !== '') referencedBroadcasts[val] = true;
             }
         }
     }
@@ -117,8 +140,8 @@ function blocksToXML(blockData) {
     var existingLists = {};
     var existingBroadcasts = {};
 
-    if (typeof window !== 'undefined' && window.vm) {
-        var editingTarget = window.vm.editingTarget;
+    if (typeof window !== 'undefined' && (vm || window.vm)) {
+        var editingTarget = (vm || window.vm).editingTarget;
         if (editingTarget) {
             for (var vid in editingTarget.variables) {
                 var v = editingTarget.variables[vid];
@@ -131,7 +154,7 @@ function blocksToXML(blockData) {
                 }
             }
         }
-        var stage = window.vm.runtime && window.vm.runtime.getTargetForStage();
+        var stage = (vm || window.vm).runtime && (vm || window.vm).runtime.getTargetForStage();
         if (stage && stage !== editingTarget) {
             for (var svid in stage.variables) {
                 var sv = stage.variables[svid];
@@ -182,7 +205,7 @@ function blocksToXML(blockData) {
     return xml;
 }
 
-function chainToXML(topBlockId, blockData) {
+function chainToXML(topBlockId, blockData, vm) {
     var blockMap = blockData.blockMap;
     if (!blockMap || !topBlockId) return '';
     var topBlock = blockMap[topBlockId];
@@ -190,7 +213,7 @@ function chainToXML(topBlockId, blockData) {
     return blocksToXML({
         blockMap: blockMap,
         topBlocks: [topBlock]
-    });
+    }, vm);
 }
 
 export {blocksToXML, chainToXML};

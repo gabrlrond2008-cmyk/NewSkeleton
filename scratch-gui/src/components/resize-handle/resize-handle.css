@@ -36,7 +36,7 @@
     border: 1px solid rgba(0, 0, 0, 0.18);
     border-radius: 50%;
     cursor: pointer;
-    color: #575e75;
+    color: var(--text-primary, #575e75);
     font-size: 0.7rem;
     line-height: 1;
     padding: 0;

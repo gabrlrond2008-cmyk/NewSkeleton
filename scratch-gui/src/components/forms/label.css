@@ -21,8 +21,8 @@
     font-size: 0.625rem;
     user-select: none;
     cursor: default;
-
     white-space: nowrap;
+    color: $text-primary;
 }
 
 [dir="ltr"] .input-label, [dir="ltr"] .input-label-secondary {

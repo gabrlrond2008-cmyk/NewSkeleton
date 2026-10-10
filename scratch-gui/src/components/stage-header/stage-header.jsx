@@ -62,14 +62,15 @@ const StageHeaderComponent = function (props) {
         onSetStageFull,
         onSetStageUnFull,
         showBranding,
+        stageSize,
         stageSizeMode,
         vm
     } = props;
 
+    const stageDimensions = getStageDimensions(stageSize, isFullScreen);
     let header = null;
 
     if (isFullScreen) {
-        const stageDimensions = getStageDimensions(null, true);
         const stageButton = showBranding ? (
             <div className={styles.embedScratchLogo}>
                 <a
@@ -139,7 +140,10 @@ const StageHeaderComponent = function (props) {
             );
         header = (
             <Box className={styles.stageHeaderWrapper}>
-                <Box className={styles.stageMenuWrapper}>
+                <Box
+                    className={styles.stageMenuWrapper}
+                    style={{width: stageDimensions ? stageDimensions.width : '100%', maxWidth: '100%'}}
+                >
                     <Controls vm={vm} />
                     <div className={styles.stageSizeRow}>
                         {stageControls}
@@ -181,6 +185,10 @@ StageHeaderComponent.propTypes = {
     onSetStageSmall: PropTypes.func.isRequired,
     onSetStageUnFull: PropTypes.func.isRequired,
     showBranding: PropTypes.bool.isRequired,
+    stageSize: PropTypes.oneOfType([
+        PropTypes.string,
+        PropTypes.object
+    ]),
     stageSizeMode: PropTypes.oneOf(Object.keys(STAGE_SIZE_MODES)),
     vm: PropTypes.instanceOf(VM).isRequired
 };

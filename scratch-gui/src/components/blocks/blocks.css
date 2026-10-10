@@ -75,6 +75,10 @@ html[data-time-travel]:not([data-time-travel="NOW"]) .blocklyHtmlInput {
     pointer-events: none;
 }
 
+[data-theme="dark"] .blocks :global(.blocklyToolboxHeader) {
+    background-color: var(--bg-white, #1a1a1a);
+}
+
 .blocks :global(.blocklyToolboxHeader > *) {
     pointer-events: auto;
 }

@@ -115,7 +115,7 @@ class SpriteInfo extends React.Component {
         const xPosition = (
             <div className={styles.group}>
                 {
-                    (stageSize === STAGE_DISPLAY_SIZES.large) ?
+                    (stageSize !== STAGE_DISPLAY_SIZES.small) ?
                         <div className={styles.iconWrapper}>
                             <img
                                 aria-hidden="true"
@@ -142,7 +142,7 @@ class SpriteInfo extends React.Component {
         const yPosition = (
             <div className={styles.group}>
                 {
-                    (stageSize === STAGE_DISPLAY_SIZES.large) ?
+                    (stageSize !== STAGE_DISPLAY_SIZES.small) ?
                         <div className={styles.iconWrapper}>
                             <img
                                 aria-hidden="true"
@@ -185,7 +185,7 @@ class SpriteInfo extends React.Component {
         return (
             <Box className={styles.spriteInfo}>
                 <div className={classNames(styles.row, styles.rowPrimary)}>
-                    <div className={styles.group}>
+                    <div className={classNames(styles.group, styles.spriteNameGroup)}>
                         <Label
                             above={labelAbove}
                             text={sprite}
@@ -193,13 +193,15 @@ class SpriteInfo extends React.Component {
                             {spriteNameInput}
                         </Label>
                     </div>
-                    {xPosition}
-                    {yPosition}
+                    <div className={classNames(styles.group, styles.coordGroup)}>
+                        {xPosition}
+                        {yPosition}
+                    </div>
                 </div>
                 <div className={classNames(styles.row, styles.rowSecondary)}>
-                    <div className={labelAbove ? styles.column : styles.group}>
+                    <div className={classNames(labelAbove ? styles.column : styles.group, styles.visibilityGroup)}>
                         {
-                            stageSize === STAGE_DISPLAY_SIZES.large ?
+                            stageSize !== STAGE_DISPLAY_SIZES.small ?
                                 <Label
                                     secondary
                                     text={showLabel}
@@ -224,32 +226,34 @@ class SpriteInfo extends React.Component {
                             disabled={this.props.disabled}
                         />
                     </div>
-                    <div className={classNames(styles.group, styles.largerInput)}>
-                        <Label
-                            secondary
-                            above={labelAbove}
-                            text={sizeLabel}
-                        >
-                            <BufferedInput
-                                small
+                    <div className={classNames(styles.group, styles.dimensionGroup)}>
+                        <div className={classNames(styles.group, styles.largerInput)}>
+                            <Label
+                                secondary
+                                above={labelAbove}
+                                text={sizeLabel}
+                            >
+                                <BufferedInput
+                                    small
+                                    disabled={this.props.disabled}
+                                    label={sizeLabel}
+                                    tabIndex="0"
+                                    type="text"
+                                    value={this.props.disabled ? '' : Math.round(this.props.size)}
+                                    onSubmit={this.props.onChangeSize}
+                                />
+                            </Label>
+                        </div>
+                        <div className={classNames(styles.group, styles.largerInput)}>
+                            <DirectionPicker
+                                direction={Math.round(this.props.direction)}
                                 disabled={this.props.disabled}
-                                label={sizeLabel}
-                                tabIndex="0"
-                                type="text"
-                                value={this.props.disabled ? '' : Math.round(this.props.size)}
-                                onSubmit={this.props.onChangeSize}
+                                labelAbove={labelAbove}
+                                rotationStyle={this.props.rotationStyle}
+                                onChangeDirection={this.props.onChangeDirection}
+                                onChangeRotationStyle={this.props.onChangeRotationStyle}
                             />
-                        </Label>
-                    </div>
-                    <div className={classNames(styles.group, styles.largerInput)}>
-                        <DirectionPicker
-                            direction={Math.round(this.props.direction)}
-                            disabled={this.props.disabled}
-                            labelAbove={labelAbove}
-                            rotationStyle={this.props.rotationStyle}
-                            onChangeDirection={this.props.onChangeDirection}
-                            onChangeRotationStyle={this.props.onChangeRotationStyle}
-                        />
+                        </div>
                     </div>
                 </div>
             </Box>

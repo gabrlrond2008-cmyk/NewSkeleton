@@ -13,6 +13,7 @@ import {blockColors as defaultColors} from './default';
 
 import defaultIcon from './default/icon.svg';
 import highContrastIcon from './high-contrast/icon.svg';
+import darkIcon from './dark/icon.svg';
 
 const DEFAULT_THEME = 'default';
 const HIGH_CONTRAST_THEME = 'high-contrast';
@@ -50,7 +51,8 @@ const themeMap = {
         blocksMediaFolder: 'blocks-media/default',
         colors: mergeWithDefaults(darkModeBlockColors),
         extensions: darkModeExtensions,
-        label: messages[DARK_THEME]
+        label: messages[DARK_THEME],
+        icon: darkIcon
     },
     [HIGH_CONTRAST_THEME]: {
         blocksMediaFolder: 'blocks-media/high-contrast',

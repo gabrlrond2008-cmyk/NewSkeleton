@@ -6,9 +6,26 @@
     box-sizing: border-box;
 }
 
+.stage-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    width: 100%;
+}
+
+.stage-menu-wrapper {
+    width: 100%;
+    display: flex;
+    justify-content: center;
+}
+
 .stage-canvas-wrapper {
     /* Hides negative space between edge of rounded corners + container, when selected */
     user-select: none;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
 }
 
 .stage-wrapper.full-screen {

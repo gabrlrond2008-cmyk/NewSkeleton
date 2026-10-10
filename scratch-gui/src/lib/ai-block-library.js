@@ -179,6 +179,53 @@ var BLOCKS = {
     control_create_clone_of_menu:  {c:'internal',t:'r',d:'[shadow] menu clones'}
 };
 
+// Input name → value type for the AI prompt
+var INPUT_VALUE_TYPES = {
+    // numeric
+    STEPS:'num', DEGREES:'num', TIMES:'num', DURATION:'num', SECS:'num',
+    DX:'num', DY:'num', X:'num', Y:'num', DIRECTION:'num',
+    VALUE:'num', CHANGE:'num', SIZE:'num', NUM:'num',
+    NUM1:'num', NUM2:'num', FROM:'num', TO:'num',
+    INDEX:'num', LETTER:'num', BEATS:'num', NOTE:'num',
+    TEMPO:'num', VOLUME:'num', DRUM:'num', OPERAND1:'num',
+    OPERAND2:'num', OPERAND:'num',
+    // text/string
+    MESSAGE:'str', QUESTION:'str', STRING1:'str', STRING2:'str',
+    ITEM:'str', EFFECT:'str',
+    // boolean
+    CONDITION:'bool',
+    // color
+    COLOR:'color', COLOR2:'color',
+    // menu/dropdown
+    TOUCHINGOBJECTMENU:'menu', DISTANCETOMENU:'menu',
+    CLONE_OPTION:'menu', KEY_OPTION:'menu', SOUND_MENU:'menu',
+    TOWARDS:'menu', BACKDROP:'menu', COSTUME:'menu',
+    STYLE:'menu', FRONT_BACK:'menu', FORWARD_BACKWARD:'menu',
+    NUMBER_NAME:'menu', DRAG_MODE:'menu', CURRENTMENU:'menu',
+    PROPERTY:'menu', BROADCAST_INPUT:'menu', WHENGREATERTHANMENU:'menu'
+};
+
+// Group input names by type for the keyword reference section
+function getInputTypeLines() {
+    var groups = {
+        num: [], str: [], bool: [], color: [], menu: []
+    };
+    for (var name in INPUT_VALUE_TYPES) {
+        if (!Object.prototype.hasOwnProperty.call(INPUT_VALUE_TYPES, name)) continue;
+        var t = INPUT_VALUE_TYPES[name];
+        if (groups[t]) groups[t].push(name);
+    }
+    var lines = ['=== INPUT VALUE TYPES ==='];
+    lines.push('num (numeric): ' + groups.num.join(', '));
+    lines.push('str (text): ' + groups.str.join(', '));
+    lines.push('bool (boolean): ' + groups.bool.join(', '));
+    lines.push('color: ' + groups.color.join(', '));
+    lines.push('menu (dropdown): ' + groups.menu.join(', '));
+    lines.push('');
+    lines.push('SUBSTACK / SUBSTACK2 = statement inputs (nested block chains)');
+    return lines;
+}
+
 var blockMessages = defineMessages({
     eventWhenflagclicked: {id:'gui.blockLibrary.eventWhenflagclicked.desc',defaultMessage:'When green flag clicked'},
     eventWhenkeypressed: {id:'gui.blockLibrary.eventWhenkeypressed.desc',defaultMessage:'When key pressed'},
@@ -401,13 +448,33 @@ function getCompactPromptLines() {
             if (seen[op]) continue;
             seen[op] = true;
             var typeChar = b.t;
-            var parts = [op + '[' + typeChar + ']'];
+            var typeLabel = (TYPE_NAMES[b.t] || b.t);
+            var parts = [op + ' [' + typeLabel + ']'];
             parts.push(b.d);
-            if (b.f && b.f.length > 0) parts.push('(f:' + b.f.join(',') + ')');
-            if (b.i && b.i.length > 0) parts.push('(v:' + b.i.join(',') + ')');
-            if (b.st && b.st.length > 0) parts.push('{st:' + b.st.join(',') + '}');
+            if (b.f && b.f.length > 0) {
+                var fTypes = b.f.map(function (fn) {
+                    var t = INPUT_VALUE_TYPES[fn] || 'menu';
+                    return fn + '=' + t;
+                });
+                parts.push('FIELD:' + fTypes.join(','));
+            }
+            if (b.i && b.i.length > 0) {
+                var iTypes = b.i.map(function (iname) {
+                    var t = INPUT_VALUE_TYPES[iname] || 'num';
+                    return iname + '=' + t;
+                });
+                parts.push('IN:' + iTypes.join(','));
+            }
+            if (b.st && b.st.length > 0) {
+                parts.push('ST:' + b.st.join(','));
+            }
             lines.push(' ' + parts.join(' | '));
         }
+    }
+    lines.push('');
+    var typeLines = getInputTypeLines();
+    for (var tli = 0; tli < typeLines.length; tli++) {
+        lines.push(typeLines[tli]);
     }
     return lines;
 }
@@ -443,4 +510,4 @@ function searchBlocks(query) {
     return results;
 }
 
-export {BLOCKS, getBlockInfo, getCompactPromptLines, getCompactPromptText, getDetailedBlockInfo, searchBlocks, TYPE_NAMES, blockMessages, detailLabels, categoryLabels, setDetailTranslator};
+export {BLOCKS, getBlockInfo, getCompactPromptLines, getCompactPromptText, getDetailedBlockInfo, searchBlocks, TYPE_NAMES, blockMessages, detailLabels, categoryLabels, setDetailTranslator, getInputTypeLines, INPUT_VALUE_TYPES};

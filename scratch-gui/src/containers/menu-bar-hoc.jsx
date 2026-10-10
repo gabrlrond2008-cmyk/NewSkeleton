@@ -3,6 +3,7 @@ import PropTypes from 'prop-types';
 import bindAll from 'lodash.bindall';
 import React from 'react';
 import NewProjectModal from '../components/new-project-modal/new-project-modal.jsx';
+import {confirmDialog} from '../lib/dialog-helper';
 
 const MenuBarHOC = function (WrappedComponent) {
     class MenuBarContainer extends React.PureComponent {
@@ -83,7 +84,7 @@ const MenuBarHOC = function (WrappedComponent) {
     };
     MenuBarContainer.defaultProps = {
         confirmWithMessage: (message, callback) => {
-            callback(confirm(message));
+            confirmDialog(message).then(callback);
         }
     };
     const mapStateToProps = state => ({

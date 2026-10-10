@@ -32,7 +32,18 @@ class BackdropLibrary extends React.Component {
             bitmapResolution: item.bitmapResolution,
             skinId: null
         };
-        this.props.vm.addBackdrop(item.md5ext, vmBackdrop);
+        this.props.vm.addBackdrop(item.md5ext, vmBackdrop)
+            .then(() => {
+                const stage = this.props.vm.runtime.getTargetForStage();
+                if (stage) {
+                    this.props.vm.setEditingTarget(stage.id);
+                }
+                this.props.vm.emitTargetsUpdate();
+                this.props.vm.emitWorkspaceUpdate();
+            })
+            .catch(err => {
+                console.warn('[BackdropLibrary] Error adding backdrop:', err);
+            });
     }
     render () {
         return (

@@ -36,6 +36,18 @@ export default appTarget => {
         return origGetContext.call(this, type, attrs);
     };
 
+    if (typeof OffscreenCanvas !== 'undefined' && OffscreenCanvas.prototype.getContext) {
+        const origOffscreenGetContext = OffscreenCanvas.prototype.getContext;
+        OffscreenCanvas.prototype.getContext = function (type, attrs) {
+            if (type === '2d' && !attrs) {
+                attrs = {willReadFrequently: true};
+            } else if (type === '2d' && attrs && attrs.willReadFrequently === undefined) {
+                attrs = Object.assign({}, attrs, {willReadFrequently: true});
+            }
+            return origOffscreenGetContext.call(this, type, attrs);
+        };
+    }
+
     GUI.setAppElement(appTarget);
 
     // note that redux's 'compose' function is just being used as a general utility to make

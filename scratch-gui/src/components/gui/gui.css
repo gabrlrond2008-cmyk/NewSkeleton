@@ -23,12 +23,12 @@
 }
 
 .editor-wrapper {
-    flex-basis: calc(1024px - 408px - (($space + $stage-standard-border-width) * 2));
-    flex-grow: 1;
-    flex-shrink: 0;
+    flex: 1 1 0;
+    min-width: 320px;
     position: relative;
     display: flex;
     flex-direction: column;
+    overflow: hidden;
 }
 
 .tabsBody {
@@ -42,6 +42,62 @@
 .blocks-wrapper {
     flex-grow: 1;
     position: relative;
+}
+
+.stage-resize-handle {
+    width: 9px;
+    margin-left: -5px;
+    margin-right: -4px;
+    position: relative;
+    cursor: col-resize;
+    user-select: none;
+    z-index: 10;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.stage-resize-handle::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 4px;
+    width: 1px;
+    background-color: $ui-black-transparent;
+    transition: background-color 0.15s ease, width 0.15s ease, left 0.15s ease;
+}
+
+.stage-resize-handle:hover::before,
+.stage-resize-handle.is-active::before,
+.stage-resize-handle.isActive::before {
+    width: 3px;
+    left: 3px;
+    background-color: $looks-secondary;
+    box-shadow: 0 0 6px rgba(76, 151, 255, 0.4);
+    border-radius: 2px;
+}
+
+.stage-and-target-wrapper {
+    display: flex;
+    flex-direction: column;
+    padding-left: $space;
+    padding-right: $space;
+    flex: 0 0 auto;
+    min-width: 340px;
+    max-width: 900px;
+    overflow: hidden;
+}
+
+.target-wrapper {
+    display: flex;
+    flex-grow: 1;
+    flex-basis: 0;
+    padding-top: $space;
+    min-height: 0;
+    min-width: 0;
+    overflow: hidden;
 }
 
 .extension-button-container {

@@ -35,6 +35,7 @@ class Stage extends React.Component {
             'onStartDrag',
             'onStopDrag',
             'onWheel',
+            'handleWindowResize',
             'updateRect',
             'questionListener',
             'setDragCanvas',
@@ -92,7 +93,9 @@ class Stage extends React.Component {
             this.stopColorPickingLoop();
         }
         this.updateRect();
-        this.renderer.resize(this.rect.width, this.rect.height);
+        if (this.rect && this.rect.width > 0 && this.rect.height > 0) {
+            this.renderer.resize(this.rect.width, this.rect.height);
+        }
     }
     componentWillUnmount () {
         this.detachMouseEvents(this.canvas);
@@ -137,12 +140,18 @@ class Stage extends React.Component {
         canvas.removeEventListener('wheel', this.onWheel);
     }
     attachRectEvents () {
-        window.addEventListener('resize', this.updateRect);
+        window.addEventListener('resize', this.handleWindowResize);
         window.addEventListener('scroll', this.updateRect);
     }
     detachRectEvents () {
-        window.removeEventListener('resize', this.updateRect);
+        window.removeEventListener('resize', this.handleWindowResize);
         window.removeEventListener('scroll', this.updateRect);
+    }
+    handleWindowResize () {
+        this.updateRect();
+        if (this.rect && this.rect.width > 0 && this.rect.height > 0) {
+            this.renderer.resize(this.rect.width, this.rect.height);
+        }
     }
     updateRect () {
         this.rect = this.canvas.getBoundingClientRect();
@@ -433,7 +442,10 @@ Stage.propTypes = {
     micIndicator: PropTypes.bool,
     onActivateColorPicker: PropTypes.func,
     onDeactivateColorPicker: PropTypes.func,
-    stageSize: PropTypes.oneOf(Object.keys(STAGE_DISPLAY_SIZES)).isRequired,
+    stageSize: PropTypes.oneOfType([
+        PropTypes.string,
+        PropTypes.object
+    ]).isRequired,
     useEditorDragStyle: PropTypes.bool,
     vm: PropTypes.instanceOf(VM).isRequired
 };
@@ -448,9 +460,9 @@ const mapStateToProps = (state, ownProps) => ({
     isStarted: state.scratchGui.vmStatus.started,
     micIndicator: state.scratchGui.micIndicator,
     // Do not use editor drag style in fullscreen or player mode.
-    useEditorDragStyle: ownProps.useEditorDragStyle !== undefined ?
-        ownProps.useEditorDragStyle :
-        !(state.scratchGui.mode.isFullScreen || state.scratchGui.mode.isPlayerOnly)
+    useEditorDragStyle: typeof ownProps.useEditorDragStyle === 'undefined' ?
+        !(state.scratchGui.mode.isFullScreen || state.scratchGui.mode.isPlayerOnly) :
+        ownProps.useEditorDragStyle
 });
 
 const mapDispatchToProps = dispatch => ({

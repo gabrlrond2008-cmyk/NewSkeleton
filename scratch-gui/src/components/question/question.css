@@ -7,7 +7,7 @@
     border-radius: $space;
     border-width: 2px;
     padding: 1rem;
-    background: white;
+    background: var(--bg-white, white);
 }
 
 .question-label {

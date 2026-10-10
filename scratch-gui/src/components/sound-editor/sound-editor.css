@@ -74,7 +74,7 @@ $border-radius: 0.25rem;
     height: 2rem;
     padding: 0.35rem;
     outline: none;
-    background: white;
+    background: var(--bg-white, white);
     border-radius: $border-radius;
     border: 1px solid $ui-black-transparent;
     cursor: pointer;

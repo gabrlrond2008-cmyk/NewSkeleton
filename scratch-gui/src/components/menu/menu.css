@@ -10,7 +10,7 @@
     min-width: 186px;
     max-width: 260px;
     overflow: visible;
-    color: $ui-white;
+    color: $text-on-primary;
     box-shadow: 0 8px 8px 0 $ui-black-transparent;
 
     transform-origin: top center;
