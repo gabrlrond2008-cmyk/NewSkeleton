@@ -395,7 +395,109 @@ function autoCorrect(blockData) {
                 topLevel: false, shadow: true, mutation: null
             };
             b.inputs[opName] = {name: opName, block: null, shadow: shadowId};
-            changes.push('Operador "' + b.opcode + '" sin "' + opName + '" → se completó con 0');
+        }
+    }
+
+    // Phase 7.9: Prune unreachable dead blocks after control_stop (all / this script)
+    for (id in blockMap) {
+        if (!Object.prototype.hasOwnProperty.call(blockMap, id)) continue;
+        b = blockMap[id];
+        if (!b || b.shadow || b.opcode !== 'control_stop' || !b.next) continue;
+        var stopOpt = b.fields && b.fields.STOP_OPTION ? (b.fields.STOP_OPTION.value || b.fields.STOP_OPTION) : 'all';
+        if (stopOpt === 'all' || stopOpt === 'this script') {
+            var deadId = b.next;
+            b.next = null;
+            while (deadId && blockMap[deadId]) {
+                var deadBlock = blockMap[deadId];
+                var nextDead = deadBlock.next;
+                delete blockMap[deadId];
+                deadId = nextDead;
+            }
+            changes.push('Bloques muertos tras control_stop eliminados');
+        }
+    }
+
+    // Phase 7.10: Sanitize freezing waits in key movement loops
+    for (id in blockMap) {
+        if (!Object.prototype.hasOwnProperty.call(blockMap, id)) continue;
+        b = blockMap[id];
+        if (!b || b.shadow || b.opcode !== 'control_wait') continue;
+        var waitDuration = b.inputs && b.inputs.DURATION ? parseFloat(b.inputs.DURATION.value || b.inputs.DURATION) : 0;
+        if (waitDuration > 0.15) {
+            var pId = b.parent;
+            var insideKeyIf = false;
+            while (pId && blockMap[pId]) {
+                var pb = blockMap[pId];
+                if (pb.opcode === 'control_if' && pb.inputs && pb.inputs.CONDITION) {
+                    var cBlock = blockMap[pb.inputs.CONDITION.block];
+                    if (cBlock && cBlock.opcode === 'sensing_keypressed') {
+                        var keyOpt = cBlock.fields && cBlock.fields.KEY_OPTION ? (cBlock.fields.KEY_OPTION.value || cBlock.fields.KEY_OPTION) : '';
+                        if (/arrow|w|a|s|d/i.test(String(keyOpt))) {
+                            insideKeyIf = true;
+                            break;
+                        }
+                    }
+                }
+                pId = pb.parent;
+            }
+            if (insideKeyIf) {
+                if (b.inputs.DURATION && typeof b.inputs.DURATION === 'object') {
+                    b.inputs.DURATION.value = 0.02;
+                } else {
+                    b.inputs.DURATION = 0.02;
+                }
+                changes.push('Espera de ' + waitDuration + 's en bucle de teclas reducida a 0.02s (evita congelar controles)');
+            }
+        }
+    }
+
+    // Phase 7.11: Safe collision invulnerability (prevents instant-death 30 FPS damage spam)
+    for (id in blockMap) {
+        if (!Object.prototype.hasOwnProperty.call(blockMap, id)) continue;
+        b = blockMap[id];
+        if (!b || b.shadow || (b.opcode !== 'control_if' && b.opcode !== 'control_if_else')) continue;
+        var condId = b.inputs && b.inputs.CONDITION ? b.inputs.CONDITION.block : null;
+        var condBlock = condId ? blockMap[condId] : null;
+        if (!condBlock || condBlock.opcode !== 'sensing_touchingobject') continue;
+
+        var subId = b.inputs.SUBSTACK ? b.inputs.SUBSTACK.block : null;
+        var hasLivesReduction = false;
+        var hasProtection = false;
+        var lastSubBlock = null;
+
+        var curr = subId;
+        while (curr && blockMap[curr]) {
+            var blk = blockMap[curr];
+            lastSubBlock = blk;
+            if (blk.opcode === 'data_changevariableby') {
+                var varName = blk.fields && blk.fields.VARIABLE ? (blk.fields.VARIABLE.value || blk.fields.VARIABLE) : '';
+                if (/vida|live|salud|hp/i.test(String(varName))) {
+                    hasLivesReduction = true;
+                }
+            }
+            if (blk.opcode === 'control_wait' || blk.opcode === 'motion_gotoxy' || blk.opcode === 'event_broadcast') {
+                hasProtection = true;
+            }
+            curr = blk.next;
+        }
+
+        if (hasLivesReduction && !hasProtection && lastSubBlock) {
+            var protWaitId = uid();
+            var shadowNumId = uid();
+            blockMap[shadowNumId] = {
+                id: shadowNumId, opcode: 'math_number',
+                fields: {NUM: {name: 'NUM', value: '0.5'}},
+                inputs: {}, next: null, parent: protWaitId,
+                topLevel: false, shadow: true, mutation: null
+            };
+            blockMap[protWaitId] = {
+                id: protWaitId, opcode: 'control_wait',
+                inputs: {DURATION: {name: 'DURATION', block: shadowNumId, shadow: shadowNumId}},
+                fields: {}, next: null, parent: lastSubBlock.id,
+                topLevel: false, shadow: false, mutation: null
+            };
+            lastSubBlock.next = protWaitId;
+            changes.push('Añadido tiempo de invulnerabilidad (0.5s) tras restar vida por colisión (evita muerte instantánea en 1 frame)');
         }
     }
 

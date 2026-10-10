@@ -594,20 +594,27 @@ function compileModularSpriteScripts(spDef, blueprint) {
                 {
                     opcode: 'control_if',
                     inputs: {
-                        CONDITION: { opcode: 'sensing_keypressed', fields: { KEY_OPTION: 'space' } },
+                        CONDITION: {
+                            opcode: 'operator_and',
+                            inputs: {
+                                OPERAND1: {
+                                    opcode: 'operator_or',
+                                    inputs: {
+                                        OPERAND1: { opcode: 'sensing_keypressed', fields: { KEY_OPTION: 'up arrow' } },
+                                        OPERAND2: { opcode: 'sensing_keypressed', fields: { KEY_OPTION: 'space' } }
+                                    }
+                                },
+                                OPERAND2: {
+                                    opcode: 'operator_lt',
+                                    inputs: {
+                                        OPERAND1: { opcode: 'motion_yposition' },
+                                        OPERAND2: floorY + 8
+                                    }
+                                }
+                            }
+                        },
                         SUBSTACK: [
-                            { opcode: 'motion_changeyby', inputs: { DY: jumpPower } },
-                            { opcode: 'control_wait', inputs: { DURATION: 0.15 } }
-                        ]
-                    }
-                },
-                {
-                    opcode: 'control_if',
-                    inputs: {
-                        CONDITION: { opcode: 'sensing_keypressed', fields: { KEY_OPTION: 'up arrow' } },
-                        SUBSTACK: [
-                            { opcode: 'motion_changeyby', inputs: { DY: jumpPower } },
-                            { opcode: 'control_wait', inputs: { DURATION: 0.15 } }
+                            { opcode: 'motion_changeyby', inputs: { DY: jumpPower } }
                         ]
                     }
                 },
@@ -776,16 +783,28 @@ function compileModularSpriteScripts(spDef, blueprint) {
 
         // Damage Collision with Player
         if (playerName) {
+            var collisionResponse = (moveType === 'rain_fall') ? [
+                { opcode: 'data_changevariableby', fields: { VARIABLE: livesVar }, inputs: { VALUE: -1 } },
+                {
+                    opcode: 'motion_gotoxy',
+                    inputs: {
+                        X: { opcode: 'operator_random', inputs: { FROM: -200, TO: 200 } },
+                        Y: 170
+                    }
+                },
+                { opcode: 'control_wait', inputs: { DURATION: 0.4 } }
+            ] : [
+                { opcode: 'data_changevariableby', fields: { VARIABLE: livesVar }, inputs: { VALUE: -1 } },
+                { opcode: 'motion_turnright', inputs: { DEGREES: 180 } },
+                { opcode: 'motion_movesteps', inputs: { STEPS: 20 } },
+                { opcode: 'control_wait', inputs: { DURATION: 0.5 } }
+            ];
+
             enemySubstack.push({
                 opcode: 'control_if',
                 inputs: {
                     CONDITION: { opcode: 'sensing_touchingobject', fields: { TOUCHINGOBJECTMENU: playerName } },
-                    SUBSTACK: [
-                        { opcode: 'data_changevariableby', fields: { VARIABLE: livesVar }, inputs: { VALUE: -1 } },
-                        { opcode: 'motion_turnright', inputs: { DEGREES: 180 } },
-                        { opcode: 'motion_movesteps', inputs: { STEPS: 15 } },
-                        { opcode: 'control_wait', inputs: { DURATION: 0.6 } }
-                    ]
+                    SUBSTACK: collisionResponse
                 }
             });
         }

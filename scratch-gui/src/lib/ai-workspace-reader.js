@@ -31,6 +31,63 @@ var FIELD_KEYS = {
     sensing_current: {CURRENTMENU: 1}
 };
 
+function getProjectEcosystemContext(vm, currentTarget) {
+    if (!vm || !vm.runtime) return [];
+    var targets = Array.isArray(vm.runtime.targets) ? vm.runtime.targets : [];
+    var stage = null;
+    var allSprites = [];
+    var otherSpriteNames = [];
+
+    for (var i = 0; i < targets.length; i++) {
+        var t = targets[i];
+        if (t.isStage) {
+            stage = t;
+        } else {
+            var sName = t.getName ? t.getName() : t.name;
+            allSprites.push(sName);
+            if (!currentTarget || t.id !== currentTarget.id) {
+                otherSpriteNames.push(sName);
+            }
+        }
+    }
+
+    var lines = [];
+    lines.push('=== CONTEXTO DEL PROYECTO (COOPERACIÓN ENTRE SPRITES) ===');
+    lines.push('Sprites en el proyecto: [' + allSprites.join(', ') + ']');
+    if (otherSpriteNames.length > 0) {
+        lines.push('Otros sprites (usa estos nombres exactos para colisiones sensing_touchingobject): [' + otherSpriteNames.join(', ') + ']');
+    }
+
+    // Global variables & broadcasts from Stage
+    if (stage && stage.variables) {
+        var globalVars = [];
+        var globalBroadcasts = [];
+        var globalLists = [];
+        for (var vid in stage.variables) {
+            var v = stage.variables[vid];
+            if (!v || !v.name) continue;
+            if (v.type === '') {
+                globalVars.push(v.name + '=' + (v.value !== undefined ? v.value : 0));
+            } else if (v.type === 'broadcast_msg') {
+                globalBroadcasts.push(v.name);
+            } else if (v.type === 'list') {
+                globalLists.push(v.name);
+            }
+        }
+        if (globalVars.length > 0) {
+            lines.push('Variables globales (en Escenario): ' + globalVars.join(', '));
+        }
+        if (globalBroadcasts.length > 0) {
+            lines.push('Mensajes broadcast activos: ' + globalBroadcasts.join(', '));
+        }
+        if (globalLists.length > 0) {
+            lines.push('Listas globales: ' + globalLists.join(', '));
+        }
+    }
+
+    return lines;
+}
+
 function readWorkspace(vm) {
     if (!vm || !vm.editingTarget) return '';
     var target = vm.editingTarget;
@@ -38,11 +95,36 @@ function readWorkspace(vm) {
     if (!blocks || !blocks._scripts) return '';
     var lines = [];
 
-    // Sprite/Stage info
-    var isStage = target.isStage;
-    lines.push('=== ' + (isStage ? 'ESCENARIO' : 'SPRITE: ' + target.getName()) + ' ===');
+    // 1. Project ecosystem context
+    var ecoLines = getProjectEcosystemContext(vm, target);
+    if (ecoLines.length > 0) {
+        lines = lines.concat(ecoLines);
+        lines.push('');
+    }
 
-    // Variables
+    // 2. Sprite/Stage info
+    var isStage = target.isStage;
+    lines.push('=== EDITANDO ACTUALMENTE: ' + (isStage ? 'ESCENARIO' : 'SPRITE "' + target.getName() + '"') + ' ===');
+
+    if (!isStage) {
+        var posX = Math.round(target.x || 0);
+        var posY = Math.round(target.y || 0);
+        var size = Math.round(target.size !== undefined ? target.size : 100);
+        var dir = Math.round(target.direction !== undefined ? target.direction : 90);
+        lines.push('Posicion: x=' + posX + ' y=' + posY + ' | Tamaño: ' + size + '% | Dirección: ' + dir);
+    }
+
+    // Costumes and sounds
+    if (target.sprite && Array.isArray(target.sprite.costumes) && target.sprite.costumes.length > 0) {
+        var costumeNames = target.sprite.costumes.map(function (c) { return c.name; });
+        lines.push('Disfraces disponibles: [' + costumeNames.join(', ') + ']');
+    }
+    if (target.sprite && Array.isArray(target.sprite.sounds) && target.sprite.sounds.length > 0) {
+        var soundNames = target.sprite.sounds.map(function (s) { return s.name; });
+        lines.push('Sonidos disponibles: [' + soundNames.join(', ') + ']');
+    }
+
+    // Variables locales
     var varNames = Object.keys(target.variables || {});
     if (varNames.length > 0) {
         var varList = [];
@@ -53,7 +135,7 @@ function readWorkspace(vm) {
             }
         }
         if (varList.length > 0) {
-            lines.push('Variables: ' + varList.join(', '));
+            lines.push('Variables locales: ' + varList.join(', '));
         }
     }
 
@@ -68,12 +150,9 @@ function readWorkspace(vm) {
             }
         }
         if (listList.length > 0) {
-            lines.push('Listas: ' + listList.join(', '));
+            lines.push('Listas locales: ' + listList.join(', '));
         }
     }
-
-    // Position
-    lines.push('Posicion: x=' + Math.round(target.x) + ' y=' + Math.round(target.y));
 
     if (blocks._scripts && blocks._scripts.length > 0) {
         for (var i = 0; i < blocks._scripts.length; i++) {
