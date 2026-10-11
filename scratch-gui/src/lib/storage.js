@@ -11,6 +11,12 @@ class Storage extends ScratchStorage {
         super();
         this.cacheDefaultProject();
         this.setAssetHost('https://cdn.assets.scratch.mit.edu');
+        // Prevent hanging worker fetch in Desktop/Tauri/Webpack environments
+        if (this.webHelper && this.webHelper.assetTool && Array.isArray(this.webHelper.assetTool.tools)) {
+            this.webHelper.assetTool.tools = this.webHelper.assetTool.tools.filter(
+                t => t.constructor.name === 'FetchTool' || !t.constructor.name.includes('Worker')
+            );
+        }
         this.addOfficialScratchWebStores();
     }
     addOfficialScratchWebStores () {

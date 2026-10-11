@@ -40,6 +40,8 @@ import {
 import {
     lintAndNormalizeDescriptor
 } from './ai-block-linter';
+import {readWorkspace} from './ai-workspace-reader';
+import {assembleBlocksInOrder} from './ai-block-animator';
 
 function cleanAndExtractJson(text) {
     if (!text) return null;
@@ -365,8 +367,6 @@ function runVisualAgent(blueprint, aiService, imageService, vm, onProgress) {
                                             console.warn('[AI VisualAgent] Error colocando sprite en vivo:', tgt.name, e);
                                         });
                                 }
-                                // Grant comfortable window on interaction or allow instant confirm
-                                countdown = 8;
                                 notifySelection();
                             }
                         },
@@ -380,16 +380,6 @@ function runVisualAgent(blueprint, aiService, imageService, vm, onProgress) {
         }
 
         notifySelection();
-
-        timerId = setInterval(function () {
-            countdown -= 1;
-            if (countdown <= 0) {
-                console.log('[AI VisualAgent] Tiempo de selección agotado (0s). Continuando automáticamente...');
-                doResolve();
-            } else {
-                notifySelection();
-            }
-        }, 1000);
     }).then(function () {
         console.log('[AI VisualAgent] Verificando instanciación final de sprites en el VM...');
         var spriteChain = Promise.resolve();
@@ -845,6 +835,54 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
 // -------------------------------------------------------------
 // AGENT 4: Programmer + OBSERVADOR (Remastered Target Sync & Modular Logic)
 // -------------------------------------------------------------
+function generateSpriteScriptsWithAI(spDef, blueprint, wsContext, aiService) {
+    if (!aiService || typeof aiService.ask !== 'function') {
+        return Promise.resolve(null);
+    }
+
+    var globalVarNames = (blueprint.globalVariables || []).map(function (v) {
+        return typeof v === 'string' ? v : (v.name || '');
+    }).filter(Boolean);
+
+    var broadcasts = blueprint.broadcasts || [];
+
+    var promptParts = [
+        'MODO CREADOR - PROGRAMACIÓN DEL PERSONAJE:',
+        'Personaje objetivo: "' + spDef.name + '".',
+        'Rol asignado: "' + (spDef.role || 'sprite') + '".',
+        'Título del juego: "' + (blueprint.gameTitle || 'Juego Scratch') + '".',
+        'Descripción del juego: ' + (blueprint.explanation || '') + '.',
+        'Variables globales del proyecto: [' + globalVarNames.join(', ') + '].',
+        'Mensajes broadcast: [' + broadcasts.join(', ') + '].',
+        'Mecánicas solicitadas para este sprite: ' + (spDef.mechanics || spDef.instructions || (spDef.name + ' realiza sus acciones en el juego')) + '.',
+        '',
+        wsContext ? ('ESTADO ACTUAL DEL PROYECTO:\n' + wsContext) : '',
+        '',
+        'REGLAS OBLIGATORIAS (KISS):',
+        '1. Devuelve un objeto JSON con { "explanation": "...", "scripts": [ ... ] } con los scripts para este personaje.',
+        '2. Cada script debe tener un bloque sombrero válido (event_whenflagclicked, event_whenbroadcastreceived, control_start_as_clone, etc.).',
+        '3. Para movimiento continuo, usa control_forever con control_if anidados (ej. teclas flechas o WASD).',
+        '4. Para colisiones usa sensing_touchingobject con el nombre exacto de otros sprites.',
+        '5. Conecta las variables globales y mensajes del juego sin inventar nombres incompatibles.',
+        '6. Código simple, directo y funcional. NO generes bloques innecesarios ni bucles vacíos.'
+    ];
+
+    return aiService.ask(promptParts.join('\n'), '').then(function (rawResp) {
+        if (!rawResp) return null;
+        var clean = cleanAndExtractJson(rawResp);
+        if (clean) {
+            if (Array.isArray(clean.scripts) && clean.scripts.length > 0) return clean.scripts;
+            if (Array.isArray(clean.sprites) && clean.sprites[0] && Array.isArray(clean.sprites[0].scripts)) {
+                return clean.sprites[0].scripts;
+            }
+        }
+        return null;
+    }).catch(function (err) {
+        console.warn('[AI Logic] Consulta IA a Modo Creador falló para ' + spDef.name + ':', err);
+        return null;
+    });
+}
+
 function runProgrammerForStage(blueprint, aiService, vm, onProgress) {
     var stage = ensureStage(vm);
     if (!stage) return Promise.resolve();
@@ -854,7 +892,7 @@ function runProgrammerForStage(blueprint, aiService, vm, onProgress) {
             onProgress({
                 agent: 'supervisor',
                 percent: 66,
-                details: '⚡ [Observador]: Ensamblando reglas globales y ciclo de juego en el Escenario...'
+                details: '⚡ Ensamblando variables globales y ciclo del juego en el Escenario...'
             });
         }
 
@@ -863,6 +901,13 @@ function runProgrammerForStage(blueprint, aiService, vm, onProgress) {
 
         var stageParsed = convertJsonToBlockMap({ scripts: scripts });
         return injectBlocksToTarget(stage.id, stageParsed, vm).then(function () {
+            try {
+                var workspace = (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) ?
+                    window.Blockly.getMainWorkspace() : null;
+                if (workspace && stageParsed && stageParsed.blockMap) {
+                    assembleBlocksInOrder(workspace, Object.keys(stageParsed.blockMap));
+                }
+            } catch (_animErr) {}
             var check = inspectTargetCode(stage);
             console.log('[Observador] ✅ Escenario programado y verificado:', check);
             return check;
@@ -870,7 +915,7 @@ function runProgrammerForStage(blueprint, aiService, vm, onProgress) {
     });
 }
 
-function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgress, spriteIndex, totalSprites) {
+function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgress, spriteIndex, totalSprites, userLearnings) {
     if (!target) return Promise.resolve();
 
     return activateAndSyncTarget(target.id, vm).then(function () {
@@ -883,14 +928,94 @@ function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgr
             });
         }
 
-        var scripts = (spDef.scripts && Array.isArray(spDef.scripts) && spDef.scripts.length > 0) ?
-            spDef.scripts : compileModularSpriteScripts(spDef, blueprint);
+        // Read real workspace state!
+        var wsText = '';
+        try {
+            wsText = readWorkspace(vm);
+            if (userLearnings && userLearnings.length > 0) {
+                wsText += '\n[AJUSTES REALIZADOS PREVIAMENTE POR EL USUARIO]:\n' + userLearnings.join('\n');
+            }
+        } catch (_wErr) {}
 
-        var spParsed = convertJsonToBlockMap({ scripts: scripts });
-        return injectBlocksToTarget(target.id, spParsed, vm).then(function () {
-            var check = inspectTargetCode(target);
-            console.log('[Observador] ✅ Sprite "' + spDef.name + '" verificado (' + check.blockCount + ' bloques).');
-            return check;
+        function doGenerateAndInject() {
+            return generateSpriteScriptsWithAI(spDef, blueprint, wsText, aiService).then(function (aiScripts) {
+                var scripts = (aiScripts && aiScripts.length > 0) ?
+                    aiScripts :
+                    ((spDef.scripts && Array.isArray(spDef.scripts) && spDef.scripts.length > 0) ?
+                        spDef.scripts : compileModularSpriteScripts(spDef, blueprint));
+
+                var spParsed = convertJsonToBlockMap({ scripts: scripts });
+                return injectBlocksToTarget(target.id, spParsed, vm).then(function () {
+                    try {
+                        var workspace = (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) ?
+                            window.Blockly.getMainWorkspace() : null;
+                        if (workspace && spParsed && spParsed.blockMap) {
+                            assembleBlocksInOrder(workspace, Object.keys(spParsed.blockMap));
+                        }
+                    } catch (_animErr) {
+                        console.warn('[AI Animator] Animación omitida:', _animErr);
+                    }
+
+                    var check = inspectTargetCode(target);
+                    console.log('[Observador] ✅ Sprite "' + spDef.name + '" ensamblado (' + check.blockCount + ' bloques).');
+                    return check;
+                });
+            });
+        }
+
+        return doGenerateAndInject().then(function (check) {
+            // Human Review Checkpoint for this Sprite
+            return new Promise(function (resolveReview) {
+                if (onProgress) {
+                    onProgress({
+                        agent: 'human-review',
+                        percent: pct,
+                        details: '🔍 [Revisión Humana]: Revisa y prueba los bloques de "' + spDef.name + '". Modifícalos con el mouse si lo deseas.',
+                        spriteReview: {
+                            spriteName: spDef.name,
+                            spriteRole: spDef.role || 'Personaje',
+                            stepInfo: 'Sprite ' + (spriteIndex + 1) + ' de ' + totalSprites,
+                            promptNote: 'Revisa los bloques ensamblados en el área de trabajo y pruébalos con la bandera verde. Puedes mover o editar bloques libremente.',
+                            onApprove: function () {
+                                console.log('[AI Review] Humano aprobó sprite "' + spDef.name + '". Registrando modificaciones...');
+                                try {
+                                    var updatedWs = readWorkspace(vm);
+                                    if (userLearnings) {
+                                        userLearnings.push('Sprite ' + spDef.name + ' verificado por usuario.');
+                                    }
+                                } catch (_uErr) {}
+                                resolveReview(check);
+                            },
+                            onRegenerate: function () {
+                                console.log('[AI Review] Humano solicitó regenerar lógica para "' + spDef.name + '"...');
+                                doGenerateAndInject().then(function () {
+                                    if (onProgress) {
+                                        onProgress({
+                                            agent: 'human-review',
+                                            percent: pct,
+                                            details: '🔄 Lógica regenerada para "' + spDef.name + '". Revisa los nuevos bloques.',
+                                            spriteReview: {
+                                                spriteName: spDef.name,
+                                                spriteRole: spDef.role || 'Personaje',
+                                                stepInfo: 'Sprite ' + (spriteIndex + 1) + ' de ' + totalSprites,
+                                                promptNote: 'Nuevos bloques ensamblados. Pruébalos y pulsa aprobar para continuar.',
+                                                onApprove: function () {
+                                                    resolveReview(check);
+                                                },
+                                                onRegenerate: function () {
+                                                    doGenerateAndInject();
+                                                }
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    });
+                } else {
+                    resolveReview(check);
+                }
+            });
         });
     });
 }
@@ -898,15 +1023,16 @@ function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgr
 function runProgrammerAgent(blueprint, aiService, vm, createdTargets, onProgress) {
     // 1. Program Stage
     return runProgrammerForStage(blueprint, aiService, vm, onProgress).then(function () {
-        // 2. Program each Sprite sequentially with clean target sync
+        // 2. Program each Sprite sequentially with human approval
         var chain = Promise.resolve();
         var total = blueprint.sprites.length;
+        var userLearnings = [];
 
         blueprint.sprites.forEach(function (spDef, idx) {
             chain = chain.then(function () {
-                return new Promise(function (r) { setTimeout(r, 100); }).then(function () {
+                return new Promise(function (r) { setTimeout(r, 200); }).then(function () {
                     var target = createdTargets[spDef.name] || findTargetByName(vm, spDef.name, false);
-                    return runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgress, idx, total);
+                    return runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgress, idx, total, userLearnings);
                 });
             });
         });
@@ -955,6 +1081,26 @@ function finalizeObserverDelivery(blueprint, createdTargets, vm, onProgress) {
     });
 }
 
+function humanLayoutCheckpoint(blueprint, createdTargets, vm, onProgress) {
+    if (!onProgress) return Promise.resolve();
+    return new Promise(function (resolve) {
+        onProgress({
+            agent: 'layout',
+            percent: 55,
+            details: '📐 Revisa el escenario. Puedes arrastrar o redimensionar los personajes libremente antes de programar.',
+            stepAction: {
+                title: '📐 Ajuste de Escenario',
+                message: 'Los personajes y el fondo están colocados en el escenario. Puedes moverlos o cambiar su tamaño si lo deseas.',
+                label: '✓ Comenzar a Programar Personajes ➔',
+                onConfirm: function () {
+                    console.log('[AI MultiAgent] Humano confirmó disposición en el escenario. Procediendo a programación...');
+                    resolve();
+                }
+            }
+        });
+    });
+}
+
 // -------------------------------------------------------------
 // Master Multi-Agent Development Pipeline
 // -------------------------------------------------------------
@@ -982,30 +1128,34 @@ function developFullGameProject(rawInput, aiService, vm, services, onProgress) {
                             // Step 4: Observador positions every sprite at Director's exact coordinates
                             return observeAndPositionSprites(blueprint, createdTargets, vm, onProgress)
                                 .then(function () {
-                                    // Step 5: Audio Designer completes soundtrack & SFX (fast, capped at 3-4s)
-                                    return runAudioAgent(blueprint, aiService, audioService, vm, createdTargets, onProgress)
+                                    // Step 5: Human Checkpoint: adjust layout on stage before coding
+                                    return humanLayoutCheckpoint(blueprint, createdTargets, vm, onProgress)
                                         .then(function () {
-                                            console.log('[AI MultiAgent] 🎵 Diseñador de audio completó sonidos.');
-                                            if (onProgress) {
-                                                onProgress({
-                                                    agent: 'audio',
-                                                    percent: 64,
-                                                    details: '🎵 [Músico]: Audio procesado con éxito. Pasando a Programación de lógica...'
-                                                });
-                                            }
-                                            // Step 6: Programmer Agent sequentially writes & verifies Stage and Sprite scripts
-                                            return runProgrammerAgent(blueprint, aiService, vm, createdTargets, onProgress)
+                                            // Step 6: Audio Designer completes soundtrack & SFX (fast, capped at 3-4s)
+                                            return runAudioAgent(blueprint, aiService, audioService, vm, createdTargets, onProgress)
                                                 .then(function () {
-                                                    console.log('[AI MultiAgent] ⚡ Programador y Observador completaron los scripts.');
-                                                    // Step 7: Observador delivers completed game
-                                                    return finalizeObserverDelivery(blueprint, createdTargets, vm, onProgress);
-                                                });
-                                        })
-                                        .catch(function (audioErr) {
-                                            console.warn('[AI MultiAgent] Advertencia de audio (continuando a programación):', audioErr);
-                                            return runProgrammerAgent(blueprint, aiService, vm, createdTargets, onProgress)
-                                                .then(function () {
-                                                    return finalizeObserverDelivery(blueprint, createdTargets, vm, onProgress);
+                                                    console.log('[AI MultiAgent] 🎵 Diseñador de audio completó sonidos.');
+                                                    if (onProgress) {
+                                                        onProgress({
+                                                            agent: 'audio',
+                                                            percent: 64,
+                                                            details: '🎵 [Músico]: Audio procesado con éxito. Pasando a Programación de lógica...'
+                                                        });
+                                                    }
+                                                    // Step 7: Programmer Agent with Modo Creador + human review per sprite
+                                                    return runProgrammerAgent(blueprint, aiService, vm, createdTargets, onProgress)
+                                                        .then(function () {
+                                                            console.log('[AI MultiAgent] ⚡ Programador y Humano completaron los scripts.');
+                                                            // Step 8: Final delivery
+                                                            return finalizeObserverDelivery(blueprint, createdTargets, vm, onProgress);
+                                                        });
+                                                })
+                                                .catch(function (audioErr) {
+                                                    console.warn('[AI MultiAgent] Advertencia de audio (continuando a programación):', audioErr);
+                                                    return runProgrammerAgent(blueprint, aiService, vm, createdTargets, onProgress)
+                                                        .then(function () {
+                                                            return finalizeObserverDelivery(blueprint, createdTargets, vm, onProgress);
+                                                        });
                                                 });
                                         });
                                 });

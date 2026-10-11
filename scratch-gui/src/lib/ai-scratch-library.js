@@ -34,6 +34,75 @@ function getBackdropThumbnail(backdropItem) {
     return `${LOCAL_ASSET_URL}${md5ext}`;
 }
 
+/**
+ * Pre-fetch an asset and cache it directly in storage.builtinHelper memory.
+ * Guarantees 0ms synchronous retrieval when Scratch VM loads costumes/sounds.
+ */
+async function preloadAssetToStorage(storage, assetType, md5ext, dataFormat) {
+    if (!storage || !storage.builtinHelper || !md5ext) return false;
+    const parts = md5ext.split('.');
+    const assetId = parts[0];
+    const ext = (dataFormat || parts[1] || 'png').toLowerCase();
+
+    // Already cached in memory?
+    if (storage.builtinHelper.get(assetId)) return true;
+
+    const urls = [
+        `${LOCAL_ASSET_URL}${md5ext}`,
+        `static/library-assets/${md5ext}`,
+        `http://localhost:8601/static/library-assets/${md5ext}`
+    ];
+
+    for (const url of urls) {
+        try {
+            const resp = await fetch(url);
+            if (resp.ok) {
+                const buf = await resp.arrayBuffer();
+                const u8 = new Uint8Array(buf);
+                if (typeof storage.builtinHelper._store === 'function') {
+                    storage.builtinHelper._store(assetType, ext, u8, assetId);
+                    return true;
+                }
+            }
+        } catch (_e) {
+            // Try next candidate URL
+        }
+    }
+    return false;
+}
+
+/**
+ * Preload all costumes and sanitize sounds for a sprite descriptor
+ */
+async function preloadSpriteAssets(spriteDescriptor, storage) {
+    if (!spriteDescriptor || !storage) return;
+    const AssetType = storage.AssetType;
+
+    if (Array.isArray(spriteDescriptor.costumes)) {
+        for (const c of spriteDescriptor.costumes) {
+            const md5ext = c.md5ext || (c.assetId + '.' + (c.dataFormat || 'png'));
+            const ext = (c.dataFormat || md5ext.split('.').pop() || 'png').toLowerCase();
+            const assetType = ext === 'svg' ? AssetType.ImageVector : AssetType.ImageBitmap;
+            await preloadAssetToStorage(storage, assetType, md5ext, ext);
+        }
+    }
+
+    // Sanitize sounds: keep only sounds that are locally present, preventing
+    // vm.addSprite from hanging on offline/blocked Scratch CDN requests.
+    if (Array.isArray(spriteDescriptor.sounds) && spriteDescriptor.sounds.length > 0) {
+        const verifiedSounds = [];
+        for (const s of spriteDescriptor.sounds) {
+            const md5ext = s.md5ext || (s.assetId + '.' + (s.dataFormat || 'wav'));
+            const ext = (s.dataFormat || md5ext.split('.').pop() || 'wav').toLowerCase();
+            const loaded = await preloadAssetToStorage(storage, AssetType.Sound, md5ext, ext);
+            if (loaded) {
+                verifiedSounds.push(s);
+            }
+        }
+        spriteDescriptor.sounds = verifiedSounds;
+    }
+}
+
 const STOP_WORDS = new Set([
     'de', 'la', 'el', 'en', 'con', 'por', 'para', 'un', 'una', 'del', 'las', 'los',
     'sobre', 'al', 'se', 'es', 'the', 'a', 'an', 'of', 'in', 'on', 'with', 'for', 'at',
@@ -441,57 +510,60 @@ function addLibrarySpriteToVM(spriteData, vm, customName, layoutDef) {
 
     console.log('[AI ScratchLibrary] Añadiendo sprite "' + targetName + '" (origen: ' + (spriteData.name || 'library') + ')...');
 
-    // Timeout protection: 15000ms (library assets served locally with CDN fallback)
-    const addSpritePromise = new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-            reject(new Error('Timeout de 15000ms al cargar sprite "' + targetName + '"'));
-        }, 15000);
+    const storage = vm.runtime && vm.runtime.storage;
+    return preloadSpriteAssets(cloned, storage).then(() => {
+        // Timeout protection: 15000ms (assets are now preloaded into memory cache)
+        const addSpritePromise = new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                reject(new Error('Timeout de 15000ms al cargar sprite "' + targetName + '"'));
+            }, 15000);
 
-        try {
-            vm.addSprite(JSON.stringify(cloned))
-                .then(res => {
-                    clearTimeout(timer);
-                    resolve(res);
-                })
-                .catch(err => {
-                    clearTimeout(timer);
-                    reject(err);
-                });
-        } catch (syncErr) {
-            clearTimeout(timer);
-            reject(syncErr);
-        }
-    });
+            try {
+                vm.addSprite(JSON.stringify(cloned))
+                    .then(res => {
+                        clearTimeout(timer);
+                        resolve(res);
+                    })
+                    .catch(err => {
+                        clearTimeout(timer);
+                        reject(err);
+                    });
+            } catch (syncErr) {
+                clearTimeout(timer);
+                reject(syncErr);
+            }
+        });
 
-    return addSpritePromise.then(() => {
-        const targets = vm.runtime.targets || [];
-        let target = targets.find(t => !t.isStage && t.getName() === targetName);
-        if (!target) {
-            // Might have been assigned an indexed name by Scratch VM
-            target = targets.filter(t => !t.isStage).pop();
-        }
+        return addSpritePromise.then(() => {
+            const targets = vm.runtime.targets || [];
+            let target = targets.find(t => !t.isStage && t.getName() === targetName);
+            if (!target) {
+                // Might have been assigned an indexed name by Scratch VM
+                target = targets.filter(t => !t.isStage).pop();
+            }
 
-        if (target) {
-            // Ensure canonical name matches targetName
-            if (target.getName() !== targetName && typeof vm.renameSprite === 'function') {
-                try {
-                    vm.renameSprite(target.id, targetName);
-                } catch (rErr) {
-                    console.warn('[AI ScratchLibrary] Error renombrando sprite a ' + targetName, rErr);
+            if (target) {
+                // Ensure canonical name matches targetName
+                if (target.getName() !== targetName && typeof vm.renameSprite === 'function') {
+                    try {
+                        vm.renameSprite(target.id, targetName);
+                    } catch (rErr) {
+                        console.warn('[AI ScratchLibrary] Error renombrando sprite a ' + targetName, rErr);
+                    }
+                }
+                if (layoutDef) {
+                    applySpriteLayout(target, layoutDef, null, vm);
+                }
+                if (typeof vm.setEditingTarget === 'function') {
+                    vm.setEditingTarget(target.id);
                 }
             }
-            if (layoutDef) {
-                applySpriteLayout(target, layoutDef, null, vm);
-            }
-            if (typeof vm.setEditingTarget === 'function') {
-                vm.setEditingTarget(target.id);
-            }
-        }
 
-        if (vm.emitTargetsUpdate) vm.emitTargetsUpdate();
-        if (vm.emitWorkspaceUpdate) vm.emitWorkspaceUpdate();
-        console.log('[AI ScratchLibrary] Sprite añadido y verificado con éxito:', targetName);
-        return target;
+            if (vm.emitTargetsUpdate) vm.emitTargetsUpdate();
+            if (vm.emitWorkspaceUpdate) vm.emitWorkspaceUpdate();
+            console.log('[AI ScratchLibrary] Sprite añadido y verificado con éxito:', targetName);
+            return target;
+        });
     }).catch(loadErr => {
         console.warn('[AI ScratchLibrary] Error cargando "' + targetName + '" (' + loadErr.message + '). Generando sprite vectorial local garantizado...');
         return addNewSpriteFromImage(null, vm, targetName).then(fallbackTarget => {
@@ -540,21 +612,32 @@ function addLibraryBackdropToVM(backdropData, vm) {
         skinId: null
     };
 
-    const addBackdropPromise = new Promise((resolve, reject) => {
-        const timer = setTimeout(() => {
-            reject(new Error('Timeout de 15000ms al cargar fondo'));
-        }, 15000);
-        try {
-            vm.addBackdrop(md5ext, vmBackdrop)
-                .then(r => { clearTimeout(timer); resolve(r); })
-                .catch(e => { clearTimeout(timer); reject(e); });
-        } catch (syncErr) {
-            clearTimeout(timer);
-            reject(syncErr);
-        }
-    });
+    const storage = vm.runtime && vm.runtime.storage;
+    const ext = (backdropData.dataFormat || md5ext.split('.').pop() || 'png').toLowerCase();
+    const assetType = ext === 'svg' ?
+        (storage ? storage.AssetType.ImageVector : null) :
+        (storage ? storage.AssetType.ImageBitmap : null);
 
-    return addBackdropPromise.then(() => {
+    const preloadPromise = (storage && assetType) ?
+        preloadAssetToStorage(storage, assetType, md5ext, ext) :
+        Promise.resolve();
+
+    return preloadPromise.then(() => {
+        const addBackdropPromise = new Promise((resolve, reject) => {
+            const timer = setTimeout(() => {
+                reject(new Error('Timeout de 15000ms al cargar fondo'));
+            }, 15000);
+            try {
+                vm.addBackdrop(md5ext, vmBackdrop)
+                    .then(r => { clearTimeout(timer); resolve(r); })
+                    .catch(e => { clearTimeout(timer); reject(e); });
+            } catch (syncErr) {
+                clearTimeout(timer);
+                reject(syncErr);
+            }
+        });
+
+        return addBackdropPromise.then(() => {
         if (stage) {
             const costumes = stage.getCostumes();
             const targetIdx = costumes.findIndex(c => c.name === backdropData.name || c.md5 === md5ext);
@@ -573,12 +656,13 @@ function addLibraryBackdropToVM(backdropData, vm) {
                 }
             }
         }
-        if (typeof vm.setEditingTarget === 'function' && stage) {
-            vm.setEditingTarget(stage.id);
-        }
-        if (vm.emitTargetsUpdate) vm.emitTargetsUpdate();
-        if (vm.emitWorkspaceUpdate) vm.emitWorkspaceUpdate();
-        return stage;
+            if (typeof vm.setEditingTarget === 'function' && stage) {
+                vm.setEditingTarget(stage.id);
+            }
+            if (vm.emitTargetsUpdate) vm.emitTargetsUpdate();
+            if (vm.emitWorkspaceUpdate) vm.emitWorkspaceUpdate();
+            return stage;
+        });
     }).catch(err => {
         console.warn('[AI ScratchLibrary] Fallback fondo:', err.message);
         return stage;

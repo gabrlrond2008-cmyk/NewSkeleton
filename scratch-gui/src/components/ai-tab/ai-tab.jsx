@@ -1091,6 +1091,67 @@ var flowCacheRef = useRef({});
                                             </div>
                                         </div>
                                     )}
+                                    {createStatus.stepAction && (
+                                        <div className={styles.artistOptionsContainer} style={{marginTop: '10px'}}>
+                                            <div className={styles.artistOptionsHeader}>
+                                                <span>{createStatus.stepAction.title || '📐 Ajuste de Escenario'}</span>
+                                            </div>
+                                            <div style={{fontSize: '0.78rem', margin: '6px 0', opacity: 0.9, lineHeight: 1.4}}>
+                                                {createStatus.stepAction.message || 'Puedes reubicar o escalar los personajes en el escenario libremente.'}
+                                            </div>
+                                            <div className={styles.artistFooterRow}>
+                                                <button
+                                                    type="button"
+                                                    className={styles.artistConfirmBtn}
+                                                    onClick={function () {
+                                                        if (createStatus.stepAction.onConfirm) {
+                                                            createStatus.stepAction.onConfirm();
+                                                        }
+                                                    }}
+                                                >
+                                                    {createStatus.stepAction.label || '✓ Comenzar a Programar Personajes ➔'}
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
+                                    {createStatus.spriteReview && (
+                                        <div className={styles.artistOptionsContainer} style={{marginTop: '10px'}}>
+                                            <div className={styles.artistOptionsHeader}>
+                                                <span>🎮 {createStatus.spriteReview.title || ('Lógica de ' + createStatus.spriteReview.spriteName)}</span>
+                                                <span className={styles.artistCountdown} style={{background: '#2e7d32', color: '#fff'}}>
+                                                    {createStatus.spriteReview.stepInfo}
+                                                </span>
+                                            </div>
+                                            <div style={{fontSize: '0.78rem', margin: '6px 0', opacity: 0.9, lineHeight: 1.4}}>
+                                                {createStatus.spriteReview.promptNote}
+                                            </div>
+                                            <div className={styles.artistFooterRow} style={{gap: '8px'}}>
+                                                {createStatus.spriteReview.onRegenerate && (
+                                                    <button
+                                                        type="button"
+                                                        className={styles.artistConfirmBtn}
+                                                        style={{background: '#6a1b9a', borderColor: '#8e24aa'}}
+                                                        onClick={function () {
+                                                            createStatus.spriteReview.onRegenerate();
+                                                        }}
+                                                    >
+                                                        🔄 Regenerar lógica
+                                                    </button>
+                                                )}
+                                                <button
+                                                    type="button"
+                                                    className={styles.artistConfirmBtn}
+                                                    onClick={function () {
+                                                        if (createStatus.spriteReview.onApprove) {
+                                                            createStatus.spriteReview.onApprove();
+                                                        }
+                                                    }}
+                                                >
+                                                    ✓ Aprobar y Siguiente Sprite ➔
+                                                </button>
+                                            </div>
+                                        </div>
+                                    )}
                                 </div>
                             )}
                             {msg.imageVerification && (
@@ -1320,7 +1381,9 @@ AiTabComponent.propTypes = {
         type: PropTypes.string,
         message: PropTypes.string,
         libraryOptions: PropTypes.object,
-        librarySelection: PropTypes.object
+        librarySelection: PropTypes.object,
+        stepAction: PropTypes.object,
+        spriteReview: PropTypes.object
     }),
     trainingData: PropTypes.array,
     trainingEnabled: PropTypes.bool,

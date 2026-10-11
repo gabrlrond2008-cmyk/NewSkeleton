@@ -1963,7 +1963,9 @@ var AiTab = function (props) {
                     mode: 'develop',
                     message: progress.details || ('[' + progress.percent + '%] ' + (progress.agent || '')),
                     libraryOptions: progress.libraryOptions || null,
-                    librarySelection: progress.librarySelection || null
+                    librarySelection: progress.librarySelection || null,
+                    stepAction: progress.stepAction || null,
+                    spriteReview: progress.spriteReview || null
                 });
             }
         ).then(function (res) {
