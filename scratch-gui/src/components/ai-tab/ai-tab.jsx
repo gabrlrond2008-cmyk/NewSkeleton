@@ -1028,7 +1028,7 @@ var flowCacheRef = useRef({});
                                                                     </div>
                                                                     <span className={styles.artistCardName}>{opt.name}</span>
                                                                     {isSelected && (
-                                                                        <span className={styles.artistSelectedBadge}>✓ Elegido</span>
+                                                                        <span className={styles.artistSelectedBadge}>✓</span>
                                                                     )}
                                                                 </div>
                                                             );
@@ -1085,6 +1085,9 @@ var flowCacheRef = useRef({});
                                                                 </div>
                                                             )}
                                                             <span className={styles.artistCardName}>{opt.name}</span>
+                                                            {isSelected && (
+                                                                <span className={styles.artistSelectedBadge}>✓</span>
+                                                            )}
                                                         </div>
                                                     );
                                                 })}

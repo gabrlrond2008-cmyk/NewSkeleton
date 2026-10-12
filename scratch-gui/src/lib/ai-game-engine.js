@@ -544,10 +544,10 @@ function compileModularSpriteScripts(spDef, blueprint) {
 
     var scripts = [];
 
-    // Helper: start header blocks
+    // Helper: start header blocks (canonical Scratch starts upon green flag)
     function createStartBlocks(extraBlocks) {
         var list = [
-            { opcode: 'event_whenbroadcastreceived', fields: { BROADCAST_OPTION: 'iniciar_juego' } },
+            { opcode: 'event_whenflagclicked' },
             { opcode: 'looks_setsizeto', inputs: { SIZE: size } },
             { opcode: 'motion_gotoxy', inputs: { X: initX, Y: initY } },
             { opcode: 'motion_pointindirection', inputs: { DIRECTION: dir } },
@@ -919,12 +919,11 @@ function compileModularStageScripts(blueprint) {
     var flagBlocks = [
         { opcode: 'event_whenflagclicked' },
         { opcode: 'data_setvariableto', fields: { VARIABLE: scoreVar }, inputs: { VALUE: 0 } },
-        { opcode: 'data_setvariableto', fields: { VARIABLE: livesVar }, inputs: { VALUE: 3 } },
-        { opcode: 'event_broadcast', inputs: { BROADCAST_INPUT: 'iniciar_juego' } }
+        { opcode: 'data_setvariableto', fields: { VARIABLE: livesVar }, inputs: { VALUE: 3 } }
     ];
 
     var supervisorBlocks = [
-        { opcode: 'event_whenbroadcastreceived', fields: { BROADCAST_OPTION: 'iniciar_juego' } },
+        { opcode: 'event_whenflagclicked' },
         {
             opcode: 'control_forever',
             inputs: {

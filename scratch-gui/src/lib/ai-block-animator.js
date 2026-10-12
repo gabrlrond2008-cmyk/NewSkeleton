@@ -320,8 +320,11 @@ function flyInFromToolbox(workspace, topBlockIds, opts) {
 
 function orderChainPreBlocks(topBlock) {
     var out = [];
+    var visited = new Set();
     function walk(b) {
         if (!b || (typeof b.isShadow === 'function' && b.isShadow())) return;
+        if (b.id && visited.has(b.id)) return;
+        if (b.id) visited.add(b.id);
         out.push(b);
         if (b.inputList) {
             for (var i = 0; i < b.inputList.length; i++) {
@@ -553,11 +556,20 @@ function animateOrdered(workspace, ordered, opts) {
 function assembleBlocksInOrder(workspace, topBlockIds, opts) {
     if (!workspace || !topBlockIds || !topBlockIds.length) return Promise.resolve();
     var ordered = [];
+    var seen = new Set();
     for (var t = 0; t < topBlockIds.length; t++) {
         var tb = workspace.getBlockById ? workspace.getBlockById(topBlockIds[t]) : null;
         if (!tb || (tb.isDisposed && tb.isDisposed())) continue;
+        // Skip blocks that have a parent - they will be visited via their root
+        if (typeof tb.getParent === 'function' && tb.getParent()) continue;
         var seq = orderChainPreBlocks(tb);
-        for (var s = 0; s < seq.length; s++) ordered.push(seq[s]);
+        for (var s = 0; s < seq.length; s++) {
+            var blk = seq[s];
+            if (blk && blk.id && !seen.has(blk.id)) {
+                seen.add(blk.id);
+                ordered.push(blk);
+            }
+        }
     }
     if (ordered.length === 0) return Promise.resolve();
     return animateOrdered(workspace, ordered, opts);

@@ -624,13 +624,12 @@ function generateFallbackStageScripts(blueprint) {
             blocks: [
                 { opcode: 'event_whenflagclicked' },
                 { opcode: 'data_setvariableto', fields: { VARIABLE: scoreVar }, inputs: { VALUE: 0 } },
-                { opcode: 'data_setvariableto', fields: { VARIABLE: livesVar }, inputs: { VALUE: 3 } },
-                { opcode: 'event_broadcast', inputs: { BROADCAST_INPUT: 'iniciar_juego' } }
+                { opcode: 'data_setvariableto', fields: { VARIABLE: livesVar }, inputs: { VALUE: 3 } }
             ]
         },
         {
             blocks: [
-                { opcode: 'event_whenbroadcastreceived', fields: { CHOICE: 'iniciar_juego' } },
+                { opcode: 'event_whenflagclicked' },
                 {
                     opcode: 'control_forever',
                     inputs: {
@@ -678,7 +677,7 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
         return [
             {
                 blocks: [
-                    { opcode: 'event_whenbroadcastreceived', fields: { CHOICE: 'iniciar_juego' } },
+                    { opcode: 'event_whenflagclicked' },
                     { opcode: 'looks_setsizeto', inputs: { SIZE: size } },
                     { opcode: 'motion_gotoxy', inputs: { X: initX, Y: initY } },
                     { opcode: 'motion_setrotationstyle', fields: { STYLE: 'left-right' } },
@@ -755,7 +754,7 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
         return [
             {
                 blocks: [
-                    { opcode: 'event_whenbroadcastreceived', fields: { CHOICE: 'iniciar_juego' } },
+                    { opcode: 'event_whenflagclicked' },
                     { opcode: 'looks_setsizeto', inputs: { SIZE: size } },
                     { opcode: 'motion_gotoxy', inputs: { X: initX, Y: initY } },
                     {
@@ -796,7 +795,7 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
         return [
             {
                 blocks: [
-                    { opcode: 'event_whenbroadcastreceived', fields: { CHOICE: 'iniciar_juego' } },
+                    { opcode: 'event_whenflagclicked' },
                     { opcode: 'looks_setsizeto', inputs: { SIZE: size } },
                     { opcode: 'looks_show' },
                     { opcode: 'motion_gotoxy', inputs: { X: initX, Y: initY } },
@@ -815,7 +814,7 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
     return [
         {
             blocks: [
-                { opcode: 'event_whenbroadcastreceived', fields: { CHOICE: 'iniciar_juego' } },
+                { opcode: 'event_whenflagclicked' },
                 { opcode: 'looks_setsizeto', inputs: { SIZE: size } },
                 { opcode: 'motion_gotoxy', inputs: { X: initX, Y: initY } },
                 {
@@ -860,7 +859,7 @@ function generateSpriteScriptsWithAI(spDef, blueprint, wsContext, aiService) {
         '',
         'REGLAS OBLIGATORIAS (KISS):',
         '1. Devuelve un objeto JSON con { "explanation": "...", "scripts": [ ... ] } con los scripts para este personaje.',
-        '2. Cada script debe tener un bloque sombrero válido (event_whenflagclicked, event_whenbroadcastreceived, control_start_as_clone, etc.).',
+        '2. Cada script debe tener un bloque sombrero válido. Usa preferentemente "event_whenflagclicked" (Bandera Verde) como sombrero principal para inicializar la posición, tamaño, mostrarse y arrancar el bucle continuo (control_forever). NO dependas de broadcasts para arrancar el sprite; usa broadcasts ("game_over", "victoria") solo para señalar eventos o transiciones.',
         '3. Para movimiento continuo, usa control_forever con control_if anidados (ej. teclas flechas o WASD).',
         '4. Para colisiones usa sensing_touchingobject con el nombre exacto de otros sprites.',
         '5. Conecta las variables globales y mensajes del juego sin inventar nombres incompatibles.',
@@ -905,7 +904,11 @@ function runProgrammerForStage(blueprint, aiService, vm, onProgress) {
                 var workspace = (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) ?
                     window.Blockly.getMainWorkspace() : null;
                 if (workspace && stageParsed && stageParsed.blockMap) {
-                    assembleBlocksInOrder(workspace, Object.keys(stageParsed.blockMap));
+                    var topIds = Object.keys(stageParsed.blockMap).filter(function (id) {
+                        var b = stageParsed.blockMap[id];
+                        return b && !b.parent;
+                    });
+                    assembleBlocksInOrder(workspace, topIds);
                 }
             } catch (_animErr) {}
             var check = inspectTargetCode(stage);
@@ -950,7 +953,11 @@ function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgr
                         var workspace = (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) ?
                             window.Blockly.getMainWorkspace() : null;
                         if (workspace && spParsed && spParsed.blockMap) {
-                            assembleBlocksInOrder(workspace, Object.keys(spParsed.blockMap));
+                            var topIds = Object.keys(spParsed.blockMap).filter(function (id) {
+                                var b = spParsed.blockMap[id];
+                                return b && !b.parent;
+                            });
+                            assembleBlocksInOrder(workspace, topIds);
                         }
                     } catch (_animErr) {
                         console.warn('[AI Animator] Animación omitida:', _animErr);
