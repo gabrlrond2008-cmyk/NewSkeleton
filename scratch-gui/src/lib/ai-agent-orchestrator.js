@@ -744,7 +744,7 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
                 inputs: {
                     CONDITION: { opcode: 'sensing_touchingobject', fields: { TOUCHINGOBJECTMENU: playerName } },
                     SUBSTACK: [
-                        { opcode: 'data_changevariableby', fields: { VARIABLE: livesVar }, inputs: { CHANGE: -1 } },
+                        { opcode: 'data_changevariableby', fields: { VARIABLE: livesVar }, inputs: { VALUE: -1 } },
                         { opcode: 'control_wait', inputs: { DURATION: 0.5 } }
                     ]
                 }
@@ -779,7 +779,7 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
                 inputs: {
                     CONDITION: { opcode: 'sensing_touchingobject', fields: { TOUCHINGOBJECTMENU: playerName } },
                     SUBSTACK: [
-                        { opcode: 'data_changevariableby', fields: { VARIABLE: scoreVar }, inputs: { CHANGE: 10 } },
+                        { opcode: 'data_changevariableby', fields: { VARIABLE: scoreVar }, inputs: { VALUE: 10 } },
                         {
                             opcode: 'motion_gotoxy',
                             inputs: {
@@ -861,9 +861,11 @@ function generateSpriteScriptsWithAI(spDef, blueprint, wsContext, aiService) {
         '1. Devuelve un objeto JSON con { "explanation": "...", "scripts": [ ... ] } con los scripts para este personaje.',
         '2. Cada script debe tener un bloque sombrero válido. Usa preferentemente "event_whenflagclicked" (Bandera Verde) como sombrero principal para inicializar la posición, tamaño, mostrarse y arrancar el bucle continuo (control_forever). NO dependas de broadcasts para arrancar el sprite; usa broadcasts ("game_over", "victoria") solo para señalar eventos o transiciones.',
         '3. Para movimiento continuo, usa control_forever con control_if anidados (ej. teclas flechas o WASD).',
-        '4. Para colisiones usa sensing_touchingobject con el nombre exacto de otros sprites.',
-        '5. Conecta las variables globales y mensajes del juego sin inventar nombres incompatibles.',
-        '6. Código simple, directo y funcional. NO generes bloques innecesarios ni bucles vacíos.'
+        '4. Al inicializar personajes que se mueven a los lados, añade "motion_setrotationstyle" con estilo "left-right" para que no se volteen boca abajo.',
+        '5. En movimiento con flechas arriba/abajo usa únicamente "motion_changeyby" con velocidad positiva/negativa; NO gires la dirección a 0 o 180.',
+        '6. Para modificar variables globales usa siempre "data_changevariableby" con input "VALUE" (ej: inputs: { VALUE: 1 } o { VALUE: -1 }). NUNCA uses input con nombre CHANGE.',
+        '7. En colisiones de daño con enemigos usando "sensing_touchingobject", añade siempre un "control_wait" de 0.5 segundos para dar invulnerabilidad temporal y no vaciar vidas en 1 frame.',
+        '8. Código simple, directo y funcional. NO generes bloques innecesarios ni bucles vacíos.'
     ];
 
     return aiService.ask(promptParts.join('\n'), '').then(function (rawResp) {
@@ -899,16 +901,17 @@ function runProgrammerForStage(blueprint, aiService, vm, onProgress) {
             blueprint.stageScripts : compileModularStageScripts(blueprint);
 
         var stageParsed = convertJsonToBlockMap({ scripts: scripts });
-        return injectBlocksToTarget(stage.id, stageParsed, vm).then(function () {
+        return injectBlocksToTarget(stage.id, stageParsed, vm).then(function (topIds) {
             try {
                 var workspace = (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) ?
                     window.Blockly.getMainWorkspace() : null;
-                if (workspace && stageParsed && stageParsed.blockMap) {
-                    var topIds = Object.keys(stageParsed.blockMap).filter(function (id) {
+                var animIds = (Array.isArray(topIds) && topIds.length > 0) ? topIds :
+                    (stageParsed && stageParsed.blockMap ? Object.keys(stageParsed.blockMap).filter(function (id) {
                         var b = stageParsed.blockMap[id];
                         return b && !b.parent;
-                    });
-                    assembleBlocksInOrder(workspace, topIds);
+                    }) : []);
+                if (workspace && animIds.length > 0) {
+                    assembleBlocksInOrder(workspace, animIds);
                 }
             } catch (_animErr) {}
             var check = inspectTargetCode(stage);
@@ -948,16 +951,17 @@ function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgr
                         spDef.scripts : compileModularSpriteScripts(spDef, blueprint));
 
                 var spParsed = convertJsonToBlockMap({ scripts: scripts });
-                return injectBlocksToTarget(target.id, spParsed, vm).then(function () {
+                return injectBlocksToTarget(target.id, spParsed, vm).then(function (topIds) {
                     try {
                         var workspace = (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) ?
                             window.Blockly.getMainWorkspace() : null;
-                        if (workspace && spParsed && spParsed.blockMap) {
-                            var topIds = Object.keys(spParsed.blockMap).filter(function (id) {
+                        var animIds = (Array.isArray(topIds) && topIds.length > 0) ? topIds :
+                            (spParsed && spParsed.blockMap ? Object.keys(spParsed.blockMap).filter(function (id) {
                                 var b = spParsed.blockMap[id];
                                 return b && !b.parent;
-                            });
-                            assembleBlocksInOrder(workspace, topIds);
+                            }) : []);
+                        if (workspace && animIds.length > 0) {
+                            assembleBlocksInOrder(workspace, animIds);
                         }
                     } catch (_animErr) {
                         console.warn('[AI Animator] Animación omitida:', _animErr);

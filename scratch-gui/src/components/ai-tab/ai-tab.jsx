@@ -1005,6 +1005,11 @@ var flowCacheRef = useRef({});
                                                                         }
                                                                     }}
                                                                 >
+                                                                    <div className={styles.artistRadioRow}>
+                                                                        <div className={styles.artistRadioCircle + (isSelected ? ' ' + styles.artistRadioCircleActive : '')}>
+                                                                            {isSelected && <div className={styles.artistRadioDot} />}
+                                                                        </div>
+                                                                    </div>
                                                                     {opt.thumbnail ? (
                                                                         <img
                                                                             className={styles.artistCardThumb}
@@ -1027,9 +1032,6 @@ var flowCacheRef = useRef({});
                                                                         {activeTarget.type === 'backdrop' ? '🌅' : '🎭'}
                                                                     </div>
                                                                     <span className={styles.artistCardName}>{opt.name}</span>
-                                                                    {isSelected && (
-                                                                        <span className={styles.artistSelectedBadge}>✓</span>
-                                                                    )}
                                                                 </div>
                                                             );
                                                         })}

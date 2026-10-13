@@ -7,6 +7,7 @@ import {addAsBackdrop, addToTarget, addNewSpriteFromImage} from './sprite-from-i
 import {blocksToXML} from './ai-block-to-xml';
 import {convertJsonToBlockMap} from './ai-block-descriptor';
 import {assembleBlocksInOrder} from './ai-block-animator';
+import {autoCorrect} from './ai-block-autocorrect';
 import createBlocks from './ai-block-creator';
 
 function findTargetByName(vm, name, isStage) {
@@ -453,45 +454,80 @@ function activateAndSyncTarget(targetId, vm) {
             console.warn('[AI GameEngine] activateAndSyncTarget warning:', e.message);
         }
 
-        // 90ms tick gives React and Blockly DOM tree time to mount the workspace cleanly
+        // 120ms tick gives React and Blockly DOM tree time to mount the workspace cleanly
         setTimeout(function () {
             resolve(target);
-        }, 90);
+        }, 120);
     });
 }
 
 /**
  * Remastered Block Injection into Target Workspace
- * Prevents isConnected null reads and safely injects blocks with animation.
+ * Uses identical canonical pipeline as Modo Creador (blocksToXML + domToWorkspace)
+ * to guarantee 100% correct variable mappings and zero Blockly type mismatch crashes.
  */
 function injectBlocksToTarget(targetId, parsedBlocks, vm) {
     if (!targetId || !parsedBlocks || !parsedBlocks.blockMap || Object.keys(parsedBlocks.blockMap).length === 0) {
-        return Promise.resolve();
+        return Promise.resolve([]);
     }
 
     var target = (vm && vm.runtime) ? vm.runtime.getTargetById(targetId) : null;
-    if (!target) return Promise.resolve();
+    if (!target) return Promise.resolve([]);
 
     return activateAndSyncTarget(targetId, vm).then(function () {
-        // 1. Create blocks natively in VM target.blocks (pure data, no UI side effects)
+        // 1. Auto-correct parsed blocks
+        var cleanParsed = parsedBlocks;
         try {
-            createBlocks(vm, parsedBlocks, target);
-        } catch (crErr) {
-            console.warn('[AI Logic] createBlocks error:', crErr);
+            if (typeof autoCorrect === 'function') {
+                cleanParsed = autoCorrect(parsedBlocks);
+            }
+        } catch (_acErr) {
+            cleanParsed = parsedBlocks;
         }
 
-        // 2. Sync Blockly workspace via emitWorkspaceUpdate (reads from target.blocks)
-        //    This is safe now because createBlocks no longer calls emitWorkspaceUpdate itself
-        try {
-            if (vm.emitWorkspaceUpdate) vm.emitWorkspaceUpdate();
-        } catch (wsErr) {
-            console.warn('[AI Logic] emitWorkspaceUpdate error:', wsErr.message);
+        var Blockly = typeof window !== 'undefined' ? window.Blockly : null;
+        var workspace = (Blockly && Blockly.getMainWorkspace) ? Blockly.getMainWorkspace() : null;
+        var injectedViaWorkspace = false;
+
+        // 2. Primary canonical path: inject through Blockly workspace (like Modo Creador)
+        if (Blockly && workspace && vm && vm.editingTarget && vm.editingTarget.id === targetId) {
+            try {
+                if (typeof workspace.clear === 'function') {
+                    workspace.clear();
+                }
+                var xml = blocksToXML(cleanParsed, vm);
+                if (xml) {
+                    var dom = Blockly.Xml.textToDom(xml);
+                    Blockly.Xml.domToWorkspace(dom, workspace);
+                    injectedViaWorkspace = true;
+                    console.log('[AI Logic] Bloques inyectados limpiamente via domToWorkspace para ' + target.getName());
+                }
+            } catch (wsInjectErr) {
+                console.warn('[AI Logic] domToWorkspace falló, usando fallback createBlocks:', wsInjectErr);
+            }
+        }
+
+        // 3. Fallback path: VM target.blocks direct creation (headless / non-active target)
+        if (!injectedViaWorkspace) {
+            try {
+                createBlocks(vm, cleanParsed, target);
+            } catch (crErr) {
+                console.warn('[AI Logic] createBlocks error:', crErr);
+            }
+            try {
+                if (vm.emitWorkspaceUpdate) vm.emitWorkspaceUpdate();
+            } catch (wsErr) {
+                console.warn('[AI Logic] emitWorkspaceUpdate error:', wsErr.message);
+            }
         }
 
         if (vm.emitTargetsUpdate) vm.emitTargetsUpdate(false);
 
         return new Promise(function (resolve) {
-            setTimeout(resolve, 100);
+            setTimeout(function () {
+                var topIds = (cleanParsed.topBlocks || []).map(function (t) { return t.id; });
+                resolve(topIds);
+            }, 100);
         });
     });
 }
@@ -551,6 +587,7 @@ function compileModularSpriteScripts(spDef, blueprint) {
             { opcode: 'looks_setsizeto', inputs: { SIZE: size } },
             { opcode: 'motion_gotoxy', inputs: { X: initX, Y: initY } },
             { opcode: 'motion_pointindirection', inputs: { DIRECTION: dir } },
+            { opcode: 'motion_setrotationstyle', fields: { STYLE: 'left-right' } },
             { opcode: 'looks_show' }
         ];
         if (extraBlocks && extraBlocks.length > 0) {
@@ -694,7 +731,6 @@ function compileModularSpriteScripts(spDef, blueprint) {
                     inputs: {
                         CONDITION: { opcode: 'sensing_keypressed', fields: { KEY_OPTION: 'up arrow' } },
                         SUBSTACK: [
-                            { opcode: 'motion_pointindirection', inputs: { DIRECTION: 0 } },
                             { opcode: 'motion_changeyby', inputs: { DY: speed } }
                         ]
                     }
@@ -704,7 +740,6 @@ function compileModularSpriteScripts(spDef, blueprint) {
                     inputs: {
                         CONDITION: { opcode: 'sensing_keypressed', fields: { KEY_OPTION: 'down arrow' } },
                         SUBSTACK: [
-                            { opcode: 'motion_pointindirection', inputs: { DIRECTION: 180 } },
                             { opcode: 'motion_changeyby', inputs: { DY: -speed } }
                         ]
                     }

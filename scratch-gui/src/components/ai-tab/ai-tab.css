@@ -1233,33 +1233,19 @@
 /* ============================================================
    ARTIST CANDIDATE SELECTION PANEL (Blue Palette)
    ============================================================ */
-@keyframes artistFadeIn {
-    from {
-        opacity: 0;
-        transform: translateY(6px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
 .artistOptionsContainer {
     margin-top: 10px;
     padding: 10px 12px;
-    background: rgba(255, 255, 255, 0.85);
-    backdrop-filter: blur(12px);
-    -webkit-backdrop-filter: blur(12px);
-    border: 1px solid rgba(0, 80, 170, 0.14);
-    border-radius: 12px;
-    box-shadow: 0 4px 16px rgba(0, 40, 89, 0.06);
-    animation: artistFadeIn 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
 }
 
 [data-theme="dark"] .artistOptionsContainer {
-    background: rgba(15, 23, 42, 0.85);
-    border-color: rgba(66, 165, 245, 0.18);
-    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.4);
+    background: #1e293b;
+    border-color: #334155;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
 }
 
 .artistOptionsHeader {
@@ -1273,21 +1259,23 @@
 }
 
 [data-theme="dark"] .artistOptionsHeader {
-    color: #94a3b8;
+    color: #cbd5e1;
 }
 
 .artistCountdown {
     font-size: 0.68rem;
     font-weight: 600;
     color: #0050aa;
-    background: rgba(0, 80, 170, 0.08);
+    background: #eff6ff;
     padding: 2px 8px;
     border-radius: 10px;
+    border: 1px solid #dbeafe;
 }
 
 [data-theme="dark"] .artistCountdown {
     color: #60a5fa;
     background: rgba(96, 165, 250, 0.12);
+    border-color: rgba(96, 165, 250, 0.2);
 }
 
 .artistTabsRow {
@@ -1296,12 +1284,12 @@
     overflow-x: auto;
     padding: 3px;
     margin-bottom: 8px;
-    background: rgba(0, 0, 0, 0.04);
-    border-radius: 20px;
+    background: #f1f5f9;
+    border-radius: 8px;
 }
 
 [data-theme="dark"] .artistTabsRow {
-    background: rgba(255, 255, 255, 0.05);
+    background: #0f172a;
 }
 
 .artistTabBtn {
@@ -1309,7 +1297,7 @@
     align-items: center;
     gap: 4px;
     padding: 3px 10px;
-    border-radius: 16px;
+    border-radius: 6px;
     border: none;
     background: transparent;
     color: #64748b;
@@ -1317,19 +1305,19 @@
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
-    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: background-color 0.15s ease, color 0.15s ease;
 }
 
 .artistTabBtn:hover {
     color: #0f172a;
-    background: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.6);
 }
 
 .artistTabBtnActive {
     background: #ffffff !important;
     color: #0050aa !important;
     font-weight: 600 !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.08);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="dark"] .artistTabBtn {
@@ -1338,13 +1326,13 @@
 
 [data-theme="dark"] .artistTabBtn:hover {
     color: #f1f5f9;
-    background: rgba(255, 255, 255, 0.08);
+    background: rgba(255, 255, 255, 0.06);
 }
 
 [data-theme="dark"] .artistTabBtnActive {
     background: #1e293b !important;
     color: #60a5fa !important;
-    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.3);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
 
 .artistCardsGrid {
@@ -1359,66 +1347,102 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    justify-content: center;
-    padding: 7px 5px;
-    border-radius: 10px;
-    border: 1px solid rgba(0, 0, 0, 0.06);
-    background: rgba(255, 255, 255, 0.85);
+    justify-content: flex-start;
+    padding: 6px 5px 8px 5px;
+    border-radius: 8px;
+    border: 1.5px solid #e2e8f0;
+    background: #f8fafc;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    min-height: 74px;
+    min-height: 80px;
     user-select: none;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .artistCard:hover {
-    border-color: rgba(0, 80, 170, 0.25);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0, 80, 170, 0.08);
+    border-color: #94a3b8;
+    background: #f1f5f9;
 }
 
 .artistCardSelected {
     border-color: #0066cc !important;
-    background: rgba(0, 102, 204, 0.04) !important;
-    box-shadow: 0 0 0 1.5px #0066cc, 0 4px 12px rgba(0, 102, 204, 0.08);
+    background: #eff6ff !important;
+    box-shadow: 0 0 0 1px #0066cc;
 }
 
 [data-theme="dark"] .artistCard {
-    background: #152238;
-    border-color: rgba(255, 255, 255, 0.06);
+    background: #0f172a;
+    border-color: #334155;
 }
 
 [data-theme="dark"] .artistCard:hover {
-    border-color: rgba(96, 165, 250, 0.3);
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    border-color: #64748b;
+    background: #1e293b;
 }
 
 [data-theme="dark"] .artistCardSelected {
-    border-color: #60a5fa !important;
-    background: rgba(96, 165, 250, 0.1) !important;
-    box-shadow: 0 0 0 1.5px #60a5fa, 0 4px 12px rgba(0, 0, 0, 0.4);
+    border-color: #3b82f6 !important;
+    background: rgba(59, 130, 246, 0.12) !important;
+    box-shadow: 0 0 0 1px #3b82f6;
 }
 
-.artistCardThumb {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-    margin-bottom: 4px;
-    transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1);
-    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.05));
+.artistRadioRow {
+    width: 100%;
+    display: flex;
+    justify-content: flex-end;
+    margin-bottom: 2px;
 }
 
-.artistCard:hover .artistCardThumb {
-    transform: scale(1.06);
-}
-
-.artistCardThumbFallback {
-    width: 40px;
-    height: 40px;
+.artistRadioCircle {
+    width: 13px;
+    height: 13px;
+    border-radius: 50%;
+    border: 1.5px solid #cbd5e1;
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 1.4rem;
+    background: #ffffff;
+    box-sizing: border-box;
+    transition: border-color 0.15s ease, background-color 0.15s ease;
+}
+
+.artistRadioCircleActive {
+    border-color: #0066cc;
+    background: #0066cc;
+}
+
+.artistRadioDot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #ffffff;
+}
+
+[data-theme="dark"] .artistRadioCircle {
+    border-color: #475569;
+    background: #1e293b;
+}
+
+[data-theme="dark"] .artistRadioCircleActive {
+    border-color: #3b82f6;
+    background: #3b82f6;
+}
+
+.artistCardThumb {
+    width: 42px;
+    height: 42px;
+    object-fit: contain;
+    margin-bottom: 4px;
+    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.06));
+}
+
+.artistCardThumbFallback {
+    width: 42px;
+    height: 42px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.3rem;
     margin-bottom: 4px;
 }
 
@@ -1431,69 +1455,53 @@
     text-overflow: ellipsis;
     white-space: nowrap;
     max-width: 100%;
+    transition: color 0.15s ease;
+}
+
+.artistCardSelected .artistCardName {
+    color: #0066cc;
+    font-weight: 600;
 }
 
 [data-theme="dark"] .artistCardName {
     color: #cbd5e1;
 }
 
-.artistSelectedBadge {
-    position: absolute;
-    top: 4px;
-    right: 4px;
-    width: 15px;
-    height: 15px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.55rem;
-    font-weight: 700;
-    color: #ffffff;
-    background: #0066cc;
-    box-shadow: 0 2px 4px rgba(0, 102, 204, 0.3);
-}
-
-[data-theme="dark"] .artistSelectedBadge {
-    background: #60a5fa;
-    color: #0f172a;
+[data-theme="dark"] .artistCardSelected .artistCardName {
+    color: #60a5fa;
 }
 
 .artistFooterRow {
     display: flex;
     justify-content: flex-end;
-    margin-top: 4px;
+    margin-top: 6px;
 }
 
 .artistConfirmBtn {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 5px 12px;
-    border-radius: 16px;
+    padding: 5px 14px;
+    border-radius: 6px;
     border: none;
     background: #0066cc;
     color: #ffffff;
     font-size: 0.72rem;
     font-weight: 600;
     cursor: pointer;
-    transition: all 0.18s cubic-bezier(0.4, 0, 0.2, 1);
-    box-shadow: 0 2px 6px rgba(0, 102, 204, 0.2);
+    transition: background-color 0.15s ease;
 }
 
 .artistConfirmBtn:hover {
     background: #0052a3;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(0, 102, 204, 0.3);
 }
 
 .artistConfirmBtn:active {
-    transform: scale(0.98);
+    background: #003f7e;
 }
 
 [data-theme="dark"] .artistConfirmBtn {
     background: #2563eb;
-    box-shadow: 0 2px 6px rgba(37, 99, 235, 0.3);
 }
 
 [data-theme="dark"] .artistConfirmBtn:hover {
