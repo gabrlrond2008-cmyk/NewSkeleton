@@ -31,9 +31,21 @@ function resolveVarId(vm, varName, varType) {
     try {
         if (typeof stage.createVariable === 'function') {
             stage.createVariable(newId, strName, type, false);
-            return newId;
         }
     } catch (_cErr) {}
+
+    // Sync to Blockly workspace directly if open
+    try {
+        if (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) {
+            var ws = window.Blockly.getMainWorkspace();
+            if (ws && typeof ws.createVariable === 'function') {
+                var existingWsVar = ws.getVariableById ? ws.getVariableById(newId) : null;
+                if (!existingWsVar) {
+                    ws.createVariable(strName, type, newId);
+                }
+            }
+        }
+    } catch (_wsErr) {}
 
     return newId;
 }

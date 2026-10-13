@@ -111,7 +111,8 @@ function readWorkspace(vm) {
         var posY = Math.round(target.y || 0);
         var size = Math.round(target.size !== undefined ? target.size : 100);
         var dir = Math.round(target.direction !== undefined ? target.direction : 90);
-        lines.push('Posicion: x=' + posX + ' y=' + posY + ' | Tamaño: ' + size + '% | Dirección: ' + dir);
+        lines.push('Posición actual colocada por el usuario: x=' + posX + ' y=' + posY + ' | Tamaño: ' + size + '% | Dirección: ' + dir);
+        lines.push('REGLA OBLIGATORIA: Al generar la inicialización de este sprite, usa motion_gotoxy con X=' + posX + ', Y=' + posY + ' y looks_setsizeto con ' + size + '%. NO reinicies la posición a (0, 0).');
     }
 
     // Costumes and sounds

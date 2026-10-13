@@ -31,7 +31,9 @@ function ensureStage(vm) {
 function initGlobalVariables(vm, gameBlueprint) {
     var stage = ensureStage(vm);
     if (!stage || !gameBlueprint) return Promise.resolve();
-    var stageId = stage.id;
+
+    var Blockly = (typeof window !== 'undefined' && window.Blockly) ? window.Blockly : null;
+    var workspace = (Blockly && Blockly.getMainWorkspace) ? Blockly.getMainWorkspace() : null;
 
     // 1. Create variables
     var gVars = gameBlueprint.globalVariables || [];
@@ -40,8 +42,12 @@ function initGlobalVariables(vm, gameBlueprint) {
         if (!vName) continue;
         try {
             var existingVar = stage.lookupVariableByNameAndType ? stage.lookupVariableByNameAndType(vName, '') : null;
-            if (!existingVar && vm.createVariable) {
-                vm.createVariable(stageId, vName, '');
+            if (!existingVar && typeof stage.createVariable === 'function') {
+                var vId = 'var_' + vName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Math.random().toString(36).substring(2, 8);
+                stage.createVariable(vId, vName, '', false);
+                if (workspace && typeof workspace.createVariable === 'function') {
+                    try { workspace.createVariable(vName, '', vId); } catch (_wErr) {}
+                }
             }
         } catch (e) {
             console.warn('[AI GameEngine] Variable global error:', vName, e.message);
@@ -55,8 +61,12 @@ function initGlobalVariables(vm, gameBlueprint) {
         if (!lName) continue;
         try {
             var existingList = stage.lookupVariableByNameAndType ? stage.lookupVariableByNameAndType(lName, 'list') : null;
-            if (!existingList && vm.createVariable) {
-                vm.createVariable(stageId, lName, 'list');
+            if (!existingList && typeof stage.createVariable === 'function') {
+                var lId = 'list_' + lName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Math.random().toString(36).substring(2, 8);
+                stage.createVariable(lId, lName, 'list', false);
+                if (workspace && typeof workspace.createVariable === 'function') {
+                    try { workspace.createVariable(lName, 'list', lId); } catch (_wErr) {}
+                }
             }
         } catch (e) {
             console.warn('[AI GameEngine] Lista global error:', lName, e.message);
@@ -70,8 +80,12 @@ function initGlobalVariables(vm, gameBlueprint) {
         if (!bName) continue;
         try {
             var existingMsg = stage.lookupVariableByNameAndType ? stage.lookupVariableByNameAndType(bName, 'broadcast_msg') : null;
-            if (!existingMsg && vm.createVariable) {
-                vm.createVariable(stageId, bName, 'broadcast_msg');
+            if (!existingMsg && typeof stage.createVariable === 'function') {
+                var bId = 'msg_' + bName.replace(/[^a-zA-Z0-9]/g, '_') + '_' + Math.random().toString(36).substring(2, 8);
+                stage.createVariable(bId, bName, 'broadcast_msg', false);
+                if (workspace && typeof workspace.createVariable === 'function') {
+                    try { workspace.createVariable(bName, 'broadcast_msg', bId); } catch (_wErr) {}
+                }
             }
         } catch (e) {
             console.warn('[AI GameEngine] Broadcast error:', bName, e.message);
@@ -521,6 +535,10 @@ function injectBlocksToTarget(targetId, parsedBlocks, vm) {
             }
         }
 
+        if (target && target.blocks && typeof target.blocks.resetCache === 'function') {
+            try { target.blocks.resetCache(); } catch (_rcErr) {}
+        }
+
         if (vm.emitTargetsUpdate) vm.emitTargetsUpdate(false);
 
         return new Promise(function (resolve) {
@@ -558,15 +576,15 @@ function cleanInitialDefaultSprite(vm, newSpriteNames) {
 // Generates 100% valid, bug-free Scratch 3.0 blocks from modular AI blueprints
 // ============================================================================
 
-function compileModularSpriteScripts(spDef, blueprint) {
+function compileModularSpriteScripts(spDef, blueprint, target) {
     var role = (spDef.role || 'ambient').toLowerCase();
     var movement = spDef.movement || {};
     var moveType = movement.type || '';
     var speed = typeof movement.speed === 'number' ? movement.speed : (role === 'jugador' || role === 'player' ? 6 : 4);
-    var size = typeof spDef.size === 'number' ? spDef.size : 80;
-    var initX = typeof spDef.initialX === 'number' ? spDef.initialX : 0;
-    var initY = typeof spDef.initialY === 'number' ? spDef.initialY : 0;
-    var dir = typeof spDef.direction === 'number' ? spDef.direction : 90;
+    var size = (target && typeof target.size === 'number') ? Math.round(target.size) : (typeof spDef.size === 'number' ? spDef.size : 80);
+    var initX = (target && typeof target.x === 'number') ? Math.round(target.x) : (typeof spDef.initialX === 'number' ? spDef.initialX : 0);
+    var initY = (target && typeof target.y === 'number') ? Math.round(target.y) : (typeof spDef.initialY === 'number' ? spDef.initialY : 0);
+    var dir = (target && typeof target.direction === 'number') ? Math.round(target.direction) : (typeof spDef.direction === 'number' ? spDef.direction : 90);
 
     var globalVars = (blueprint && blueprint.globalVariables) || [];
     var scoreVar = globalVars.find(function (v) { return (/punto|score|moneda/i).test(v); }) || 'puntuacion';

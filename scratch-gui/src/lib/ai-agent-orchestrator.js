@@ -158,7 +158,7 @@ function runDirectorAgent(userPrompt, aiService, onProgress) {
         '  "explanation": "Resumen claro de cómo se juega, controles, objetivo y puntuación",',
         '  "stageConcept": "Concepto del fondo en biblioteca (ej: Stars, Blue Sky, Underwater, Forest)",',
         '  "globalVariables": ["puntuacion", "vidas"],',
-        '  "globalBroadcasts": ["iniciar_juego", "game_over", "victoria"],',
+        '  "globalBroadcasts": ["game_over", "victoria"],',
         '  "winPoints": 50,',
         '  "sprites": [',
         '    {',
@@ -210,7 +210,7 @@ function runDirectorAgent(userPrompt, aiService, onProgress) {
                     stageConcept: 'Water And Rocks',
                     globalVariables: ['puntuacion', 'vidas'],
                     globalLists: [],
-                    globalBroadcasts: ['iniciar_juego', 'game_over'],
+                    globalBroadcasts: ['game_over', 'victoria'],
                     sprites: [
                         { name: 'Jugador', role: 'jugador', libraryKeywords: ['boat', 'sailboat', 'player'], initialX: 0, initialY: -120, size: 85, direction: 90, sfxActions: ['movimiento'] },
                         { name: 'Obstaculo', role: 'obstaculo', libraryKeywords: ['rocks', 'crystal', 'obstacle'], initialX: 0, initialY: 120, size: 75, direction: 180, sfxActions: ['impacto'] }
@@ -658,7 +658,7 @@ function generateFallbackStageScripts(blueprint) {
     ];
 }
 
-function generateFallbackSpriteScripts(spDef, blueprint) {
+function generateFallbackSpriteScripts(spDef, blueprint, target) {
     var role = (spDef.role || '').toLowerCase();
     var scoreVar = (blueprint.globalVariables && blueprint.globalVariables[0]) || 'puntuacion';
     var livesVar = (blueprint.globalVariables && blueprint.globalVariables[1]) || 'vidas';
@@ -669,9 +669,9 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
     }) || (blueprint.sprites && blueprint.sprites[0]);
     var playerName = (player && player.name !== spDef.name) ? player.name : '';
 
-    var size = spDef.size || 75;
-    var initX = typeof spDef.initialX === 'number' ? spDef.initialX : 0;
-    var initY = typeof spDef.initialY === 'number' ? spDef.initialY : 0;
+    var size = (target && typeof target.size === 'number') ? Math.round(target.size) : (spDef.size || 75);
+    var initX = (target && typeof target.x === 'number') ? Math.round(target.x) : (typeof spDef.initialX === 'number' ? spDef.initialX : 0);
+    var initY = (target && typeof target.y === 'number') ? Math.round(target.y) : (typeof spDef.initialY === 'number' ? spDef.initialY : 0);
 
     if (role === 'player' || role === 'jugador' || (!role && blueprint.sprites && blueprint.sprites[0] === spDef)) {
         return [
@@ -834,7 +834,7 @@ function generateFallbackSpriteScripts(spDef, blueprint) {
 // -------------------------------------------------------------
 // AGENT 4: Programmer + OBSERVADOR (Remastered Target Sync & Modular Logic)
 // -------------------------------------------------------------
-function generateSpriteScriptsWithAI(spDef, blueprint, wsContext, aiService) {
+function generateSpriteScriptsWithAI(spDef, blueprint, wsContext, aiService, target) {
     if (!aiService || typeof aiService.ask !== 'function') {
         return Promise.resolve(null);
     }
@@ -843,7 +843,16 @@ function generateSpriteScriptsWithAI(spDef, blueprint, wsContext, aiService) {
         return typeof v === 'string' ? v : (v.name || '');
     }).filter(Boolean);
 
-    var broadcasts = blueprint.broadcasts || [];
+    var broadcasts = (blueprint.broadcasts || blueprint.globalBroadcasts || ['game_over', 'victoria'])
+        .filter(function (b) { return b !== 'iniciar_juego' && b !== 'start_game'; });
+
+    var targetPosDesc = '';
+    if (target && typeof target.x === 'number' && typeof target.y === 'number') {
+        var tX = Math.round(target.x);
+        var tY = Math.round(target.y);
+        var tSize = Math.round(target.size || spDef.size || 80);
+        targetPosDesc = 'Posición actual fijada en el escenario: X=' + tX + ', Y=' + tY + ', Tamaño=' + tSize + '%. Respeta OBLIGATORIAMENTE esta posición en motion_gotoxy y looks_setsizeto, NO lo muevas a (0, 0) a menos que sea explícitamente requerido.';
+    }
 
     var promptParts = [
         'MODO CREADOR - PROGRAMACIÓN DEL PERSONAJE:',
@@ -851,15 +860,16 @@ function generateSpriteScriptsWithAI(spDef, blueprint, wsContext, aiService) {
         'Rol asignado: "' + (spDef.role || 'sprite') + '".',
         'Título del juego: "' + (blueprint.gameTitle || 'Juego Scratch') + '".',
         'Descripción del juego: ' + (blueprint.explanation || '') + '.',
+        targetPosDesc,
         'Variables globales del proyecto: [' + globalVarNames.join(', ') + '].',
-        'Mensajes broadcast: [' + broadcasts.join(', ') + '].',
+        'Mensajes broadcast permitidos (eventos finales): [' + broadcasts.join(', ') + '].',
         'Mecánicas solicitadas para este sprite: ' + (spDef.mechanics || spDef.instructions || (spDef.name + ' realiza sus acciones en el juego')) + '.',
         '',
         wsContext ? ('ESTADO ACTUAL DEL PROYECTO:\n' + wsContext) : '',
         '',
         'REGLAS OBLIGATORIAS (KISS):',
         '1. Devuelve un objeto JSON con { "explanation": "...", "scripts": [ ... ] } con los scripts para este personaje.',
-        '2. Cada script debe tener un bloque sombrero válido. Usa preferentemente "event_whenflagclicked" (Bandera Verde) como sombrero principal para inicializar la posición, tamaño, mostrarse y arrancar el bucle continuo (control_forever). NO dependas de broadcasts para arrancar el sprite; usa broadcasts ("game_over", "victoria") solo para señalar eventos o transiciones.',
+        '2. Todo arranca con Bandera Verde: Cada script debe tener un bloque sombrero "event_whenflagclicked" (Bandera Verde) como sombrero principal para inicializar la posición, tamaño, mostrarse y arrancar el bucle continuo (control_forever). NUNCA uses broadcasts para iniciar el juego o los personajes; el juego arranca directamente al presionar la Bandera Verde.',
         '3. Para movimiento continuo, usa control_forever con control_if anidados (ej. teclas flechas o WASD).',
         '4. Al inicializar personajes que se mueven a los lados, añade "motion_setrotationstyle" con estilo "left-right" para que no se volteen boca abajo.',
         '5. En movimiento con flechas arriba/abajo usa únicamente "motion_changeyby" con velocidad positiva/negativa; NO gires la dirección a 0 o 180.',
@@ -884,7 +894,7 @@ function generateSpriteScriptsWithAI(spDef, blueprint, wsContext, aiService) {
     });
 }
 
-function runProgrammerForStage(blueprint, aiService, vm, onProgress) {
+function runProgrammerForStage(blueprint, aiService, vm, onProgress, totalSprites) {
     var stage = ensureStage(vm);
     if (!stage) return Promise.resolve();
 
@@ -892,31 +902,82 @@ function runProgrammerForStage(blueprint, aiService, vm, onProgress) {
         if (onProgress) {
             onProgress({
                 agent: 'supervisor',
-                percent: 66,
+                percent: 62,
                 details: '⚡ Ensamblando variables globales y ciclo del juego en el Escenario...'
             });
         }
 
-        var scripts = (blueprint && blueprint.stageScripts && blueprint.stageScripts.length > 0) ?
-            blueprint.stageScripts : compileModularStageScripts(blueprint);
+        function doStageInject() {
+            var scripts = (blueprint && blueprint.stageScripts && blueprint.stageScripts.length > 0) ?
+                blueprint.stageScripts : compileModularStageScripts(blueprint);
 
-        var stageParsed = convertJsonToBlockMap({ scripts: scripts });
-        return injectBlocksToTarget(stage.id, stageParsed, vm).then(function (topIds) {
-            try {
-                var workspace = (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) ?
-                    window.Blockly.getMainWorkspace() : null;
-                var animIds = (Array.isArray(topIds) && topIds.length > 0) ? topIds :
-                    (stageParsed && stageParsed.blockMap ? Object.keys(stageParsed.blockMap).filter(function (id) {
-                        var b = stageParsed.blockMap[id];
-                        return b && !b.parent;
-                    }) : []);
-                if (workspace && animIds.length > 0) {
-                    assembleBlocksInOrder(workspace, animIds);
+            var stageParsed = convertJsonToBlockMap({ scripts: scripts });
+            return injectBlocksToTarget(stage.id, stageParsed, vm).then(function (topIds) {
+                try {
+                    var workspace = (typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace) ?
+                        window.Blockly.getMainWorkspace() : null;
+                    var animIds = (Array.isArray(topIds) && topIds.length > 0) ? topIds :
+                        (stageParsed && stageParsed.blockMap ? Object.keys(stageParsed.blockMap).filter(function (id) {
+                            var b = stageParsed.blockMap[id];
+                            return b && !b.parent;
+                        }) : []);
+                    if (workspace && animIds.length > 0) {
+                        assembleBlocksInOrder(workspace, animIds);
+                    }
+                } catch (_animErr) {}
+                var check = inspectTargetCode(stage);
+                console.log('[Observador] ✅ Escenario programado y verificado:', check);
+                return check;
+            });
+        }
+
+        return doStageInject().then(function (check) {
+            // Human Review Checkpoint for Stage!
+            return new Promise(function (resolveReview) {
+                if (onProgress) {
+                    onProgress({
+                        agent: 'human-review',
+                        percent: 66,
+                        details: '🔍 [Revisión Humana]: Revisa las variables y el ciclo del Escenario. Puedes probarlo con la bandera verde.',
+                        spriteReview: {
+                            title: 'Lógica del Escenario',
+                            spriteName: 'Escenario',
+                            stepInfo: 'Paso 1 de ' + (totalSprites + 1) + ' (Escenario)',
+                            promptNote: 'Revisa las variables globales y el ciclo del juego en el Escenario. Pruébalo con la bandera verde y aprueba para continuar con los personajes.',
+                            onApprove: function () {
+                                console.log('[AI Review] Humano aprobó el Escenario.');
+                                resolveReview(check);
+                            },
+                            onRegenerate: function () {
+                                console.log('[AI Review] Humano solicitó regenerar lógica del Escenario...');
+                                doStageInject().then(function () {
+                                    if (onProgress) {
+                                        onProgress({
+                                            agent: 'human-review',
+                                            percent: 66,
+                                            details: '🔄 Lógica regenerada para el Escenario. Revisa los nuevos bloques.',
+                                            spriteReview: {
+                                                title: 'Lógica del Escenario',
+                                                spriteName: 'Escenario',
+                                                stepInfo: 'Paso 1 de ' + (totalSprites + 1) + ' (Escenario)',
+                                                promptNote: 'Nuevos bloques del Escenario ensamblados. Pruébalos y pulsa aprobar para continuar.',
+                                                onApprove: function () {
+                                                    resolveReview(check);
+                                                },
+                                                onRegenerate: function () {
+                                                    doStageInject();
+                                                }
+                                            }
+                                        });
+                                    }
+                                });
+                            }
+                        }
+                    });
+                } else {
+                    resolveReview(check);
                 }
-            } catch (_animErr) {}
-            var check = inspectTargetCode(stage);
-            console.log('[Observador] ✅ Escenario programado y verificado:', check);
-            return check;
+            });
         });
     });
 }
@@ -944,11 +1005,11 @@ function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgr
         } catch (_wErr) {}
 
         function doGenerateAndInject() {
-            return generateSpriteScriptsWithAI(spDef, blueprint, wsText, aiService).then(function (aiScripts) {
+            return generateSpriteScriptsWithAI(spDef, blueprint, wsText, aiService, target).then(function (aiScripts) {
                 var scripts = (aiScripts && aiScripts.length > 0) ?
                     aiScripts :
                     ((spDef.scripts && Array.isArray(spDef.scripts) && spDef.scripts.length > 0) ?
-                        spDef.scripts : compileModularSpriteScripts(spDef, blueprint));
+                        spDef.scripts : compileModularSpriteScripts(spDef, blueprint, target));
 
                 var spParsed = convertJsonToBlockMap({ scripts: scripts });
                 return injectBlocksToTarget(target.id, spParsed, vm).then(function (topIds) {
@@ -985,7 +1046,7 @@ function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgr
                         spriteReview: {
                             spriteName: spDef.name,
                             spriteRole: spDef.role || 'Personaje',
-                            stepInfo: 'Sprite ' + (spriteIndex + 1) + ' de ' + totalSprites,
+                            stepInfo: 'Paso ' + (spriteIndex + 2) + ' de ' + (totalSprites + 1) + ' ("' + spDef.name + '")',
                             promptNote: 'Revisa los bloques ensamblados en el área de trabajo y pruébalos con la bandera verde. Puedes mover o editar bloques libremente.',
                             onApprove: function () {
                                 console.log('[AI Review] Humano aprobó sprite "' + spDef.name + '". Registrando modificaciones...');
@@ -1008,7 +1069,7 @@ function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgr
                                             spriteReview: {
                                                 spriteName: spDef.name,
                                                 spriteRole: spDef.role || 'Personaje',
-                                                stepInfo: 'Sprite ' + (spriteIndex + 1) + ' de ' + totalSprites,
+                                                stepInfo: 'Paso ' + (spriteIndex + 2) + ' de ' + (totalSprites + 1) + ' ("' + spDef.name + '")',
                                                 promptNote: 'Nuevos bloques ensamblados. Pruébalos y pulsa aprobar para continuar.',
                                                 onApprove: function () {
                                                     resolveReview(check);
@@ -1032,11 +1093,11 @@ function runProgrammerForSprite(spDef, blueprint, aiService, vm, target, onProgr
 }
 
 function runProgrammerAgent(blueprint, aiService, vm, createdTargets, onProgress) {
-    // 1. Program Stage
-    return runProgrammerForStage(blueprint, aiService, vm, onProgress).then(function () {
+    var total = (blueprint && blueprint.sprites) ? blueprint.sprites.length : 0;
+    // 1. Program Stage with Human Review
+    return runProgrammerForStage(blueprint, aiService, vm, onProgress, total).then(function () {
         // 2. Program each Sprite sequentially with human approval
         var chain = Promise.resolve();
-        var total = blueprint.sprites.length;
         var userLearnings = [];
 
         blueprint.sprites.forEach(function (spDef, idx) {

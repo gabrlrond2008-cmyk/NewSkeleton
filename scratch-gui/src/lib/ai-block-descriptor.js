@@ -27,7 +27,7 @@ var FIELD_KEYS = {
     data_showlist: {LIST: 1},
     data_hidelist: {LIST: 1},
     event_whenkeypressed: {KEY_OPTION: 1},
-    event_whenbroadcastreceived: {CHOICE: 1},
+    event_whenbroadcastreceived: {BROADCAST_OPTION: 1, CHOICE: 1},
     motion_setrotationstyle: {STYLE: 1},
     looks_gotofrontback: {FRONT_BACK: 1},
     looks_costumenumbername: {NUMBER_NAME: 1},
@@ -614,6 +614,8 @@ function convertJsonToBlockMap(jsonObj) {
                         mappedInputName = 'SOUND_MENU';
                     } else if (block.opcode === 'sensing_touchingobject') {
                         mappedInputName = 'TOUCHINGOBJECTMENU';
+                    } else if (block.opcode === 'sensing_distanceto') {
+                        mappedInputName = 'DISTANCETOMENU';
                     } else if (block.opcode === 'sensing_keypressed') {
                         mappedInputName = 'KEY_OPTION';
                     } else if (block.opcode === 'event_broadcast' || block.opcode === 'event_broadcastandwait') {
@@ -622,9 +624,15 @@ function convertJsonToBlockMap(jsonObj) {
                         mappedInputName = 'TOWARDS';
                     } else if (block.opcode === 'motion_goto') {
                         mappedInputName = 'TO';
+                    } else if (block.opcode === 'control_create_clone_of') {
+                        mappedInputName = 'CLONE_OPTION';
+                    } else if (block.opcode === 'looks_switchcostumeto') {
+                        mappedInputName = 'COSTUME';
+                    } else if (block.opcode === 'looks_switchbackdropto' || block.opcode === 'looks_switchbackdroptoandwait') {
+                        mappedInputName = 'BACKDROP';
                     }
 
-                    if (mappedInputName && (key === 'SOUND_MENU' || key === 'OBJECT' || key === 'TOUCHINGOBJECTMENU' || key === 'KEY_OPTION' || key === 'BROADCAST_OPTION' || key === 'CHOICE' || key === 'TOWARDS' || key === 'TO')) {
+                    if (mappedInputName && (key === 'SOUND_MENU' || key === 'OBJECT' || key === 'TOUCHINGOBJECTMENU' || key === 'DISTANCETOMENU' || key === 'KEY_OPTION' || key === 'BROADCAST_OPTION' || key === 'CHOICE' || key === 'TOWARDS' || key === 'TO' || key === 'CLONE_OPTION' || key === 'COSTUME' || key === 'BACKDROP' || key === mappedInputName)) {
                         var mShadowType = getShadow(mappedInputName, block.opcode);
                         if (mShadowType) {
                             var mShadowId = uid();
@@ -641,7 +649,11 @@ function convertJsonToBlockMap(jsonObj) {
                         }
                     }
 
-                    block.fields[key] = { name: key, value: fVal };
+                    var canonicalFieldKey = key;
+                    if ((block.opcode === 'event_whenbroadcastreceived' || block.opcode === 'event_broadcast_menu') && (canonicalFieldKey === 'CHOICE' || canonicalFieldKey === 'BROADCAST_OPTION_MENU')) {
+                        canonicalFieldKey = 'BROADCAST_OPTION';
+                    }
+                    block.fields[canonicalFieldKey] = { name: canonicalFieldKey, value: fVal };
                 }
             }
         }
