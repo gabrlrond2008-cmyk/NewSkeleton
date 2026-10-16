@@ -395,7 +395,12 @@ const TabBar = ({
                 {tabListContent}
                 {insertIdx === openTabs.length && <div className={styles.insertIndicator} />}
                 {availableTabs.length > 0 && (
-                    <div className={styles.addTabWrapper} ref={addBtnRef}>
+                    <div
+                        className={classNames(styles.addTabWrapper, {
+                            [styles.addTabWrapperOpen]: addMenuState !== 'closed'
+                        })}
+                        ref={addBtnRef}
+                    >
                         <button
                             className={classNames(styles.tab, styles.addTabBtn, {
                                 [styles.addTabOpen]: addMenuState === 'open'

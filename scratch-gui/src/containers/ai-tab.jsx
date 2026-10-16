@@ -23,6 +23,7 @@ import {assembleBlocksInOrder, fadeOutChains, flyInBlocks, fadeOutBlocks} from '
 import {isGameSchema} from '../lib/ai-game-schema';
 import {developFullGameProject} from '../lib/ai-agent-orchestrator';
 import {lintAndNormalizeDescriptor} from '../lib/ai-block-linter';
+import {generateProceduralSfx} from '../lib/audio/procedural-sfx';
 
 var systemMessages = defineMessages({
     noProvider: {
@@ -584,6 +585,24 @@ var AiTab = function (props) {
         }
     }, [props.pendingExplain]); // eslint-disable-line react-hooks/exhaustive-deps
 
+    // Auto-analysis of referenced blocks from workspace selection
+    useEffect(function () {
+        if (props.blockSelectionResult) {
+            var res = props.blockSelectionResult;
+            if (props.onClearBlockSelectionResult) {
+                props.onClearBlockSelectionResult();
+            }
+            if (res.prompt) {
+                queueMicrotask(function () {
+                    handleSend(res.prompt, {
+                        referencedBlocks: res.blockIds,
+                        referencedNames: res.blockNames
+                    });
+                });
+            }
+        }
+    }, [props.blockSelectionResult]); // eslint-disable-line react-hooks/exhaustive-deps
+
     useEffect(function () {
         if (props.reanalyzeTick > 0) {
             handleInstruct();
@@ -626,7 +645,7 @@ var AiTab = function (props) {
         }
     }, []);
 
-    var handleSend = useCallback(function (text) {
+    var handleSend = useCallback(function (text, extra) {
         var service = getService();
         if (!service) {
             setMessages(function (prev) {
@@ -638,7 +657,7 @@ var AiTab = function (props) {
             return;
         }
 
-        var userMsg = {role: 'user', content: text};
+        var userMsg = Object.assign({role: 'user', content: text}, extra || {});
         var msgIdx = messages.length;
         setMessages(function (prev) { return prev.concat([userMsg]); });
         setSending(true);
@@ -2331,14 +2350,40 @@ var AiTab = function (props) {
             });
             setGeneratingSfxIndex(null);
         }).catch(function (err) {
-            setMessages(function (prev) {
-                var copy = prev.slice();
-                copy[msgIndex] = Object.assign({}, copy[msgIndex], {
-                    sfxState: 'error',
-                    sfxError: err.message || 'Sound effect generation failed'
+            console.log('[AI Audio] Audio service externo no disponible, usando sintetizador procedural WebAudio...', err);
+            try {
+                var lower = (prompt || '').toLowerCase();
+                var sfxType = 'jump';
+                if (lower.indexOf('laser') !== -1 || lower.indexOf('shoot') !== -1 || lower.indexOf('disparo') !== -1) sfxType = 'laser';
+                else if (lower.indexOf('coin') !== -1 || lower.indexOf('moneda') !== -1 || lower.indexOf('punto') !== -1) sfxType = 'coin';
+                else if (lower.indexOf('explo') !== -1 || lower.indexOf('boom') !== -1 || lower.indexOf('bomba') !== -1) sfxType = 'explosion';
+                else if (lower.indexOf('hit') !== -1 || lower.indexOf('golpe') !== -1 || lower.indexOf('daño') !== -1) sfxType = 'hit';
+                else if (lower.indexOf('power') !== -1 || lower.indexOf('bonus') !== -1 || lower.indexOf('win') !== -1) sfxType = 'powerup';
+
+                var localSfx = generateProceduralSfx(sfxType);
+                setMessages(function (prev) {
+                    var copy = prev.slice();
+                    copy[msgIndex] = Object.assign({}, copy[msgIndex], {
+                        sfxState: 'generated',
+                        sfxData: {
+                            audioUrl: localSfx.dataUrl,
+                            blob: new Blob([localSfx.arrayBuffer], {type: 'audio/wav'}),
+                            format: 'wav',
+                            name: (prompt.substring(0, 30) || sfxType) + ' (Procedural)'
+                        }
+                    });
+                    return copy;
                 });
-                return copy;
-            });
+            } catch (fallbackErr) {
+                setMessages(function (prev) {
+                    var copy = prev.slice();
+                    copy[msgIndex] = Object.assign({}, copy[msgIndex], {
+                        sfxState: 'error',
+                        sfxError: fallbackErr.message || 'Sound effect generation failed'
+                    });
+                    return copy;
+                });
+            }
             setGeneratingSfxIndex(null);
         });
     }, [messages, generatingSfxIndex, getAudioService]);
@@ -2608,6 +2653,7 @@ var AiTab = function (props) {
             onVerify={handleVerify}
             onRevert={handleRevertBlocks}
             onStop={handleStopStreaming}
+            onStartBlockSelection={props.onStartBlockSelection}
         />
     );
 };
@@ -2620,7 +2666,10 @@ AiTab.propTypes = {
     onClearExplain: PropTypes.func,
     onMentorGuidance: PropTypes.func,
     onActivateTab: PropTypes.func,
-    reanalyzeTick: PropTypes.number
+    reanalyzeTick: PropTypes.number,
+    onStartBlockSelection: PropTypes.func,
+    blockSelectionResult: PropTypes.object,
+    onClearBlockSelectionResult: PropTypes.func
 };
 
 export default injectIntl(AiTab);

@@ -3,25 +3,30 @@
 @import "../../css/z-index.css";
 
 .wrapper {
-    flex-shrink: 0;
+    flex: 1;
+    width: 100%;
     position: relative;
     display: flex;
     justify-content: center;
-    padding: 2px 0;
+    align-items: center;
+    padding: 0;
     z-index: 1;
+    overflow: hidden;
 }
 
 .inputWrapper {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: .4rem .5rem;
+    gap: 6px;
+    padding: .35rem .65rem;
     border: 1px dashed $ui-black-transparent;
     border-radius: $form-radius;
     background-color: $ui-white-transparent;
     background-clip: padding-box;
     transition: background-color 0.15s ease, box-shadow 0.15s ease;
-    width: auto;
+    width: 90%;
+    max-width: 270px;
+    box-sizing: border-box;
 }
 
 .inputWrapper:hover {
@@ -56,7 +61,7 @@
     color: $text-primary;
     font-weight: bold;
     min-width: 0;
-    max-width: 140px;
+    width: 100%;
 }
 
 .input::placeholder {

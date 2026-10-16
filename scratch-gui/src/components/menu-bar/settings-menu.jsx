@@ -6,6 +6,7 @@ import {connect} from 'react-redux';
 
 
 import AiMenu from './ai-menu.jsx';
+import DisplayMenu from './display-menu.jsx';
 import LanguageMenu from './language-menu.jsx';
 import MenuBarMenu from './menu-bar-menu.jsx';
 import ThemeMenu from './theme-menu.jsx';
@@ -90,6 +91,7 @@ var SettingsMenu = ({
                 <MenuSection>
                     {canChangeLanguage && <LanguageMenu onRequestCloseSettings={onRequestClose} />}
                     {canChangeTheme && <ThemeMenu onRequestCloseSettings={onRequestClose} />}
+                    <DisplayMenu onRequestCloseSettings={onRequestClose} />
                     <AiMenu onRequestCloseSettings={onRequestClose} />
                 </MenuSection>
                 <MenuSection>

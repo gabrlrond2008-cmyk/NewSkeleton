@@ -132,6 +132,10 @@ class SoundLibrary extends React.PureComponent {
                             return soundPlayer;
                         });
                 }
+            })
+            .catch(err => {
+                console.warn('[SoundLibrary] Error loading sound asset:', md5ext, err);
+                if (this.handleStop) this.handleStop();
             });
     }
     handleItemMouseLeave () {
@@ -147,6 +151,8 @@ class SoundLibrary extends React.PureComponent {
         };
         this.props.vm.addSound(vmSound).then(() => {
             this.props.onNewSound();
+        }).catch(err => {
+            console.warn('[SoundLibrary] Error adding sound to VM:', err);
         });
     }
     render () {

@@ -5,7 +5,7 @@
   "identifier": "com.fist.app",
   "build": {
     "frontendDist": "../scratch-gui/build",
-    "devUrl": "http://localhost:8601",
+    "devUrl": "http://localhost:8602",
     "beforeDevCommand": "npm run start --workspace scratch-gui",
     "beforeBuildCommand": "npm run build --workspace scratch-gui"
   },

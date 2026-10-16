@@ -4,11 +4,15 @@
 
 .page-wrapper {
     height: 100%;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
 }
 
 .body-wrapper {
     height: calc(100% - $menu-bar-height);
     background-color: $ui-primary;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
 }
 
 .body-wrapper * {
@@ -20,6 +24,12 @@
     flex-direction: row;
     height: 100%;
     overflow-y: hidden;
+    transition: flex-direction 0.25s ease;
+}
+
+.flex-wrapper.stageLeft,
+.flex-wrapper.stage-left {
+    flex-direction: row-reverse;
 }
 
 .editor-wrapper {
@@ -88,6 +98,84 @@
     min-width: 340px;
     max-width: 900px;
     overflow: hidden;
+    transition: width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                min-width 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                padding 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.2s ease;
+}
+
+.stage-and-target-wrapper.stage-collapsed,
+.stage-and-target-wrapper.stageCollapsed {
+    width: 0 !important;
+    min-width: 0 !important;
+    max-width: 0 !important;
+    padding-left: 0 !important;
+    padding-right: 0 !important;
+    overflow: hidden !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.stage-collapse-toggle {
+    flex: 0 0 16px;
+    width: 16px;
+    height: 100%;
+    border-radius: 0 !important;
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: none;
+    border-left: 1.5px solid rgba(0, 0, 0, 0.12);
+    border-right: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 25;
+    color: #475569;
+    transition: background-color 0.18s ease,
+                color 0.18s ease,
+                border-color 0.18s ease;
+    user-select: none;
+    padding: 0;
+}
+
+.stage-collapse-toggle:hover {
+    background: #0071e3;
+    color: #ffffff;
+    border-color: #0071e3;
+    box-shadow: none !important;
+}
+
+.stage-collapse-toggle.stage-left,
+.stage-collapse-toggle.stageLeft {
+    border-left: 1px solid rgba(0, 0, 0, 0.06);
+    border-right: 1.5px solid rgba(0, 0, 0, 0.12);
+}
+
+.stage-collapse-toggle.stage-collapsed,
+.stage-collapse-toggle.stageCollapsed {
+    border-right: none;
+}
+
+.stage-collapse-toggle.stage-collapsed.stage-left,
+.stage-collapse-toggle.stageCollapsed.stageLeft {
+    border-left: none;
+}
+
+[data-theme="dark"] .stage-collapse-toggle {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .stage-collapse-toggle:hover {
+    background: #3b82f6;
+    color: #ffffff;
+    border-color: #3b82f6;
+    box-shadow: none !important;
 }
 
 .target-wrapper {
@@ -233,5 +321,202 @@ $fade-out-distance: 15px;
     border-right: 2px dashed rgba(0, 53, 122, 0.3);
     border-radius: 8px 0 0 8px;
 }
+
+/* ===== PALETTE COLLAPSE TOGGLE & ANIMATIONS ===== */
+.blocks-wrapper :global(.blocklyToolboxWrapper),
+.extension-button-container {
+    transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.22s ease !important;
+    will-change: transform, opacity;
+}
+
+.blocks-wrapper.palette-collapsed :global(.blocklyToolboxWrapper) {
+    transform: translateX(-100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.extension-button-container.palette-collapsed {
+    transform: translateX(-100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.palette-collapse-toggle {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 308px;
+    width: 16px;
+    height: 100%;
+    border-radius: 0 !important; /* Cuadrado: esquinas rectas sin bordes redondeados */
+    background: rgba(255, 255, 255, 0.94);
+    backdrop-filter: blur(12px);
+    -webkit-backdrop-filter: blur(12px);
+    border: none;
+    border-right: 1.5px solid rgba(0, 0, 0, 0.12);
+    border-left: 1px solid rgba(0, 0, 0, 0.06);
+    box-shadow: none !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 130; /* Por encima del dock bar (z-index: 120) para que el borde no quede tapado */
+    color: #475569;
+    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 0.18s ease,
+                color 0.18s ease,
+                border-color 0.18s ease;
+    user-select: none;
+    padding: 0;
+}
+
+.palette-collapse-toggle:hover {
+    background: #0071e3;
+    color: #ffffff;
+    border-color: #0071e3;
+    box-shadow: none !important;
+}
+
+.palette-collapse-toggle.palette-collapsed {
+    left: 0;
+    border-radius: 0 !important;
+    border-left: none;
+    border-right: 1.5px solid rgba(0, 0, 0, 0.12);
+    box-shadow: none !important;
+}
+
+.palette-collapse-toggle.palette-collapsed:hover {
+    background: #0071e3;
+    color: #ffffff;
+    border-color: #0071e3;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .palette-collapse-toggle {
+    background: rgba(30, 41, 59, 0.95);
+    border-color: rgba(255, 255, 255, 0.12);
+    color: #94a3b8;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .palette-collapse-toggle:hover {
+    background: #3b82f6;
+    color: #ffffff;
+    border-color: #3b82f6;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .palette-collapse-toggle.palette-collapsed {
+    border-color: rgba(255, 255, 255, 0.12);
+}
+
+[data-theme="dark"] .palette-collapse-toggle.palette-collapsed:hover {
+    background: #3b82f6;
+    color: #ffffff;
+    border-color: #3b82f6;
+}
+
+.palette-collapse-icon {
+    flex-shrink: 0;
+    pointer-events: none;
+    transition: transform 0.15s ease;
+}
+
+.palette-collapse-toggle:hover .palette-collapse-icon {
+    transform: scale(1.15);
+}
+
+/* ===== BLOCKS ON RIGHT DISPLAY MODE ===== */
+.blocks-wrapper.blocksRight :global(.blocklyToolboxWrapper),
+.blocks-wrapper.blocks-right :global(.blocklyToolboxWrapper) {
+    left: auto !important;
+    right: 0 !important;
+}
+
+.blocks-wrapper.blocksRight :global(.blocklyToolboxDiv),
+.blocks-wrapper.blocks-right :global(.blocklyToolboxDiv) {
+    border-right: none !important;
+    border-left: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+.blocks-wrapper.blocksRight :global(.blocklyToolboxHeader),
+.blocks-wrapper.blocks-right :global(.blocklyToolboxHeader) {
+    border-right: none !important;
+    border-left: 1px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+.blocks-wrapper.blocksRight.palette-collapsed :global(.blocklyToolboxWrapper),
+.blocks-wrapper.blocks-right.palette-collapsed :global(.blocklyToolboxWrapper) {
+    transform: translateX(100%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+.extension-button-container.positionRight,
+.extension-button-container.position-right {
+    left: auto !important;
+    right: 0 !important;
+}
+
+.extension-button-container.positionRight.palette-collapsed,
+.extension-button-container.position-right.palette-collapsed {
+    transform: translateX(100%) !important;
+}
+
+.palette-collapse-toggle.positionRight,
+.palette-collapse-toggle.position-right {
+    left: auto !important;
+    right: 308px !important;
+    border-right: none !important;
+    border-left: 1.5px solid rgba(0, 0, 0, 0.12) !important;
+    transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                background-color 0.18s ease,
+                color 0.18s ease,
+                border-color 0.18s ease;
+}
+
+.palette-collapse-toggle.positionRight.palette-collapsed,
+.palette-collapse-toggle.position-right.palette-collapsed {
+    left: auto !important;
+    right: 0 !important;
+    border-right: none !important;
+    border-left: 1.5px solid rgba(0, 0, 0, 0.12) !important;
+}
+
+.blocks-wrapper.blocksRight :global(.blocklyZoom),
+.blocks-wrapper.blocks-right :global(.blocklyZoom) {
+    left: 24px !important;
+    right: auto !important;
+}
+
+/* ===== ANIMATION: DISAPPEAR DOWN -> REAPPEAR ON THE OPPOSITE SIDE ===== */
+.blocks-wrapper.blocksExitingDown :global(.blocklyToolboxWrapper),
+.extension-button-container.blocksExitingDown,
+.palette-collapse-toggle.blocksExitingDown {
+    transform: translateY(115%) !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.22s ease-in !important;
+}
+
+.blocks-wrapper.blocksEnteringUp :global(.blocklyToolboxWrapper),
+.extension-button-container.blocksEnteringUp,
+.palette-collapse-toggle.blocksEnteringUp {
+    animation: blocksPopUp 0.32s cubic-bezier(0.16, 1, 0.3, 1) forwards !important;
+}
+
+@keyframes blocksPopUp {
+    0% {
+        transform: translateY(115%);
+        opacity: 0;
+    }
+    100% {
+        transform: translateY(0);
+        opacity: 1;
+    }
+}
+
+
 
 

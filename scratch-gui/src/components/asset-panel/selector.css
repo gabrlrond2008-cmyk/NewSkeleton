@@ -84,6 +84,17 @@ $fade-out-distance: 100px;
     }
 }
 
+:global([class*="splitActive"]) .wrapper,
+:global(.splitActive) .wrapper {
+    width: 90px;
+}
+
+:global([class*="splitActive"]) .list-item,
+:global(.splitActive) .list-item {
+    width: 4rem;
+    height: 4rem;
+}
+
 
 .list-item.placeholder {
     background: var(--bg-white, white);

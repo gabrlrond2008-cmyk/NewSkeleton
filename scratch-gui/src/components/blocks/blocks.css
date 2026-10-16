@@ -61,26 +61,35 @@ html[data-time-travel]:not([data-time-travel="NOW"]) .blocklyHtmlInput {
     left: 0;
     top: 0;
     bottom: 3.25rem;
-    width: auto;
+    width: 308px;
     z-index: 1;
+    overflow: visible;
 }
 
 .blocks :global(.blocklyToolboxHeader) {
+    width: 100%;
+    box-sizing: border-box;
     display: flex;
     justify-content: center;
-    align-items: stretch;
+    align-items: center;
     background-color: #FFFFFF;
     border-right: 1px solid $ui-black-transparent;
-    padding: 2px 0;
-    pointer-events: none;
+    border-bottom: 1px solid $ui-black-transparent;
+    padding: 3px 0;
+    pointer-events: auto;
+    position: relative;
+    z-index: 2;
 }
 
 [data-theme="dark"] .blocks :global(.blocklyToolboxHeader) {
     background-color: var(--bg-white, #1a1a1a);
+    border-right-color: rgba(255, 255, 255, 0.12);
+    border-bottom-color: rgba(255, 255, 255, 0.12);
 }
 
-.blocks :global(.blocklyToolboxHeader > *) {
-    pointer-events: auto;
+[dir="rtl"] .blocks :global(.blocklyToolboxHeader) {
+    border-right: none;
+    border-left: 1px solid $ui-black-transparent;
 }
 
 .blocks :global(.blocklyFlyout) {

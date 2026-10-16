@@ -1,0 +1,14 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" width="120" height="120">
+                <!-- Wings -->
+                <polygon points="10,80 60,30 110,80 60,65" fill="#2563EB" stroke="#1D4ED8" stroke-width="3"/>
+                <!-- Main Body -->
+                <polygon points="60,10 75,70 60,65 45,70" fill="#E2E8F0" stroke="#94A3B8" stroke-width="3"/>
+                <!-- Cockpit -->
+                <ellipse cx="60" cy="42" rx="7" ry="15" fill="#38BDF8" stroke="#0284C7" stroke-width="2"/>
+                <!-- Laser Canons -->
+                <rect x="18" y="55" width="4" height="20" rx="2" fill="#EF4444"/>
+                <rect x="98" y="55" width="4" height="20" rx="2" fill="#EF4444"/>
+                <!-- Thruster Flame -->
+                <polygon points="52,70 60,115 68,70" fill="#F97316"/>
+                <polygon points="56,70 60,95 64,70" fill="#FDE047"/>
+            </svg>

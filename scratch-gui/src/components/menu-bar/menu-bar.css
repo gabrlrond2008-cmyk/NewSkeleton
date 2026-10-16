@@ -75,6 +75,8 @@
     display: flex;
     flex-direction: row;
     align-items: center;
+    position: relative;
+    z-index: 495;
 }
 
 .file-group .menu-bar-item {
@@ -89,7 +91,51 @@
 
 .menu-bar-menu {
     margin-top: $menu-bar-height;
-    z-index: $z-index-menu-bar;
+    z-index: 495;
+}
+
+.menu-backdrop {
+    position: fixed;
+    top: $menu-bar-height;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(15, 23, 42, 0.35);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    z-index: 480;
+    animation: menuBackdropFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    cursor: default;
+}
+
+[data-theme="dark"] .menu-backdrop {
+    background: rgba(0, 0, 0, 0.55);
+}
+
+@keyframes menuBackdropFadeIn {
+    0% {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+        -webkit-backdrop-filter: blur(0px);
+    }
+    100% {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
+}
+
+.menu-bar.has-open-menu .menu-bar-item:not(.active),
+.menu-bar.has-open-menu .title-field-centered,
+.menu-bar.has-open-menu .account-info-group {
+    opacity: 0.55;
+    transition: opacity 0.2s ease;
+}
+
+.menu-bar-item.active {
+    opacity: 1 !important;
+    position: relative;
+    z-index: 495;
 }
 
 .feedback-link {

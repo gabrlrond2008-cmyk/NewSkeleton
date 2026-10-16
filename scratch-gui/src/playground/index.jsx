@@ -14,6 +14,15 @@ import supportedBrowser from '../lib/supported-browser';
 
 import styles from './index.css';
 
+// Prevent viewport displacement / window scrolling across the app
+if (typeof window !== 'undefined') {
+    window.addEventListener('scroll', () => {
+        if (window.scrollX !== 0 || window.scrollY !== 0) {
+            window.scrollTo(0, 0);
+        }
+    }, {passive: true});
+}
+
 const appTarget = document.createElement('div');
 appTarget.className = styles.app;
 document.body.appendChild(appTarget);

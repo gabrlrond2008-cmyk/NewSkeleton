@@ -50,17 +50,26 @@ export default {
             ]
         },
         {
-            area: 'Asistente de IA',
+            area: 'Fist (Asistente y Agente de IA)',
             items: [
-                'La pestaña AI es la cuarta pestaña del editor. Es como tener un ayudante al lado.',
-                'Es un chat donde le podés preguntar cómo hacer cosas en Scratch: cómo funciona un bloque, para qué sirve una herramienta, cómo arreglar algo.',
-                'La IA puede leer tus bloques, crear bloques nuevos y modificar tu proyecto según lo que le pidas.',
-                'Para usarlo necesitás configurar una clave (API Key) en Settings > AI. Elegís un proveedor y ponés tu clave.',
-                'Cada respuesta que te da tiene un botón "Verificar" que revisa si lo que dijo está bien, usando la información de la app.',
-                'El asistente usa formato especial para las respuestas: títulos, listas con viñetas, código, tablas, negrita y cursiva.',
-                'Puede leer los bloques en tu área de trabajo y crear bloques nuevos para vos. Da instrucciones y te ayuda a construir proyectos.',
-                'Si te pide hacer algo que no sea preguntas sobre la app, decile que no puede. Si no sabe algo, lo dice.',
-                'Si necesitás cambiar de proveedor o modelo, todo se configura desde Settings > AI y se guarda solo.'
+                'Fist es el agente y asistente inteligente integrado del editor Scratch GUI.',
+                'En la vista de código, Fist reside en una barra interactiva integrada directamente al workspace. Se puede abrir en modo acordeón (haciendo clic o con la rueda del ratón) o desacoplarse en una ventana flotante arrastrándola.',
+                'Fist tiene herramientas para leer el lienzo de bloques actual, crear nuevos bloques, editar scripts existentes, y generar recursos completos.',
+                'Generación de imágenes: Fist puede crear personajes/sprites y fondos/escenarios usando IA.',
+                'Generación de audio: Fist puede sintetizar locución de voz (TTS con Azure Neural), efectos de sonido reales (SFX via Freesound/procedural) y música instrumental.',
+                'Orquestador multiescena: Fist puede crear juegos completos desde cero generando estructura, sprites, escenarios y bloques coordinados.',
+                'Para configurarlo, se ingresa a Settings > AI para seleccionar proveedor (OpenAI, Gemini, Groq, Sambanova, OpenRouter, OpenCodeZen) y clave de API.'
+            ]
+        },
+        {
+            area: 'Personalización de Visualización (Display Settings)',
+            items: [
+                'Desde el menú Configuración > Display (Visualización) se puede personalizar completamente la distribución del editor con 3 opciones:',
+                '1. Ubicación de la barra de bloques: Izquierda (por defecto) o Derecha. Al cambiar de lado, la paleta se desliza suavemente hacia abajo y reaparece en el lado seleccionado. El botón de extensiones y el tirador de colapsar se adaptan a ese lado.',
+                '2. Ubicación de la barra de Fist (IA): Abajo (por defecto) o Arriba (al tope del workspace, directamente debajo de las pestañas). La barra puede abrirse como acordeón, y al cambiar de posición o desacoplarla realiza una animación de pastilla (pill) hacia arriba o hacia abajo.',
+                '3. Ubicación del Escenario / Simulación VM: Derecha (por defecto) o Izquierda. Permite colocar el escenario a la izquierda y el editor a la derecha, invirtiendo automáticamente el tirador de redimensión.',
+                'La barra de bloques cuenta con un tirador lateral y soporte para gestos táctiles y swipe horizontal con el ratón para colapsar o expandir la paleta rápidamente.',
+                'Todas las preferencias de Display se guardan automáticamente en localStorage para persistir entre sesiones.'
             ]
         },
         {

@@ -31,6 +31,7 @@ import workspaceMetricsReducer, {workspaceMetricsInitialState} from './workspace
 import blockTrashReducer, {blockTrashInitialState} from './block-trash';
 import animationsReducer, {animationsInitialState} from './animations';
 import deviceReducer, {deviceInitialState} from './device';
+import displaySettingsReducer, {displaySettingsInitialState} from './display-settings';
 import throttle from 'redux-throttle';
 
 import decks from '../lib/libraries/decks/index.jsx';
@@ -69,7 +70,8 @@ const guiInitialState = {
     workspaceMetrics: workspaceMetricsInitialState,
     blockTrash: blockTrashInitialState,
     animations: animationsInitialState,
-    device: deviceInitialState
+    device: deviceInitialState,
+    displaySettings: displaySettingsInitialState
 };
 
 const initPlayer = function (currentState) {
@@ -173,7 +175,8 @@ const guiReducer = combineReducers({
     workspaceMetrics: workspaceMetricsReducer,
     blockTrash: blockTrashReducer,
     animations: animationsReducer,
-    device: deviceReducer
+    device: deviceReducer,
+    displaySettings: displaySettingsReducer
 });
 
 export {

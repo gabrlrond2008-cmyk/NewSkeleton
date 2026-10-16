@@ -289,7 +289,8 @@ var AiTabComponent = function (props) {
         generatingIndex, addingIndex, addingTarget, verifyingIndex, verifyingImageIndex, onGenerateImage, onVerifyImage, onAddImage,
         generatingAudioIndex, onGenerateAudio, generatingSfxIndex, onGenerateSfx, generatingMusicIndex, onGenerateMusic,
         onAddSound,
-        onCreate, onDevelop, onVerify, onRevert, onStop} = props;
+        onCreate, onDevelop, onVerify, onRevert, onStop,
+        onStartBlockSelection} = props;
     var [input, setInput] = useState('');
     var [suggestions, setSuggestions] = useState([]);
     var [selectedSuggestionIdx, setSelectedSuggestionIdx] = useState(-1);
@@ -298,12 +299,59 @@ var AiTabComponent = function (props) {
     var [flowOpen, setFlowOpen] = useState({});
     var [activeArtistTargetKey, setActiveArtistTargetKey] = useState(null);
     var [artistSelectedMap, setArtistSelectedMap] = useState({});
+    var [playingSoundUrl, setPlayingSoundUrl] = useState(null);
+    var soundAudioRef = useRef(null);
 var inputRef = useRef(null);
 var listRef = useRef(null);
 var nearBottomRef = useRef(true);
 var debounceRef = useRef(null);
 var addMenuRef = useRef(null);
 var flowCacheRef = useRef({});
+
+    var handleToggleSoundPreview = useCallback(function (e, soundUrl) {
+        if (e && e.stopPropagation) e.stopPropagation();
+        if (!soundUrl) return;
+
+        if (soundAudioRef.current) {
+            soundAudioRef.current.pause();
+            soundAudioRef.current = null;
+        }
+
+        if (playingSoundUrl === soundUrl) {
+            setPlayingSoundUrl(null);
+            return;
+        }
+
+        try {
+            var audio = new Audio(soundUrl);
+            soundAudioRef.current = audio;
+            setPlayingSoundUrl(soundUrl);
+            audio.onended = function () {
+                setPlayingSoundUrl(null);
+                soundAudioRef.current = null;
+            };
+            audio.onerror = function () {
+                setPlayingSoundUrl(null);
+                soundAudioRef.current = null;
+            };
+            audio.play().catch(function () {
+                setPlayingSoundUrl(null);
+                soundAudioRef.current = null;
+            });
+        } catch (err) {
+            setPlayingSoundUrl(null);
+            soundAudioRef.current = null;
+        }
+    }, [playingSoundUrl]);
+
+    useEffect(function () {
+        return function () {
+            if (soundAudioRef.current) {
+                soundAudioRef.current.pause();
+                soundAudioRef.current = null;
+            }
+        };
+    }, []);
 
     useEffect(function () {
         function handleClickOutside(e) {
@@ -363,6 +411,15 @@ var flowCacheRef = useRef({});
         if (debounceRef.current) clearTimeout(debounceRef.current);
 
         var triggerIdx = findTrigger(val);
+
+        if (triggerIdx !== -1 && typeof onStartBlockSelection === 'function') {
+            var textBefore = val.substring(0, triggerIdx);
+            setInput(textBefore);
+            setSuggestions([]);
+            setShowSuggestions(false);
+            onStartBlockSelection(textBefore);
+            return;
+        }
 
         if (triggerIdx === -1) {
             setSuggestions([]);
@@ -549,6 +606,32 @@ var flowCacheRef = useRef({});
                                 }
                             >
                                 <div className={styles.bubble}>
+                                    {isUser && msg.referencedBlocks && msg.referencedBlocks.length > 0 && (
+                                        <div
+                                            className={styles.refBadge}
+                                            onClick={function () {
+                                                var ws = typeof window !== 'undefined' && window.Blockly && window.Blockly.getMainWorkspace ?
+                                                    window.Blockly.getMainWorkspace() : null;
+                                                if (!ws) return;
+                                                msg.referencedBlocks.forEach(function (id) {
+                                                    try { ws.glowBlock(id, true); } catch (_) {}
+                                                });
+                                                setTimeout(function () {
+                                                    msg.referencedBlocks.forEach(function (id) {
+                                                        try { ws.glowBlock(id, false); } catch (_) {}
+                                                    });
+                                                }, 3000);
+                                            }}
+                                            title={intl.locale && intl.locale.indexOf('es') === 0 ? 'Clic para resaltar estos bloques en el lienzo' : 'Click to highlight these blocks on workspace'}
+                                        >
+                                            <span>🎯</span>
+                                            <span>
+                                                {msg.referencedBlocks.length === 1 ?
+                                                    (msg.referencedNames && msg.referencedNames[0] ? msg.referencedNames[0] : (intl.locale && intl.locale.indexOf('es') === 0 ? '1 bloque referenciado' : '1 block referenced')) :
+                                                    ((msg.referencedBlocks.length) + (intl.locale && intl.locale.indexOf('es') === 0 ? ' bloques referenciados' : ' blocks referenced'))}
+                                            </span>
+                                        </div>
+                                    )}
                                     {typing ? (
                                         <div className={styles.content}>
                                             <span className={styles.typingText}>{content}</span>
@@ -569,7 +652,7 @@ var flowCacheRef = useRef({});
                                         <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor">
                                             <rect x="6" y="6" width="12" height="12" rx="1"/>
                                         </svg>
-                                        {intl.formatMessage(messages.stop)}
+                                        <span className={styles.actionBtnLabel}>{intl.formatMessage(messages.stop)}</span>
                                     </button>
                                 </div>
                             )}
@@ -594,7 +677,7 @@ var flowCacheRef = useRef({});
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                                 <path d="M12 2l1.5 6.5L20 10l-6.5 1.5L12 18l-1.5-6.5L4 10l6.5-1.5z"/>
                                             </svg>
-                                            {instructing ? intl.formatMessage(messages.instructing) : intl.formatMessage(messages.instruct)}
+                                            <span className={styles.actionBtnLabel}>{instructing ? intl.formatMessage(messages.instructing) : intl.formatMessage(messages.instruct)}</span>
                                         </button>
                                     )}
                                     {imgPending && !isImgGenerating && (
@@ -609,7 +692,7 @@ var flowCacheRef = useRef({});
                                                 <circle cx="8.5" cy="8.5" r="1.5"/>
                                                 <path d="M21 15l-5-5L5 21"/>
                                             </svg>
-                                            {intl.formatMessage(messages.generateImage)}
+                                            <span className={styles.actionBtnLabel}>{intl.formatMessage(messages.generateImage)}</span>
                                         </button>
                                     )}
                                     {hasImgGenerate && imgError && (
@@ -622,7 +705,7 @@ var flowCacheRef = useRef({});
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                                 <path d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
                                             </svg>
-                                            {intl.formatMessage(messages.generateImage)}
+                                            <span className={styles.actionBtnLabel}>{intl.formatMessage(messages.generateImage)}</span>
                                         </button>
                                     )}
                                     {imgGenerated && !msg.imageVerification && (
@@ -635,7 +718,7 @@ var flowCacheRef = useRef({});
                                                 <path d="M9 12l2 2 4-4"/>
                                                 <circle cx="12" cy="12" r="10"/>
                                             </svg>
-                                            {isImgVerifying ? intl.formatMessage(messages.verifyingImage) : intl.formatMessage(messages.verifyImage)}
+                                            <span className={styles.actionBtnLabel}>{isImgVerifying ? intl.formatMessage(messages.verifyingImage) : intl.formatMessage(messages.verifyImage)}</span>
                                         </button>
                                     )}
                                     {imgGenerated && (
@@ -648,7 +731,7 @@ var flowCacheRef = useRef({});
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                                     <path d="M12 4v16M4 12h16"/>
                                                 </svg>
-                                                {isAdding ? intl.formatMessage(messages.generatingImage) : intl.formatMessage(messages.addImage)}
+                                                <span className={styles.actionBtnLabel}>{isAdding ? intl.formatMessage(messages.generatingImage) : intl.formatMessage(messages.addImage)}</span>
                                                 <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor" style={{marginLeft: 2}}>
                                                     <path d="M7 10l5 5 5-5z"/>
                                                 </svg>
@@ -686,7 +769,7 @@ var flowCacheRef = useRef({});
                                                 <line x1="12" y1="19" x2="12" y2="23"/>
                                                 <line x1="8" y1="23" x2="16" y2="23"/>
                                             </svg>
-                                            {generatingAudioIndex === i ? intl.formatMessage(messages.generatingAudio) : intl.formatMessage(messages.generateAudio)}
+                                            <span className={styles.actionBtnLabel}>{generatingAudioIndex === i ? intl.formatMessage(messages.generatingAudio) : intl.formatMessage(messages.generateAudio)}</span>
                                         </button>
                                     )}
                                     {hasSfxGenerate && !msg.sfxData && msg.sfxState !== 'error' && (
@@ -700,7 +783,7 @@ var flowCacheRef = useRef({});
                                                 <path d="M11 5L6 9H2v6h4l5 4V5z"/>
                                                 <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
                                             </svg>
-                                            {generatingSfxIndex === i ? intl.formatMessage(messages.generatingSfx) : intl.formatMessage(messages.generateSfx)}
+                                            <span className={styles.actionBtnLabel}>{generatingSfxIndex === i ? intl.formatMessage(messages.generatingSfx) : intl.formatMessage(messages.generateSfx)}</span>
                                         </button>
                                     )}
                                     {hasMusicGenerate && !msg.musicData && msg.musicState !== 'error' && (
@@ -715,7 +798,7 @@ var flowCacheRef = useRef({});
                                                 <circle cx="6" cy="18" r="3"/>
                                                 <circle cx="18" cy="16" r="3"/>
                                             </svg>
-                                            {generatingMusicIndex === i ? intl.formatMessage(messages.generatingMusic) : intl.formatMessage(messages.generateMusic)}
+                                            <span className={styles.actionBtnLabel}>{generatingMusicIndex === i ? intl.formatMessage(messages.generatingMusic) : intl.formatMessage(messages.generateMusic)}</span>
                                         </button>
                                     )}
                                     {msg.hasBlocks && creatingIndex !== i && (
@@ -732,7 +815,7 @@ var flowCacheRef = useRef({});
                                                 <line x1="15" y1="15" x2="21" y2="21"/>
                                                 <line x1="4" y1="4" x2="9" y2="9"/>
                                             </svg>
-                                            {intl.formatMessage(msg.intent === 'edit' ? messages.applyChanges : messages.createBlocks)}
+                                            <span className={styles.actionBtnLabel}>{intl.formatMessage(msg.intent === 'edit' ? messages.applyChanges : messages.createBlocks)}</span>
                                         </button>
                                     )}
                                     {(msg.hasGameDevelop || msg.hasBlocks) && creatingIndex !== i && (
@@ -747,7 +830,7 @@ var flowCacheRef = useRef({});
                                                 <polyline points="2 17 12 22 22 17" />
                                                 <polyline points="2 12 12 17 22 12" />
                                             </svg>
-                                            {intl.formatMessage(messages.developGame)}
+                                            <span className={styles.actionBtnLabel}>{intl.formatMessage(messages.developGame)}</span>
                                         </button>
                                     )}
                                     {msg.snapshotXml && !msg.reverted && (
@@ -761,7 +844,7 @@ var flowCacheRef = useRef({});
                                                 <path d="M3 7v6h6"/>
                                                 <path d="M21 17a9 9 0 00-15-6.7L3 13"/>
                                             </svg>
-                                            {intl.formatMessage(messages.revertBlocks)}
+                                            <span className={styles.actionBtnLabel}>{intl.formatMessage(messages.revertBlocks)}</span>
                                         </button>
                                     )}
                                     {flowCode && (
@@ -776,7 +859,7 @@ var flowCacheRef = useRef({});
                                                 <rect x="15" y="3" width="6" height="6" rx="1"/>
                                                 <path d="M9 6h6M6 9v6M15 9v6M18 15v3"/>
                                             </svg>
-                                            {flowOpen[i] ? intl.formatMessage(messages.hideFlowchart) : intl.formatMessage(messages.flowchart)}
+                                            <span className={styles.actionBtnLabel}>{flowOpen[i] ? intl.formatMessage(messages.hideFlowchart) : intl.formatMessage(messages.flowchart)}</span>
                                         </button>
                                     )}
                                     {!mentorMode && (
@@ -790,7 +873,7 @@ var flowCacheRef = useRef({});
                                                 <path d="M9 12l2 2 4-4"/>
                                                 <circle cx="12" cy="12" r="10"/>
                                             </svg>
-                                            {verifyingIndex === i ? intl.formatMessage(messages.verifying) : intl.formatMessage(messages.verify)}
+                                            <span className={styles.actionBtnLabel}>{verifyingIndex === i ? intl.formatMessage(messages.verifying) : intl.formatMessage(messages.verify)}</span>
                                         </button>
                                     )}
                                     {msg.audioData && (
@@ -841,7 +924,7 @@ var flowCacheRef = useRef({});
                                                 <polyline points="17,21 17,13 7,13 7,21"/>
                                                 <polyline points="7,3 7,8 15,8"/>
                                             </svg>
-                                            {intl.formatMessage(messages.train)}
+                                            <span className={styles.actionBtnLabel}>{intl.formatMessage(messages.train)}</span>
                                         </button>
                                     )}
                                     {msg.audioData && !msg.soundAdded && (
@@ -854,7 +937,7 @@ var flowCacheRef = useRef({});
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
                                                 <path d="M12 4v16M4 12h16"/>
                                             </svg>
-                                            {addingIndex === i && addingTarget === 'sound' ? intl.formatMessage(messages.addingSound) : intl.formatMessage(messages.addSound)}
+                                            <span className={styles.actionBtnLabel}>{addingIndex === i && addingTarget === 'sound' ? intl.formatMessage(messages.addingSound) : intl.formatMessage(messages.addSound)}</span>
                                         </button>
                                     )}
                                     {msg.sfxData && !msg.soundAdded && (
@@ -865,9 +948,10 @@ var flowCacheRef = useRef({});
                                             title={intl.formatMessage(messages.addSound)}
                                         >
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                                <path d="M12 4v16M4 12h16"/>
+                                                <path d="M11 5L6 9H2v6h4l5 4V5z"/>
+                                                <path d="M19.07 4.93a10 10 0 010 14.14M15.54 8.46a5 5 0 010 7.07"/>
                                             </svg>
-                                            {addingIndex === i && addingTarget === 'sound' ? intl.formatMessage(messages.addingSound) : intl.formatMessage(messages.addSound)}
+                                            <span className={styles.actionBtnLabel}>{addingIndex === i && addingTarget === 'sound' ? intl.formatMessage(messages.addingSound) : intl.formatMessage(messages.addSound)}</span>
                                         </button>
                                     )}
                                     {msg.musicData && !msg.soundAdded && (
@@ -878,9 +962,11 @@ var flowCacheRef = useRef({});
                                             title={intl.formatMessage(messages.addSound)}
                                         >
                                             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                                                <path d="M12 4v16M4 12h16"/>
+                                                <path d="M9 18V5l12-2v13"/>
+                                                <circle cx="6" cy="18" r="3"/>
+                                                <circle cx="18" cy="16" r="3"/>
                                             </svg>
-                                            {addingIndex === i && addingTarget === 'sound' ? intl.formatMessage(messages.addingSound) : intl.formatMessage(messages.addSound)}
+                                            <span className={styles.actionBtnLabel}>{addingIndex === i && addingTarget === 'sound' ? intl.formatMessage(messages.addingSound) : intl.formatMessage(messages.addSound)}</span>
                                         </button>
                                     )}
                                 </div>
@@ -953,146 +1039,158 @@ var flowCacheRef = useRef({});
                                     </div>
 
                                     {createStatus.librarySelection && Array.isArray(createStatus.librarySelection.targets) && (
-                                        <div className={styles.artistOptionsContainer}>
-                                            <div className={styles.artistOptionsHeader}>
-                                                <span>🎨 Selecciona apariencia visual:</span>
+                                        <div className={styles.artistPillBarContainer}>
+                                            <div className={styles.artistPillBarHeader}>
+                                                <div className={styles.artistTabsRow}>
+                                                    {createStatus.librarySelection.targets.map(function (tgt) {
+                                                        var activeKey = activeArtistTargetKey || createStatus.librarySelection.targets[0].key;
+                                                        var isActive = activeKey === tgt.key;
+                                                        var icon = '👾';
+                                                        if (tgt.type === 'sound') {
+                                                            icon = tgt.soundRole === 'music' ? '🎵' : '🔊';
+                                                        } else if (tgt.type === 'backdrop') {
+                                                            icon = '🌅';
+                                                        }
+                                                        return (
+                                                            <button
+                                                                key={tgt.key}
+                                                                type="button"
+                                                                className={styles.artistTabBtn + (isActive ? ' ' + styles.artistTabBtnActive : '')}
+                                                                onClick={function () {
+                                                                    setActiveArtistTargetKey(tgt.key);
+                                                                }}
+                                                            >
+                                                                <span className={styles.artistTabIcon}>{icon}</span>
+                                                                <span className={styles.artistTabLabel}>{tgt.name}</span>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
                                                 {createStatus.librarySelection.countdown != null && (
-                                                    <span className={styles.artistCountdown}>
-                                                        ⏱️ Auto-continuar en {createStatus.librarySelection.countdown}s
-                                                    </span>
+                                                    <div className={styles.artistCountdown}>
+                                                        <span className={styles.artistCountdownDot} />
+                                                        <span>{createStatus.librarySelection.countdown}s</span>
+                                                    </div>
                                                 )}
                                             </div>
-                                            <div className={styles.artistTabsRow}>
-                                                {createStatus.librarySelection.targets.map(function (tgt) {
-                                                    var activeKey = activeArtistTargetKey || createStatus.librarySelection.targets[0].key;
-                                                    var isActive = activeKey === tgt.key;
-                                                    return (
-                                                        <button
-                                                            key={tgt.key}
-                                                            type="button"
-                                                            className={styles.artistTabBtn + (isActive ? ' ' + styles.artistTabBtnActive : '')}
-                                                            onClick={function () {
-                                                                setActiveArtistTargetKey(tgt.key);
-                                                            }}
-                                                        >
-                                                            {tgt.type === 'backdrop' ? '🌅 ' : '👾 '}
-                                                            {tgt.name}
-                                                        </button>
-                                                    );
-                                                })}
-                                            </div>
+
                                             {(() => {
                                                 var activeKey = activeArtistTargetKey || (createStatus.librarySelection.targets[0] && createStatus.librarySelection.targets[0].key);
                                                 var activeTarget = createStatus.librarySelection.targets.find(function (t) { return t.key === activeKey; }) || createStatus.librarySelection.targets[0];
                                                 if (!activeTarget || !Array.isArray(activeTarget.options)) return null;
 
+                                                var isSoundTarget = activeTarget.type === 'sound';
+
                                                 return (
-                                                    <div className={styles.artistCardsGrid}>
-                                                        {activeTarget.options.map(function (opt, optIdx) {
-                                                            var isSelected = (artistSelectedMap[activeTarget.key] || activeTarget.selectedId) === opt.id;
-                                                            return (
-                                                                <div
-                                                                    key={opt.id || optIdx}
-                                                                    className={styles.artistCard + (isSelected ? ' ' + styles.artistCardSelected : '')}
-                                                                    onClick={function () {
-                                                                        setArtistSelectedMap(function (prev) {
-                                                                            var next = Object.assign({}, prev);
-                                                                            next[activeTarget.key] = opt.id;
-                                                                            return next;
-                                                                        });
-                                                                        if (createStatus.librarySelection.onSelectCandidate) {
-                                                                            createStatus.librarySelection.onSelectCandidate(activeTarget.key, opt);
-                                                                        }
-                                                                    }}
-                                                                >
-                                                                    <div className={styles.artistRadioRow}>
-                                                                        <div className={styles.artistRadioCircle + (isSelected ? ' ' + styles.artistRadioCircleActive : '')}>
-                                                                            {isSelected && <div className={styles.artistRadioDot} />}
-                                                                        </div>
-                                                                    </div>
-                                                                    {opt.thumbnail ? (
-                                                                        <img
-                                                                            className={styles.artistCardThumb}
-                                                                            src={opt.thumbnail}
-                                                                            alt={opt.name}
-                                                                            onError={function (e) {
-                                                                                e.currentTarget.style.display = 'none';
-                                                                                var parent = e.currentTarget.parentNode;
-                                                                                if (parent) {
-                                                                                    var fb = parent.querySelector('.' + styles.artistCardThumbFallback);
-                                                                                    if (fb) fb.style.display = 'flex';
-                                                                                }
-                                                                            }}
-                                                                        />
-                                                                    ) : null}
-                                                                    <div
-                                                                        className={styles.artistCardThumbFallback}
-                                                                        style={{display: opt.thumbnail ? 'none' : 'flex'}}
+                                                    <div className={styles.artistChipsRow}>
+                                                        <div className={styles.artistChipsList}>
+                                                            {activeTarget.options.map(function (opt, optIdx) {
+                                                                var isSelected = (artistSelectedMap[activeTarget.key] || activeTarget.selectedId) === opt.id;
+                                                                var isThisPlaying = isSoundTarget && opt.assetUrl && playingSoundUrl === opt.assetUrl;
+
+                                                                return (
+                                                                    <button
+                                                                        key={opt.id || optIdx}
+                                                                        type="button"
+                                                                        className={styles.artistChip + (isSelected ? ' ' + styles.artistChipSelected : '')}
+                                                                        onClick={function () {
+                                                                            setArtistSelectedMap(function (prev) {
+                                                                                var next = Object.assign({}, prev);
+                                                                                next[activeTarget.key] = opt.id;
+                                                                                return next;
+                                                                            });
+                                                                            if (createStatus.librarySelection.onSelectCandidate) {
+                                                                                createStatus.librarySelection.onSelectCandidate(activeTarget.key, opt);
+                                                                            }
+                                                                            if (isSoundTarget && opt.assetUrl) {
+                                                                                handleToggleSoundPreview(null, opt.assetUrl);
+                                                                            }
+                                                                        }}
                                                                     >
-                                                                        {activeTarget.type === 'backdrop' ? '🌅' : '🎭'}
-                                                                    </div>
-                                                                    <span className={styles.artistCardName}>{opt.name}</span>
-                                                                </div>
-                                                            );
-                                                        })}
-                                                    </div>
-                                                );
-                                            })()}
-                                            <div className={styles.artistFooterRow}>
-                                                <button
-                                                    type="button"
-                                                    className={styles.artistConfirmBtn}
-                                                    onClick={function () {
-                                                        console.log('[AI Tab] Botón Confirmar Selección clickeado por el usuario');
-                                                        if (createStatus.librarySelection && createStatus.librarySelection.onConfirm) {
-                                                            createStatus.librarySelection.onConfirm();
-                                                        }
-                                                    }}
-                                                >
-                                                    ✓ Continuar con esta selección
-                                                </button>
-                                            </div>
-                                        </div>
-                                    )}
-                                    {createStatus.libraryOptions && !createStatus.librarySelection && Array.isArray(createStatus.libraryOptions.items) && (
-                                        <div className={styles.artistOptionsContainer}>
-                                            <div className={styles.artistOptionsHeader}>
-                                                <span>🎨 Elige para "{createStatus.libraryOptions.targetName}":</span>
-                                                {createStatus.libraryOptions.onSelect && (
-                                                    <span style={{fontSize: '0.65rem', opacity: 0.8}}>Selecciona 1 de las 3 opciones</span>
-                                                )}
-                                            </div>
-                                            <div className={styles.artistCardsGrid}>
-                                                {createStatus.libraryOptions.items.map(function (opt, optIdx) {
-                                                    var isSelected = createStatus.libraryOptions.selectedId === opt.id;
-                                                    return (
-                                                        <div
-                                                            key={opt.id || optIdx}
-                                                            className={styles.artistCard + (isSelected ? ' ' + styles.artistCardSelected : '')}
+                                                                        {isSoundTarget ? (
+                                                                            <span
+                                                                                className={styles.chipPlayIcon + (isThisPlaying ? ' ' + styles.chipPlayIconActive : '')}
+                                                                                onClick={function (e) {
+                                                                                    handleToggleSoundPreview(e, opt.assetUrl);
+                                                                                }}
+                                                                                title={isThisPlaying ? 'Pausar' : 'Escuchar'}
+                                                                            >
+                                                                                {isThisPlaying ? '⏸' : '▶'}
+                                                                            </span>
+                                                                        ) : opt.thumbnail ? (
+                                                                            <img
+                                                                                src={opt.thumbnail}
+                                                                                alt=""
+                                                                                className={styles.chipThumb}
+                                                                                onError={function (e) { e.currentTarget.style.display = 'none'; }}
+                                                                            />
+                                                                        ) : null}
+                                                                        <span className={styles.chipLabel}>{opt.name}</span>
+                                                                        {isSoundTarget && opt.duration != null && (
+                                                                            <span className={styles.chipDuration}>{opt.duration}s</span>
+                                                                        )}
+                                                                        {isSelected && <span className={styles.chipCheck}>✓</span>}
+                                                                    </button>
+                                                                );
+                                                            })}
+                                                        </div>
+
+                                                        <button
+                                                            type="button"
+                                                            className={styles.artistConfirmPillBtn}
+                                                            title="Confirmar selección y continuar"
                                                             onClick={function () {
-                                                                if (createStatus.libraryOptions.onSelect) {
-                                                                    createStatus.libraryOptions.onSelect(opt);
+                                                                if (soundAudioRef.current) {
+                                                                    soundAudioRef.current.pause();
+                                                                    soundAudioRef.current = null;
+                                                                    setPlayingSoundUrl(null);
+                                                                }
+                                                                if (createStatus.librarySelection && createStatus.librarySelection.onConfirm) {
+                                                                    createStatus.librarySelection.onConfirm();
                                                                 }
                                                             }}
                                                         >
-                                                            {opt.thumbnail ? (
-                                                                <img
-                                                                    className={styles.artistCardThumb}
-                                                                    src={opt.thumbnail}
-                                                                    alt={opt.name}
-                                                                />
-                                                            ) : (
-                                                                <div className={styles.artistCardThumbFallback}>
-                                                                    🎭
-                                                                </div>
-                                                            )}
-                                                            <span className={styles.artistCardName}>{opt.name}</span>
-                                                            {isSelected && (
-                                                                <span className={styles.artistSelectedBadge}>✓</span>
-                                                            )}
-                                                        </div>
-                                                    );
-                                                })}
+                                                            <span>✓ Listo</span>
+                                                        </button>
+                                                    </div>
+                                                );
+                                            })()}
+                                        </div>
+                                    )}
+                                    {createStatus.libraryOptions && !createStatus.librarySelection && Array.isArray(createStatus.libraryOptions.items) && (
+                                        <div className={styles.artistPillBarContainer}>
+                                            <div className={styles.artistChipsRow}>
+                                                <span className={styles.artistChipLabelPrefix}>
+                                                    🎨 {createStatus.libraryOptions.targetName}:
+                                                </span>
+                                                <div className={styles.artistChipsList}>
+                                                    {createStatus.libraryOptions.items.map(function (opt, optIdx) {
+                                                        var isSelected = createStatus.libraryOptions.selectedId === opt.id;
+                                                        return (
+                                                            <button
+                                                                key={opt.id || optIdx}
+                                                                type="button"
+                                                                className={styles.artistChip + (isSelected ? ' ' + styles.artistChipSelected : '')}
+                                                                onClick={function () {
+                                                                    if (createStatus.libraryOptions.onSelect) {
+                                                                        createStatus.libraryOptions.onSelect(opt);
+                                                                    }
+                                                                }}
+                                                            >
+                                                                {opt.thumbnail ? (
+                                                                    <img
+                                                                        src={opt.thumbnail}
+                                                                        alt=""
+                                                                        className={styles.chipThumb}
+                                                                        onError={function (e) { e.currentTarget.style.display = 'none'; }}
+                                                                    />
+                                                                ) : null}
+                                                                <span className={styles.chipLabel}>{opt.name}</span>
+                                                                {isSelected && <span className={styles.chipCheck}>✓</span>}
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
                                             </div>
                                         </div>
                                     )}
@@ -1297,6 +1395,7 @@ var flowCacheRef = useRef({});
 
 AiTabComponent.propTypes = {
     intl: intlShape,
+    onStartBlockSelection: PropTypes.func,
     messages: PropTypes.arrayOf(PropTypes.shape({
         role: PropTypes.string,
         content: PropTypes.string,

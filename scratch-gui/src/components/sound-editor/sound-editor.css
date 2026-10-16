@@ -6,12 +6,18 @@
     flex-direction: column;
     flex-grow: 1;
     padding: calc(2 * $space);
+    min-width: 0;
+    min-height: 0;
+    overflow-x: auto;
+    overflow-y: auto;
 }
 
 .row {
     display: flex;
     flex-direction: row;
     align-items: center;
+    flex-wrap: wrap;
+    gap: 6px;
 }
 
 [dir="rtl"] .row-reverse {

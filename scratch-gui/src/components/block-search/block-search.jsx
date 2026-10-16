@@ -20,7 +20,7 @@ const BlockSearch = ({intl, workspace, ScratchBlocks, toolboxXML, onSearch}) => 
 
     useEffect(() => {
         if (debounceRef.current) clearTimeout(debounceRef.current);
-        if (query.length < 2) {
+        if (!query || query.trim().length === 0) {
             onSearch('', []);
             return;
         }

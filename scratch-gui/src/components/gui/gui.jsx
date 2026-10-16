@@ -81,6 +81,26 @@ const messages = defineMessages({
         id: 'gui.gui.selectDevice',
         defaultMessage: 'Select Device',
         description: 'Title for the device selection library'
+    },
+    showPalette: {
+        id: 'gui.gui.showPalette',
+        defaultMessage: 'Show blocks palette (click or swipe)',
+        description: 'Tooltip to expand blocks palette'
+    },
+    collapsePalette: {
+        id: 'gui.gui.collapsePalette',
+        defaultMessage: 'Collapse blocks palette (click or swipe)',
+        description: 'Tooltip to collapse blocks palette'
+    },
+    showSimulator: {
+        id: 'gui.gui.showSimulator',
+        defaultMessage: 'Show simulator',
+        description: 'Tooltip to expand simulator panel'
+    },
+    collapseSimulator: {
+        id: 'gui.gui.collapseSimulator',
+        defaultMessage: 'Collapse simulator',
+        description: 'Tooltip to collapse simulator panel'
     }
 });
 
@@ -124,6 +144,45 @@ const TAB_REGISTRY = {
 };
 
 let isRendererSupported = null;
+
+function isBlocklyDraggingActive() {
+    if (typeof document === 'undefined') return false;
+    if (document.body.classList.contains('blocklyDragging')) return true;
+    if (document.querySelector('.blocklyDragging')) return true;
+    var dragSurface = document.querySelector('.blocklyBlockDragSurface');
+    if (dragSurface && dragSurface.style.display !== 'none' && dragSurface.querySelector('g')) return true;
+    if (typeof window !== 'undefined' && window.Blockly) {
+        if (typeof window.Blockly.dragMode_ !== 'undefined' && window.Blockly.dragMode_ !== 0) return true;
+        if (window.Blockly.mainWorkspace && typeof window.Blockly.mainWorkspace.isDragging === 'function' && window.Blockly.mainWorkspace.isDragging()) return true;
+        if (window.Blockly.getMainWorkspace) {
+            var ws = window.Blockly.getMainWorkspace();
+            if (ws && typeof ws.isDragging === 'function' && ws.isDragging()) return true;
+        }
+    }
+    return false;
+}
+
+function getHorizontalSwipeAction(dx, position, order) {
+    if (Math.abs(dx) < 14) return null;
+    var isRight = dx > 0;
+    var isLeft = dx < 0;
+
+    // Moving towards screen edge:
+    // When element is on 'left': moving left (dx < 0) pushes towards edge.
+    // When element is on 'right': moving right (dx > 0) pushes towards edge.
+    var isTowardsEdge = (position === 'left' && isLeft) || (position === 'right' && isRight);
+    var isTowardsCenter = (position === 'left' && isRight) || (position === 'right' && isLeft);
+
+    if (order === 'left-close-right-open') {
+        if (isTowardsEdge) return 'close';
+        if (isTowardsCenter) return 'open';
+    } else {
+        // 'left-open-right-close' (inverted)
+        if (isTowardsEdge) return 'open';
+        if (isTowardsCenter) return 'close';
+    }
+    return null;
+}
 
 const GUIComponent = props => {
     const {
@@ -208,6 +267,12 @@ const GUIComponent = props => {
         onSetHasBeenSaved,
         onRestoreTabs,
         splitPrimaryIndex,
+        blocksPosition = 'left',
+        aiBarPosition = 'bottom',
+        stagePosition = 'right',
+        blocksAnimating = null,
+        swipeOrder = 'up-close-down-open',
+        horizontalSwipeOrder = 'left-close-right-open',
         ...componentProps
     } = omit(props, 'dispatch');
     if (children) {
@@ -219,6 +284,278 @@ const GUIComponent = props => {
     const handleAiChatToggle = useCallback(function (open) {
         setAiChatOpen(open);
     }, []);
+    const [blocksPaletteCollapsed, setBlocksPaletteCollapsed] = useState(false);
+    const swipeLockedRef = useRef(false);
+    const wheelDecelTimerRef = useRef(null);
+
+    const [blocksWrapperNode, setBlocksWrapperNode] = useState(null);
+    const blocksWrapperRef = useRef(null);
+    const handleSetBlocksWrapper = useCallback(node => {
+        blocksWrapperRef.current = node;
+        setBlocksWrapperNode(node);
+    }, []);
+
+    const executePaletteAction = useCallback(function (shouldCollapse) {
+        if (swipeLockedRef.current) {
+            clearTimeout(wheelDecelTimerRef.current);
+            wheelDecelTimerRef.current = setTimeout(function () {
+                swipeLockedRef.current = false;
+            }, 300);
+            return;
+        }
+
+        swipeLockedRef.current = true;
+        clearTimeout(wheelDecelTimerRef.current);
+        wheelDecelTimerRef.current = setTimeout(function () {
+            swipeLockedRef.current = false;
+        }, 400);
+
+        setBlocksPaletteCollapsed(function (prev) {
+            if (prev === shouldCollapse) return prev;
+            setTimeout(function () {
+                window.dispatchEvent(new Event('resize'));
+                if (workspaceHandle && workspaceHandle.ScratchBlocks && workspaceHandle.workspace) {
+                    try {
+                        workspaceHandle.ScratchBlocks.svgResize(workspaceHandle.workspace);
+                    } catch (_) {}
+                }
+            }, 320);
+            return shouldCollapse;
+        });
+    }, [workspaceHandle]);
+
+    const toggleDragRef = useRef({startX: 0, hasDragged: false, active: false});
+    const handleTogglePalette = useCallback(function () {
+        executePaletteAction(!blocksPaletteCollapsed);
+    }, [blocksPaletteCollapsed, executePaletteAction]);
+
+    const handleToggleClick = useCallback(function () {
+        if (toggleDragRef.current.hasDragged) {
+            toggleDragRef.current.hasDragged = false;
+            return;
+        }
+        handleTogglePalette();
+    }, [handleTogglePalette]);
+
+    const handleTogglePointerDown = useCallback(function (e) {
+        if (e.button !== 0) return;
+        toggleDragRef.current = {startX: e.clientX, hasDragged: false, active: true};
+        var onPointerMove = function (moveEvent) {
+            if (!toggleDragRef.current.active) return;
+            var dx = moveEvent.clientX - toggleDragRef.current.startX;
+            if (Math.abs(dx) > 14) {
+                toggleDragRef.current.hasDragged = true;
+                toggleDragRef.current.active = false;
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+
+                var action = getHorizontalSwipeAction(dx, blocksPosition, horizontalSwipeOrder);
+                if (action === 'close' && !blocksPaletteCollapsed) {
+                    executePaletteAction(true);
+                } else if (action === 'open' && blocksPaletteCollapsed) {
+                    executePaletteAction(false);
+                }
+            }
+        };
+        var onPointerUp = function () {
+            toggleDragRef.current.active = false;
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+        };
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+    }, [blocksPaletteCollapsed, executePaletteAction, blocksPosition, horizontalSwipeOrder]);
+
+    const blocksWheelLockRef = useRef(false);
+
+    // Native capture listeners on blocksWrapperNode to guarantee Blockly NEVER swallows swipe events!
+    useEffect(function () {
+        var el = blocksWrapperNode || blocksWrapperRef.current;
+        if (!el) return;
+
+        var dragData = null;
+
+        var onCapturePointerDown = function (e) {
+            if (e.button !== 0) return;
+            var target = e.target;
+            if (!target) return;
+
+            // 1. NEVER trigger a palette swipe if interacting with blocks, workspace, inputs, buttons, or scrollbars!
+            if (target.closest) {
+                if (
+                    target.closest('.blocklyDraggable') ||
+                    target.closest('.blocklyBlockCanvas') ||
+                    target.closest('.blocklyFlyoutElements') ||
+                    target.closest('.blocklyEditableText') ||
+                    target.closest('.blocklyNonEditableText') ||
+                    target.closest('.blocklyWidgetDiv') ||
+                    target.closest('.blocklyDropDownDiv') ||
+                    target.closest('.blocklyFlyoutButton') ||
+                    target.closest('.blocklyFlyoutCheckbox') ||
+                    target.closest('.blocklyScrollbarHandle')
+                ) {
+                    return;
+                }
+            }
+
+            if (isBlocklyDraggingActive()) return;
+
+            var rect = el.getBoundingClientRect();
+
+            // 2. Identify if pointerdown is genuinely on the palette toggle bar or empty category column
+            var isInsidePalette = false;
+            if (target.closest) {
+                isInsidePalette = Boolean(
+                    target.closest('[class*="paletteCollapseToggle"]') ||
+                    target.closest('.blocklyToolboxWrapper') ||
+                    target.closest('.blocklyToolboxDiv') ||
+                    target.closest('[class*="extensionButtonContainer"]') ||
+                    target.closest('.blocklyFlyoutBackground')
+                );
+            }
+
+            // If palette is collapsed, also allow swiping open from the thin edge strip (45px)
+            if (!isInsidePalette && blocksPaletteCollapsed) {
+                if (blocksPosition === 'right') {
+                    if (e.clientX >= rect.right - 45 && e.clientX <= rect.right) {
+                        isInsidePalette = true;
+                    }
+                } else {
+                    if (e.clientX >= rect.left && e.clientX <= rect.left + 45) {
+                        isInsidePalette = true;
+                    }
+                }
+            }
+
+            if (!isInsidePalette) return;
+
+            dragData = {
+                startX: e.clientX,
+                startY: e.clientY,
+                active: true
+            };
+
+            var onPointerMove = function (moveEvent) {
+                if (!dragData || !dragData.active) return;
+
+                // If user is dragging a block anywhere, cancel swipe immediately
+                if (isBlocklyDraggingActive()) {
+                    dragData.active = false;
+                    cleanupMove();
+                    return;
+                }
+
+                if (moveEvent.target && moveEvent.target.closest && (
+                    moveEvent.target.closest('.blocklyDraggable') ||
+                    moveEvent.target.closest('.blocklyBlockDragSurface') ||
+                    moveEvent.target.closest('.blocklyBlockCanvas')
+                )) {
+                    dragData.active = false;
+                    cleanupMove();
+                    return;
+                }
+
+                var dx = moveEvent.clientX - dragData.startX;
+                var dy = moveEvent.clientY - dragData.startY;
+
+                // Require intentional swipe: at least 38px horizontally with dominant horizontal vector
+                if (Math.abs(dx) >= 38 && Math.abs(dx) > Math.abs(dy) * 1.5) {
+                    dragData.active = false;
+                    cleanupMove();
+
+                    var action = getHorizontalSwipeAction(dx, blocksPosition, horizontalSwipeOrder);
+                    if (action === 'close' && !blocksPaletteCollapsed) {
+                        executePaletteAction(true);
+                    } else if (action === 'open' && blocksPaletteCollapsed) {
+                        executePaletteAction(false);
+                    }
+                }
+            };
+
+            var onPointerUp = function () {
+                if (dragData) dragData.active = false;
+                cleanupMove();
+            };
+
+            var cleanupMove = function () {
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+            };
+
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+        };
+
+        var onCaptureWheel = function (e) {
+            var dx = e.deltaX;
+            var dy = e.deltaY;
+
+            // Only handle dominant horizontal scrolls
+            if (Math.abs(dx) < 18 || Math.abs(dx) <= Math.abs(dy) * 1.4) {
+                return;
+            }
+
+            if (isBlocklyDraggingActive()) {
+                return;
+            }
+
+            var target = e.target;
+            if (!target) return;
+
+            if (target.closest && (
+                target.closest('.blocklyDraggable') ||
+                target.closest('.blocklyBlockCanvas') ||
+                target.closest('.blocklyFlyoutElements')
+            )) {
+                return;
+            }
+
+            var rect = el.getBoundingClientRect();
+            var isInside = false;
+
+            if (target.closest) {
+                isInside = Boolean(
+                    target.closest('[class*="paletteCollapseToggle"]') ||
+                    target.closest('.blocklyToolboxWrapper') ||
+                    target.closest('.blocklyToolboxDiv') ||
+                    target.closest('[class*="extensionButtonContainer"]') ||
+                    target.closest('.blocklyFlyoutBackground')
+                );
+            }
+
+            if (!isInside && blocksPaletteCollapsed) {
+                if (blocksPosition === 'right') {
+                    if (e.clientX >= rect.right - 45 && e.clientX <= rect.right) isInside = true;
+                } else {
+                    if (e.clientX >= rect.left && e.clientX <= rect.left + 45) isInside = true;
+                }
+            }
+
+            if (!isInside) return;
+
+            if (blocksWheelLockRef.current) return;
+            blocksWheelLockRef.current = true;
+            setTimeout(function () {
+                blocksWheelLockRef.current = false;
+            }, 280);
+
+            var action = getHorizontalSwipeAction(dx, blocksPosition, horizontalSwipeOrder);
+            if (action === 'close' && !blocksPaletteCollapsed) {
+                executePaletteAction(true);
+            } else if (action === 'open' && blocksPaletteCollapsed) {
+                executePaletteAction(false);
+            }
+        };
+
+        el.addEventListener('pointerdown', onCapturePointerDown, {capture: true, passive: true});
+        el.addEventListener('wheel', onCaptureWheel, {capture: true, passive: false});
+
+        return function () {
+            el.removeEventListener('pointerdown', onCapturePointerDown, {capture: true});
+            el.removeEventListener('wheel', onCaptureWheel, {capture: true});
+        };
+    }, [blocksWrapperNode, blocksPaletteCollapsed, executePaletteAction, blocksPosition, horizontalSwipeOrder]);
+
     const [isDragToSplit, setIsDragToSplit] = useState(false);
     const [dragZone, setDragZone] = useState(null);
     const [isFullSize, setIsFullSize] = useState(
@@ -290,7 +627,9 @@ const GUIComponent = props => {
                 const containerRect = flexWrapperRef.current.getBoundingClientRect();
                 const totalW = containerRect.width;
 
-                const deltaX = isRtlMode ? (moveEvent.clientX - startX) : (startX - moveEvent.clientX);
+                const deltaX = (isRtlMode || stagePosition === 'left') ?
+                    (moveEvent.clientX - startX) :
+                    (startX - moveEvent.clientX);
                 const nextWidth = startWidth + deltaX;
 
                 const minW = 340;
@@ -323,7 +662,7 @@ const GUIComponent = props => {
 
         document.addEventListener('pointermove', onPointerMove);
         document.addEventListener('pointerup', onPointerUp);
-    }, [stagePanelWidth, isRtl]);
+    }, [stagePanelWidth, isRtl, stagePosition]);
 
     const handleStageResizeDoubleClick = useCallback(() => {
         setStagePanelWidth(430);
@@ -332,6 +671,172 @@ const GUIComponent = props => {
         } catch (err) {}
         window.dispatchEvent(new Event('resize'));
     }, []);
+
+    const [isStageCollapsed, setIsStageCollapsed] = useState(() => {
+        if (typeof window !== 'undefined') {
+            return localStorage.getItem('scratch_stage_collapsed') === 'true';
+        }
+        return false;
+    });
+
+    const [stageWrapperNode, setStageWrapperNode] = useState(null);
+    const stageWrapperRef = useRef(null);
+    const handleSetStageWrapper = useCallback(node => {
+        stageWrapperRef.current = node;
+        setStageWrapperNode(node);
+    }, []);
+
+    const executeStageAction = useCallback(function (shouldCollapse) {
+        setIsStageCollapsed(function (prev) {
+            if (prev === shouldCollapse) return prev;
+            try {
+                localStorage.setItem('scratch_stage_collapsed', String(shouldCollapse));
+            } catch (_) {}
+            setTimeout(function () {
+                window.dispatchEvent(new Event('resize'));
+            }, 50);
+            setTimeout(function () {
+                window.dispatchEvent(new Event('resize'));
+            }, 320);
+            return shouldCollapse;
+        });
+    }, []);
+
+    const handleToggleStageCollapse = useCallback(() => {
+        executeStageAction(!isStageCollapsed);
+    }, [executeStageAction, isStageCollapsed]);
+
+    const stageWheelLockRef = useRef(false);
+
+    // Native capture listeners on stageWrapperNode to guarantee swipes across the entire simulator area work smoothly!
+    useEffect(function () {
+        var el = stageWrapperNode || stageWrapperRef.current;
+        if (!el) return;
+
+        var stageDrag = null;
+
+        var onCapturePointerDown = function (e) {
+            if (e.button !== 0) return;
+            var target = e.target;
+            // Never intercept clicks on the running Scratch project canvas, buttons, or input boxes
+            if (target && (target.tagName === 'CANVAS' || target.closest('button') || target.closest('input') || target.closest('select'))) {
+                return;
+            }
+
+            stageDrag = {
+                startX: e.clientX,
+                startY: e.clientY,
+                active: true
+            };
+
+            var onPointerMove = function (moveEvent) {
+                if (!stageDrag || !stageDrag.active) return;
+                var dx = moveEvent.clientX - stageDrag.startX;
+                var dy = moveEvent.clientY - stageDrag.startY;
+
+                if (Math.abs(dx) >= 20 && Math.abs(dx) > Math.abs(dy) * 1.3) {
+                    stageDrag.active = false;
+                    cleanupMove();
+
+                    var action = getHorizontalSwipeAction(dx, stagePosition, horizontalSwipeOrder);
+                    if (action === 'close' && !isStageCollapsed) {
+                        executeStageAction(true);
+                    } else if (action === 'open' && isStageCollapsed) {
+                        executeStageAction(false);
+                    }
+                }
+            };
+
+            var onPointerUp = function () {
+                if (stageDrag) stageDrag.active = false;
+                cleanupMove();
+            };
+
+            var cleanupMove = function () {
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+            };
+
+            window.addEventListener('pointermove', onPointerMove);
+            window.addEventListener('pointerup', onPointerUp);
+        };
+
+        var onCaptureWheel = function (e) {
+            var dx = e.deltaX;
+            var dy = e.deltaY;
+            if (Math.abs(dx) < 14 || Math.abs(dx) <= Math.abs(dy) * 1.2) return;
+
+            if (stageWheelLockRef.current) return;
+            stageWheelLockRef.current = true;
+            setTimeout(function () {
+                stageWheelLockRef.current = false;
+            }, 280);
+
+            var action = getHorizontalSwipeAction(dx, stagePosition, horizontalSwipeOrder);
+            if (action === 'close' && !isStageCollapsed) {
+                executeStageAction(true);
+            } else if (action === 'open' && isStageCollapsed) {
+                executeStageAction(false);
+            }
+        };
+
+        el.addEventListener('pointerdown', onCapturePointerDown, {capture: true, passive: true});
+        el.addEventListener('wheel', onCaptureWheel, {capture: true, passive: false});
+
+        return function () {
+            el.removeEventListener('pointerdown', onCapturePointerDown, {capture: true});
+            el.removeEventListener('wheel', onCaptureWheel, {capture: true});
+        };
+    }, [stageWrapperNode, isStageCollapsed, executeStageAction, stagePosition, horizontalSwipeOrder]);
+
+    const stageToggleDragRef = useRef({startX: 0, hasDragged: false, active: false});
+    const handleStageTogglePointerDown = useCallback(function (e) {
+        if (e.button !== 0) return;
+        stageToggleDragRef.current = {startX: e.clientX, hasDragged: false, active: true};
+        var onPointerMove = function (moveEvent) {
+            if (!stageToggleDragRef.current.active) return;
+            var dx = moveEvent.clientX - stageToggleDragRef.current.startX;
+            if (Math.abs(dx) > 14) {
+                stageToggleDragRef.current.hasDragged = true;
+                stageToggleDragRef.current.active = false;
+                window.removeEventListener('pointermove', onPointerMove);
+                window.removeEventListener('pointerup', onPointerUp);
+
+                var action = getHorizontalSwipeAction(dx, stagePosition, horizontalSwipeOrder);
+                if (action === 'close' && !isStageCollapsed) {
+                    executeStageAction(true);
+                } else if (action === 'open' && isStageCollapsed) {
+                    executeStageAction(false);
+                }
+            }
+        };
+        var onPointerUp = function () {
+            stageToggleDragRef.current.active = false;
+            window.removeEventListener('pointermove', onPointerMove);
+            window.removeEventListener('pointerup', onPointerUp);
+        };
+        window.addEventListener('pointermove', onPointerMove);
+        window.addEventListener('pointerup', onPointerUp);
+    }, [isStageCollapsed, stagePosition, horizontalSwipeOrder, executeStageAction]);
+
+    const handleStageWheel = useCallback(function (e) {
+        var dx = e.deltaX;
+        var dy = e.deltaY;
+        if (Math.abs(dx) < 14 || Math.abs(dx) <= Math.abs(dy) * 1.2) return;
+
+        if (stageWheelLockRef.current) return;
+        stageWheelLockRef.current = true;
+        setTimeout(function () {
+            stageWheelLockRef.current = false;
+        }, 280);
+
+        var action = getHorizontalSwipeAction(dx, stagePosition, horizontalSwipeOrder);
+        if (action === 'close' && !isStageCollapsed) {
+            executeStageAction(true);
+        } else if (action === 'open' && isStageCollapsed) {
+            executeStageAction(false);
+        }
+    }, [isStageCollapsed, stagePosition, horizontalSwipeOrder, executeStageAction]);
 
     const dynamicStageDimensions = useMemo(() => {
         if (isFullScreen) return null;
@@ -385,7 +890,19 @@ const GUIComponent = props => {
     }, [targetIsStage]);
 
     const codePanel = useMemo(() => (
-        <Box className={styles.blocksWrapper}>
+        <Box
+            className={classNames(
+                styles.blocksWrapper,
+                {
+                    [styles.paletteCollapsed]: blocksPaletteCollapsed,
+                    [styles.blocksRight]: blocksPosition === 'right',
+                    [styles.blocksExitingDown]: blocksAnimating === 'exiting-down',
+                    [styles.blocksEnteringUp]: blocksAnimating === 'entering-up'
+                }
+            )}
+            componentRef={handleSetBlocksWrapper}
+            data-code-panel="true"
+        >
             <Blocks
                 key={`${blocksId}/${theme}`}
                 canUseCloud={canUseCloud}
@@ -399,14 +916,90 @@ const GUIComponent = props => {
                 theme={theme}
                 vm={vm}
             />
+            <Box
+                className={classNames(
+                    styles.extensionButtonContainer,
+                    {
+                        [styles.paletteCollapsed]: blocksPaletteCollapsed,
+                        [styles.positionRight]: blocksPosition === 'right',
+                        [styles.blocksExitingDown]: blocksAnimating === 'exiting-down',
+                        [styles.blocksEnteringUp]: blocksAnimating === 'entering-up'
+                    }
+                )}
+            >
+                <button
+                    className={styles.extensionButton}
+                    title={intl.formatMessage(messages.addExtension)}
+                    onClick={onExtensionButtonClick}
+                >
+                    <img
+                        className={styles.extensionButtonIcon}
+                        draggable={false}
+                        src={addExtensionIcon}
+                    />
+                </button>
+            </Box>
+            <button
+                className={classNames(
+                    styles.paletteCollapseToggle,
+                    {
+                        [styles.paletteCollapsed]: blocksPaletteCollapsed,
+                        [styles.positionRight]: blocksPosition === 'right',
+                        [styles.blocksExitingDown]: blocksAnimating === 'exiting-down',
+                        [styles.blocksEnteringUp]: blocksAnimating === 'entering-up'
+                    }
+                )}
+                onClick={handleToggleClick}
+                onPointerDown={handleTogglePointerDown}
+                title={((intl && intl.locale && intl.locale.toLowerCase().startsWith('es')) ?
+                    (blocksPaletteCollapsed ? 'Mostrar paleta de bloques (clic o deslizar)' : 'Colapsar paleta de bloques (clic o deslizar)') :
+                    (intl ?
+                        intl.formatMessage(blocksPaletteCollapsed ? messages.showPalette : messages.collapsePalette) :
+                        (blocksPaletteCollapsed ? 'Show blocks palette (click or swipe)' : 'Collapse blocks palette (click or swipe)'))
+                )}
+                type="button"
+            >
+                <svg
+                    className={styles.paletteCollapseIcon}
+                    width="12"
+                    height="12"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                >
+                    {blocksPosition === 'right' ? (
+                        blocksPaletteCollapsed ? (
+                            <polyline points="15 18 9 12 15 6" />
+                        ) : (
+                            <polyline points="9 18 15 12 9 6" />
+                        )
+                    ) : (
+                        blocksPaletteCollapsed ? (
+                            <polyline points="9 18 15 12 9 6" />
+                        ) : (
+                            <polyline points="15 18 9 12 15 6" />
+                        )
+                    )}
+                </svg>
+            </button>
         </Box>
-    ), [blocksId, theme, canUseCloud, blocksTabVisible, vm, basePath, stageSize]);
+    ), [blocksId, theme, canUseCloud, blocksTabVisible, vm, basePath, stageSize, blocksPaletteCollapsed, blocksPosition, blocksAnimating, intl, onExtensionButtonClick, handleToggleClick, handleSetBlocksWrapper, handleTogglePointerDown]);
 
     const costumePanel = useMemo(() => <CostumeTab vm={vm} />, [vm]);
     const soundPanel = useMemo(() => <SoundTab vm={vm} />, [vm]);
 
     const controlPanel = useMemo(() => (
-        <Box className={styles.blocksWrapper}>
+        <Box
+            className={classNames(
+                styles.blocksWrapper,
+                {
+                    [styles.blocksRight]: blocksPosition === 'right'
+                }
+            )}
+        >
             <Blocks
                 key={'control/' + theme}
                 canUseCloud={canUseCloud}
@@ -420,7 +1013,7 @@ const GUIComponent = props => {
                 vm={controlVm}
             />
         </Box>
-    ), [theme, canUseCloud, controlVm, basePath, stageSize]);
+    ), [theme, canUseCloud, controlVm, basePath, stageSize, blocksPosition]);
 
     const circuitosPanel = useMemo(() => <CircuitosTab vm={vm} />, [vm]);
     const tab3dPanel = useMemo(() => <Tab3D vm={vm} />, [vm]);
@@ -481,7 +1074,10 @@ const GUIComponent = props => {
 
     const renderEditor = () => (
         <Box className={styles.bodyWrapper}>
-            <Box className={styles.flexWrapper} componentRef={el => { flexWrapperRef.current = el; }}>
+            <Box
+                className={classNames(styles.flexWrapper, {[styles.stageLeft]: stagePosition === 'left'})}
+                componentRef={el => { flexWrapperRef.current = el; }}
+            >
                 <Box className={styles.editorWrapper}>
                     <TabBar
                         tabs={tabsConfig}
@@ -516,26 +1112,12 @@ const GUIComponent = props => {
                             </div>
                         )}
                         {!showSplit && activeTabId === 'code' && (
-                            <Box className={styles.extensionButtonContainer}>
-                                <button
-                                    className={styles.extensionButton}
-                                    title={intl.formatMessage(messages.addExtension)}
-                                    onClick={onExtensionButtonClick}
-                                >
-                                    <img
-                                        className={styles.extensionButtonIcon}
-                                        draggable={false}
-                                        src={addExtensionIcon}
-                                    />
-                                </button>
-                            </Box>
-                        )}
-                        {!showSplit && activeTabId === 'code' && (
                             <Box className={styles.watermark}>
                                 <Watermark selectedDevice={selectedDevice} />
                             </Box>
                         )}
                         <FloatingAiChat
+                            activeTabId={activeTabId}
                             isOpen={aiChatOpen}
                             onToggle={handleAiChatToggle}
                             vm={vm}
@@ -543,10 +1125,20 @@ const GUIComponent = props => {
                             projectKey={projectKey}
                             onClearExplain={onClearExplain}
                             onActivateTab={onActivateTab}
+                            isPaletteCollapsed={blocksPaletteCollapsed}
+                            onTogglePalette={handleTogglePalette}
+                            blocksPosition={blocksPosition}
+                            aiBarPosition={aiBarPosition}
+                            stagePosition={stagePosition}
+                            showSplit={showSplit}
+                            secondaryTabId={secondaryTabId}
+                            splitRatio={splitRatio}
+                            isStageCollapsed={isStageCollapsed}
+                            swipeOrder={swipeOrder}
                         />
                     </div>
                 </Box>
-                {!isFullScreen && (
+                {!isFullScreen && !isStageCollapsed && (
                     <div
                         className={classNames(
                             styles.stageResizeHandle,
@@ -557,11 +1149,65 @@ const GUIComponent = props => {
                         role="separator"
                         aria-orientation="vertical"
                         tabIndex={0}
+                        title={((intl && intl.locale && intl.locale.toLowerCase().startsWith('es')) ?
+                            'Arrastrar para redimensionar (doble clic para restablecer)' :
+                            'Drag to resize (double click to reset)'
+                        )}
                     />
                 )}
+                {!isFullScreen && (
+                    <button
+                        className={classNames(
+                            styles.stageCollapseToggle,
+                            {
+                                [styles.stageCollapsed]: isStageCollapsed,
+                                [styles.stageLeft]: stagePosition === 'left'
+                            }
+                        )}
+                        onClick={handleToggleStageCollapse}
+                        onWheel={handleStageWheel}
+                        onPointerDown={handleStageTogglePointerDown}
+                        title={((intl && intl.locale && intl.locale.toLowerCase().startsWith('es')) ?
+                            (isStageCollapsed ? 'Mostrar simulador' : 'Colapsar simulador') :
+                            (intl ?
+                                intl.formatMessage(isStageCollapsed ? messages.showSimulator : messages.collapseSimulator) :
+                                (isStageCollapsed ? 'Show simulator' : 'Collapse simulator'))
+                        )}
+                        type="button"
+                    >
+                        <svg
+                            className={styles.paletteCollapseIcon}
+                            width="12"
+                            height="12"
+                            viewBox="0 0 24 24"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="2.5"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                        >
+                            {stagePosition === 'left' ? (
+                                isStageCollapsed ? (
+                                    <polyline points="9 18 15 12 9 6" />
+                                ) : (
+                                    <polyline points="15 18 9 12 15 6" />
+                                )
+                            ) : (
+                                isStageCollapsed ? (
+                                    <polyline points="15 18 9 12 15 6" />
+                                ) : (
+                                    <polyline points="9 18 15 12 9 6" />
+                                )
+                            )}
+                        </svg>
+                    </button>
+                )}
                 <Box
-                    className={classNames(styles.stageAndTargetWrapper, styles[stageSize])}
-                    style={{width: `${stagePanelWidth}px`}}
+                    className={classNames(styles.stageAndTargetWrapper, styles[stageSize], {
+                        [styles.stageCollapsed]: isStageCollapsed
+                    })}
+                    componentRef={handleSetStageWrapper}
+                    style={isStageCollapsed ? {width: 0} : {width: `${stagePanelWidth}px`}}
                     data-stage-panel="true"
                     data-panel-right="true"
                 >
@@ -768,7 +1414,13 @@ GUIComponent.propTypes = {
     onReorderTabs: PropTypes.func,
     onClearExplain: PropTypes.func,
     onSetProjectKey: PropTypes.func,
-    selectedDevice: PropTypes.object
+    selectedDevice: PropTypes.object,
+    blocksPosition: PropTypes.string,
+    aiBarPosition: PropTypes.string,
+    stagePosition: PropTypes.string,
+    blocksAnimating: PropTypes.string,
+    swipeOrder: PropTypes.string,
+    horizontalSwipeOrder: PropTypes.string
 };
 
 GUIComponent.defaultProps = {
@@ -791,7 +1443,13 @@ GUIComponent.defaultProps = {
     showComingSoon: false,
     stageSizeMode: STAGE_SIZE_MODES.large,
     splitRatio: 0.5,
-    selectedDevice: null
+    selectedDevice: null,
+    blocksPosition: 'left',
+    aiBarPosition: 'bottom',
+    stagePosition: 'right',
+    blocksAnimating: null,
+    swipeOrder: 'up-close-down-open',
+    horizontalSwipeOrder: 'left-close-right-open'
 };
 
 const mapStateToProps = state => ({
@@ -800,7 +1458,13 @@ const mapStateToProps = state => ({
     theme: state.scratchGui.theme.theme,
     toolboxXML: state.scratchGui.toolbox.toolboxXML,
     reducedMotion: state.scratchGui.animations.reducedMotion,
-    selectedDevice: state.scratchGui.device.selectedDevice
+    selectedDevice: state.scratchGui.device.selectedDevice,
+    blocksPosition: state.scratchGui.displaySettings ? state.scratchGui.displaySettings.blocksPosition : 'left',
+    aiBarPosition: state.scratchGui.displaySettings ? state.scratchGui.displaySettings.aiBarPosition : 'bottom',
+    stagePosition: state.scratchGui.displaySettings ? state.scratchGui.displaySettings.stagePosition : 'right',
+    blocksAnimating: state.scratchGui.displaySettings ? state.scratchGui.displaySettings.blocksAnimating : null,
+    swipeOrder: state.scratchGui.displaySettings ? state.scratchGui.displaySettings.swipeOrder : 'up-close-down-open',
+    horizontalSwipeOrder: state.scratchGui.displaySettings ? state.scratchGui.displaySettings.horizontalSwipeOrder : 'left-close-right-open'
 });
 
 export default injectIntl(connect(

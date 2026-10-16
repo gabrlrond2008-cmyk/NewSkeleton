@@ -2,6 +2,8 @@
 @import "../../css/colors.css";
 
 .container {
+    container-type: inline-size;
+    container-name: aiContainer;
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -151,55 +153,90 @@
 
 .msgActions {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 6px;
-    margin: 6px 0 0 0;
-    animation: slideInLeft 0.3s ease;
+    margin: 8px 0 0 0;
+    animation: slideInLeft 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
 .actionBtn {
     display: inline-flex;
     align-items: center;
-    gap: 4px;
-    padding: 3px 8px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    background: #fafafa;
-    color: #666;
-    font-size: 0.68rem;
+    justify-content: center;
+    gap: 5px;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    color: #4b5563;
+    font-size: 0.72rem;
+    font-weight: 500;
     cursor: pointer;
-    font-family: inherit;
-    transition: border-color 0.15s, color 0.15s, background 0.15s, opacity 0.15s;
+    font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    white-space: nowrap;
+    user-select: none;
+    transition: width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                padding 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                border-color 0.2s ease,
+                background-color 0.2s ease,
+                color 0.2s ease,
+                transform 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                box-shadow 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.actionBtn svg {
+    flex-shrink: 0;
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.actionBtnLabel {
+    display: inline-block;
+    max-width: 140px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    opacity: 1;
+    transition: max-width 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                margin 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.actionBtn:hover {
+    transform: translateY(-1px) scale(1.02);
+    box-shadow: 0 3px 8px rgba(0, 0, 0, 0.08);
+}
+
+.actionBtn:active {
+    transform: translateY(0) scale(0.97);
 }
 
 .actionBtn:disabled {
-    opacity: 0.5;
+    opacity: 0.45;
     cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
 }
 
-.verifyBtn:hover {
-    border-color: #4caf50;
-    color: #4caf50;
-    background: #f0faf0;
-}
-
-.verifying {
-    border-color: #ff9800;
-    color: #ff9800;
-    background: #fff8e1;
-    animation: pulse 0.8s infinite;
-}
-
+/* Individual Apple-style hover accents (all buttons rest in uniform neutral gray) */
 .createBtn:hover {
-    border-color: $looks-secondary;
-    color: $looks-secondary;
-    background: #f3eefb;
+    border-color: #8b5cf6;
+    color: #6d28d9;
+    background: #ede9fe;
+    box-shadow: 0 3px 10px rgba(139, 92, 246, 0.2);
 }
 
 .developBtn:hover {
     border-color: #1a73e8;
-    color: #1a73e8;
-    background: #e8f0fe;
+    color: #0b57d0;
+    background: #d2e3fc;
+    box-shadow: 0 3px 10px rgba(26, 115, 232, 0.2);
 }
+
 
 .developingGame {
     border-color: #1a73e8;
@@ -215,28 +252,116 @@
     animation: pulse 0.8s infinite;
 }
 
+.verifyBtn:hover {
+    border-color: #22c55e;
+    color: #16a34a;
+    background: #f0fdf4;
+    box-shadow: 0 3px 10px rgba(34, 197, 94, 0.18);
+}
+
+.verifying {
+    border-color: #ff9800;
+    color: #ff9800;
+    background: #fff8e1;
+    animation: pulse 0.8s infinite;
+}
+
 .revertBtn:hover {
-    border-color: #ff7043;
-    color: #ff7043;
-    background: #fff3ef;
+    border-color: #f97316;
+    color: #ea580c;
+    background: #fff7ed;
 }
 
-.flowBtn:hover {
-    border-color: #4a6dcc;
-    color: #4a6dcc;
-    background: #eef2fb;
-}
-
+.flowBtn:hover,
 .flowBtnActive {
-    border-color: #4a6dcc;
-    color: #4a6dcc;
-    background: #eef2fb;
+    border-color: #3b82f6;
+    color: #2563eb;
+    background: #eff6ff;
 }
 
 .stopBtn {
-    border-color: #e02f2f;
-    color: #e02f2f;
-    background: #fdecec;
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #ef4444;
+    background: rgba(254, 242, 242, 0.9);
+}
+
+.stopBtn:hover {
+    border-color: #ef4444;
+    color: #dc2626;
+    background: #fee2e2;
+}
+
+/* Apple-style Responsive Dynamic Collapse:
+   In tight spaces, buttons become circular icons.
+   Hovering over any button springs open its label smoothly! */
+@container aiContainer (max-width: 440px) {
+    .actionBtn {
+        padding: 0;
+        width: 28px;
+        height: 28px;
+        gap: 0;
+        border-radius: 9999px;
+    }
+
+    .actionBtn .actionBtnLabel {
+        max-width: 0;
+        opacity: 0;
+        margin: 0;
+        pointer-events: none;
+    }
+
+    .actionBtn:hover,
+    .actionBtn:focus-visible {
+        width: auto;
+        padding: 0 10px;
+        gap: 5px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+        transform: translateY(-1px) scale(1.04);
+        z-index: 10;
+    }
+
+    .actionBtn:hover .actionBtnLabel,
+    .actionBtn:focus-visible .actionBtnLabel {
+        max-width: 140px;
+        opacity: 1;
+        margin-left: 2px;
+        pointer-events: auto;
+    }
+}
+
+@media (max-width: 480px) {
+    .actionBtn {
+        padding: 0;
+        width: 28px;
+        height: 28px;
+        gap: 0;
+        border-radius: 9999px;
+    }
+
+    .actionBtn .actionBtnLabel {
+        max-width: 0;
+        opacity: 0;
+        margin: 0;
+        pointer-events: none;
+    }
+
+    .actionBtn:hover,
+    .actionBtn:focus-visible {
+        width: auto;
+        padding: 0 10px;
+        gap: 5px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.12);
+        transform: translateY(-1px) scale(1.04);
+        z-index: 10;
+    }
+
+    .actionBtn:hover .actionBtnLabel,
+    .actionBtn:focus-visible .actionBtnLabel {
+        max-width: 140px;
+        opacity: 1;
+        margin-left: 2px;
+        pointer-events: auto;
+    }
 }
 
 .flowPanel {
@@ -332,219 +457,8 @@
     white-space: nowrap;
 }
 
-/* ===== ARTIST LIBRARY OPTIONS ===== */
-.artistOptionsContainer {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    margin: 8px 0 6px 0;
-    padding: 10px 12px;
-    background: #f0f7ff;
-    border: 1px solid #c2e0ff;
-    border-radius: 8px;
-    animation: slideInLeft 0.25s ease;
-}
+/* ===== ARTIST LIBRARY OPTIONS (STYLED AT BOTTOM OF FILE) ===== */
 
-[data-theme="dark"] .artistOptionsContainer {
-    background: #132238;
-    border-color: #1f3b60;
-}
-
-.artistOptionsHeader {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    font-size: 0.74rem;
-    font-weight: 700;
-    color: #0b57d0;
-}
-
-[data-theme="dark"] .artistOptionsHeader {
-    color: #7dadff;
-}
-
-.artistCountdown {
-    font-size: 0.65rem;
-    font-weight: 600;
-    color: #1a73e8;
-    background: #e8f0fe;
-    padding: 2px 6px;
-    border-radius: 10px;
-}
-
-[data-theme="dark"] .artistCountdown {
-    background: #1b3860;
-    color: #8ab4f8;
-}
-
-.artistTabsRow {
-    display: flex;
-    gap: 6px;
-    overflow-x: auto;
-    padding-bottom: 2px;
-}
-
-.artistTabBtn {
-    background: #ffffff;
-    border: 1px solid #d0d7de;
-    border-radius: 14px;
-    padding: 4px 10px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: #444;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.15s ease;
-}
-
-.artistTabBtn:hover {
-    border-color: #1a73e8;
-    color: #0b57d0;
-    background: #e8f0fe;
-}
-
-.artistTabBtnActive {
-    background: #1a73e8;
-    border-color: #1a73e8;
-    color: #ffffff;
-    box-shadow: 0 1px 4px rgba(26, 115, 232, 0.3);
-}
-
-[data-theme="dark"] .artistTabBtn {
-    background: #1c2b3d;
-    border-color: #2b3d52;
-    color: #bbb;
-}
-
-[data-theme="dark"] .artistTabBtn:hover {
-    background: #233954;
-    color: #8ab4f8;
-}
-
-[data-theme="dark"] .artistTabBtnActive {
-    background: #1a73e8;
-    border-color: #1a73e8;
-    color: #ffffff;
-}
-
-.artistCardsGrid {
-    display: flex;
-    gap: 8px;
-    overflow-x: auto;
-    padding-bottom: 4px;
-}
-
-.artistCard {
-    flex: 1 1 0;
-    min-width: 90px;
-    max-width: 130px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    padding: 8px 6px 6px 6px;
-    background: #ffffff;
-    border: 2px solid #e0e0e0;
-    border-radius: 8px;
-    cursor: pointer;
-    transition: all 0.2s ease;
-    user-select: none;
-    position: relative;
-}
-
-[data-theme="dark"] .artistCard {
-    background: #1c2b3d;
-    border-color: #2e435e;
-}
-
-.artistCard:hover {
-    border-color: #1a73e8;
-    transform: translateY(-2px);
-    box-shadow: 0 3px 8px rgba(26, 115, 232, 0.22);
-}
-
-.artistCardSelected {
-    border-color: #0b57d0;
-    background: #e8f0fe;
-    box-shadow: 0 0 0 2px rgba(11, 87, 208, 0.35);
-}
-
-[data-theme="dark"] .artistCardSelected {
-    background: #193153;
-    border-color: #4c97ff;
-    box-shadow: 0 0 0 2px rgba(76, 151, 255, 0.4);
-}
-
-.artistCardThumb {
-    width: 48px;
-    height: 48px;
-    object-fit: contain;
-    margin-bottom: 4px;
-}
-
-.artistCardThumbFallback {
-    width: 48px;
-    height: 48px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    margin-bottom: 4px;
-}
-
-.artistCardName {
-    font-size: 0.68rem;
-    font-weight: 600;
-    text-align: center;
-    color: #333;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    max-width: 100%;
-}
-
-[data-theme="dark"] .artistCardName {
-    color: #ddd;
-}
-
-.artistSelectedBadge {
-    display: inline-block;
-    margin-top: 4px;
-    font-size: 0.6rem;
-    font-weight: 700;
-    color: #0b57d0;
-    background: #d2e3fc;
-    padding: 1px 5px;
-    border-radius: 8px;
-}
-
-[data-theme="dark"] .artistSelectedBadge {
-    color: #8ab4f8;
-    background: #25446e;
-}
-
-.artistFooterRow {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 4px;
-}
-
-.artistConfirmBtn {
-    background: #0b57d0;
-    color: #ffffff;
-    border: none;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 0.72rem;
-    font-weight: 600;
-    cursor: pointer;
-    box-shadow: 0 1px 4px rgba(11, 87, 208, 0.25);
-    transition: all 0.15s ease;
-}
-
-.artistConfirmBtn:hover {
-    background: #0842a0;
-    box-shadow: 0 2px 6px rgba(11, 87, 208, 0.35);
-}
 
 .createSuccess {
     background: #f0faf0;
@@ -1032,41 +946,50 @@
 }
 
 [data-theme="dark"] .actionBtn {
-    border-color: #333;
-    background: #1a1a1a;
-    color: #999;
+    border-color: rgba(255, 255, 255, 0.12);
+    background: rgba(30, 41, 59, 0.88);
+    color: #cbd5e1;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
 }
+
+[data-theme="dark"] .createBtn:hover {
+    border-color: #a78bfa;
+    color: #c4b5fd;
+    background: rgba(139, 92, 246, 0.28);
+    box-shadow: 0 3px 12px rgba(139, 92, 246, 0.3);
+}
+
+[data-theme="dark"] .developBtn:hover {
+    border-color: #60a5fa;
+    color: #93c5fd;
+    background: rgba(59, 130, 246, 0.28);
+    box-shadow: 0 3px 12px rgba(59, 130, 246, 0.3);
+}
+
 
 [data-theme="dark"] .verifyBtn:hover {
     border-color: #4caf50;
     color: #4caf50;
-    background: rgba(76, 175, 80, 0.1);
-}
-
-[data-theme="dark"] .creating,
-[data-theme="dark"] .createBtn:hover {
-    border-color: $looks-secondary;
-    color: $looks-secondary;
-    background: rgba(0, 53, 122, 0.15);
+    background: rgba(76, 175, 80, 0.18);
 }
 
 [data-theme="dark"] .revertBtn:hover {
     border-color: #ff7043;
     color: #ff7043;
-    background: rgba(255, 112, 67, 0.12);
+    background: rgba(255, 112, 67, 0.18);
 }
 
 [data-theme="dark"] .flowBtn:hover,
 [data-theme="dark"] .flowBtnActive {
     border-color: #7a9ae6;
     color: #7a9ae6;
-    background: rgba(74, 109, 204, 0.15);
+    background: rgba(74, 109, 204, 0.2);
 }
 
 [data-theme="dark"] .stopBtn {
-    border-color: #e57373;
-    color: #e57373;
-    background: rgba(224, 47, 47, 0.12);
+    border-color: #ef4444;
+    color: #f87171;
+    background: rgba(239, 68, 68, 0.15);
 }
 
 [data-theme="dark"] .trainBtn:hover {
@@ -1231,65 +1154,77 @@
 }
 
 /* ============================================================
-   ARTIST CANDIDATE SELECTION PANEL (Blue Palette)
+   ARTIST & MUSICIAN CANDIDATE SELECTION PANEL (Google Minimalist)
    ============================================================ */
-.artistOptionsContainer {
-    margin-top: 10px;
-    padding: 10px 12px;
+@keyframes artistSlideUp {
+    from {
+        opacity: 0;
+        transform: translateY(6px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes pulseDot {
+    0%, 100% {
+        opacity: 1;
+        transform: scale(1);
+    }
+    50% {
+        opacity: 0.4;
+        transform: scale(0.85);
+    }
+}
+
+@keyframes soundWave {
+    0% {
+        height: 4px;
+    }
+    100% {
+        height: 20px;
+    }
+}
+
+.artistPillBarContainer {
+    margin-top: 8px;
+    padding: 6px 10px;
     background: #ffffff;
-    border: 1px solid #e2e8f0;
-    border-radius: 10px;
-    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    border: 1px solid #dadce0;
+    border-radius: 9999px;
+    box-shadow: 0 1px 3px rgba(60, 64, 67, 0.08), 0 2px 6px rgba(60, 64, 67, 0.04);
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    animation: artistSlideUp 0.2s cubic-bezier(0.2, 0, 0, 1) both;
+    transform: translateZ(0);
 }
 
-[data-theme="dark"] .artistOptionsContainer {
-    background: #1e293b;
-    border-color: #334155;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
+[data-theme="dark"] .artistPillBarContainer {
+    background: #202124;
+    border-color: #3c4043;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
 }
 
-.artistOptionsHeader {
+.artistPillBarHeader {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    font-size: 0.74rem;
-    font-weight: 600;
-    color: #1e293b;
-    margin-bottom: 8px;
-}
-
-[data-theme="dark"] .artistOptionsHeader {
-    color: #cbd5e1;
-}
-
-.artistCountdown {
-    font-size: 0.68rem;
-    font-weight: 600;
-    color: #0050aa;
-    background: #eff6ff;
-    padding: 2px 8px;
-    border-radius: 10px;
-    border: 1px solid #dbeafe;
-}
-
-[data-theme="dark"] .artistCountdown {
-    color: #60a5fa;
-    background: rgba(96, 165, 250, 0.12);
-    border-color: rgba(96, 165, 250, 0.2);
+    gap: 8px;
+    width: 100%;
 }
 
 .artistTabsRow {
     display: flex;
     gap: 4px;
     overflow-x: auto;
-    padding: 3px;
-    margin-bottom: 8px;
-    background: #f1f5f9;
-    border-radius: 8px;
+    padding: 2px;
+    scrollbar-width: none;
 }
 
-[data-theme="dark"] .artistTabsRow {
-    background: #0f172a;
+.artistTabsRow::-webkit-scrollbar {
+    display: none;
 }
 
 .artistTabBtn {
@@ -1297,214 +1232,330 @@
     align-items: center;
     gap: 4px;
     padding: 3px 10px;
-    border-radius: 6px;
-    border: none;
-    background: transparent;
-    color: #64748b;
-    font-size: 0.71rem;
+    border-radius: 9999px;
+    border: 1px solid transparent;
+    background: #f1f3f4;
+    color: #5f6368;
+    font-size: 0.68rem;
     font-weight: 500;
     cursor: pointer;
     white-space: nowrap;
-    transition: background-color 0.15s ease, color 0.15s ease;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
 }
 
 .artistTabBtn:hover {
-    color: #0f172a;
-    background: rgba(255, 255, 255, 0.6);
+    color: #202124;
+    background: #e8eaed;
 }
 
 .artistTabBtnActive {
-    background: #ffffff !important;
-    color: #0050aa !important;
+    background: #e8f0fe !important;
+    border-color: rgba(26, 115, 232, 0.3) !important;
+    color: #1a73e8 !important;
     font-weight: 600 !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
 }
 
 [data-theme="dark"] .artistTabBtn {
-    color: #94a3b8;
+    background: #303134;
+    color: #9aa0a6;
 }
 
 [data-theme="dark"] .artistTabBtn:hover {
-    color: #f1f5f9;
-    background: rgba(255, 255, 255, 0.06);
+    color: #e8eaed;
+    background: #3c4043;
 }
 
 [data-theme="dark"] .artistTabBtnActive {
-    background: #1e293b !important;
-    color: #60a5fa !important;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    background: rgba(138, 180, 248, 0.18) !important;
+    border-color: rgba(138, 180, 248, 0.35) !important;
+    color: #8ab4f8 !important;
 }
 
-.artistCardsGrid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    margin-bottom: 8px;
+.artistTabIcon {
+    font-size: 0.76rem;
+    line-height: 1;
 }
 
-.artistCard {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: flex-start;
-    padding: 6px 5px 8px 5px;
-    border-radius: 8px;
-    border: 1.5px solid #e2e8f0;
-    background: #f8fafc;
-    cursor: pointer;
-    min-height: 80px;
-    user-select: none;
-    box-sizing: border-box;
-    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+.artistTabLabel {
+    line-height: 1.2;
 }
 
-.artistCard:hover {
-    border-color: #94a3b8;
-    background: #f1f5f9;
-}
-
-.artistCardSelected {
-    border-color: #0066cc !important;
-    background: #eff6ff !important;
-    box-shadow: 0 0 0 1px #0066cc;
-}
-
-[data-theme="dark"] .artistCard {
-    background: #0f172a;
-    border-color: #334155;
-}
-
-[data-theme="dark"] .artistCard:hover {
-    border-color: #64748b;
-    background: #1e293b;
-}
-
-[data-theme="dark"] .artistCardSelected {
-    border-color: #3b82f6 !important;
-    background: rgba(59, 130, 246, 0.12) !important;
-    box-shadow: 0 0 0 1px #3b82f6;
-}
-
-.artistRadioRow {
-    width: 100%;
-    display: flex;
-    justify-content: flex-end;
-    margin-bottom: 2px;
-}
-
-.artistRadioCircle {
-    width: 13px;
-    height: 13px;
-    border-radius: 50%;
-    border: 1.5px solid #cbd5e1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: #ffffff;
-    box-sizing: border-box;
-    transition: border-color 0.15s ease, background-color 0.15s ease;
-}
-
-.artistRadioCircleActive {
-    border-color: #0066cc;
-    background: #0066cc;
-}
-
-.artistRadioDot {
-    width: 5px;
-    height: 5px;
-    border-radius: 50%;
-    background: #ffffff;
-}
-
-[data-theme="dark"] .artistRadioCircle {
-    border-color: #475569;
-    background: #1e293b;
-}
-
-[data-theme="dark"] .artistRadioCircleActive {
-    border-color: #3b82f6;
-    background: #3b82f6;
-}
-
-.artistCardThumb {
-    width: 42px;
-    height: 42px;
-    object-fit: contain;
-    margin-bottom: 4px;
-    filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.06));
-}
-
-.artistCardThumbFallback {
-    width: 42px;
-    height: 42px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
-    margin-bottom: 4px;
-}
-
-.artistCardName {
-    font-size: 0.68rem;
-    font-weight: 500;
-    color: #334155;
-    text-align: center;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    max-width: 100%;
-    transition: color 0.15s ease;
-}
-
-.artistCardSelected .artistCardName {
-    color: #0066cc;
-    font-weight: 600;
-}
-
-[data-theme="dark"] .artistCardName {
-    color: #cbd5e1;
-}
-
-[data-theme="dark"] .artistCardSelected .artistCardName {
-    color: #60a5fa;
-}
-
-.artistFooterRow {
-    display: flex;
-    justify-content: flex-end;
-    margin-top: 6px;
-}
-
-.artistConfirmBtn {
+.artistCountdown {
     display: inline-flex;
     align-items: center;
     gap: 4px;
-    padding: 5px 14px;
-    border-radius: 6px;
-    border: none;
-    background: #0066cc;
-    color: #ffffff;
-    font-size: 0.72rem;
+    font-size: 0.65rem;
+    font-weight: 500;
+    color: #1a73e8;
+    background: #e8f0fe;
+    padding: 2px 8px;
+    border-radius: 9999px;
+    border: 1px solid rgba(26, 115, 232, 0.18);
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+[data-theme="dark"] .artistCountdown {
+    color: #8ab4f8;
+    background: rgba(138, 180, 248, 0.12);
+    border-color: rgba(138, 180, 248, 0.25);
+}
+
+.artistCountdownDot {
+    width: 5px;
+    height: 5px;
+    border-radius: 50%;
+    background: #1a73e8;
+    animation: pulseDot 1.6s infinite ease-in-out;
+}
+
+[data-theme="dark"] .artistCountdownDot {
+    background: #8ab4f8;
+}
+
+.artistChipsRow {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 6px;
+    width: 100%;
+}
+
+.artistChipLabelPrefix {
+    font-size: 0.68rem;
     font-weight: 600;
+    color: #202124;
+    white-space: nowrap;
+    flex-shrink: 0;
+}
+
+[data-theme="dark"] .artistChipLabelPrefix {
+    color: #e8eaed;
+}
+
+.artistChipsList {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    scrollbar-width: none;
+    flex: 1;
+}
+
+.artistChipsList::-webkit-scrollbar {
+    display: none;
+}
+
+.artistChip {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 9px;
+    border-radius: 9999px;
+    border: 1px solid #dadce0;
+    background: #ffffff;
+    color: #202124;
+    font-size: 0.68rem;
+    font-weight: 500;
     cursor: pointer;
-    transition: background-color 0.15s ease;
+    white-space: nowrap;
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+    flex-shrink: 0;
 }
 
-.artistConfirmBtn:hover {
-    background: #0052a3;
+.artistChip:hover {
+    border-color: #bdc1c6;
+    background: #f8fafd;
+    transform: translateY(-1px);
 }
 
-.artistConfirmBtn:active {
-    background: #003f7e;
+.artistChipSelected {
+    border-color: #1a73e8 !important;
+    background: #e8f0fe !important;
+    color: #1a73e8 !important;
+    font-weight: 600 !important;
+    box-shadow: 0 1px 2px rgba(26, 115, 232, 0.18) !important;
 }
 
-[data-theme="dark"] .artistConfirmBtn {
-    background: #2563eb;
+[data-theme="dark"] .artistChip {
+    background: #202124;
+    border-color: #3c4043;
+    color: #e8eaed;
 }
 
-[data-theme="dark"] .artistConfirmBtn:hover {
-    background: #1d4ed8;
+[data-theme="dark"] .artistChip:hover {
+    border-color: #5f6368;
+    background: #2d3135;
 }
+
+[data-theme="dark"] .artistChipSelected {
+    border-color: #8ab4f8 !important;
+    background: rgba(138, 180, 248, 0.18) !important;
+    color: #8ab4f8 !important;
+}
+
+.chipThumb {
+    width: 14px;
+    height: 14px;
+    object-fit: contain;
+    border-radius: 3px;
+}
+
+.chipPlayIcon {
+    font-size: 0.6rem;
+    color: #1a73e8;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: rgba(26, 115, 232, 0.1);
+    margin-right: 1px;
+    transition: all 0.15s ease;
+}
+
+.chipPlayIconActive {
+    background: #1a73e8;
+    color: #ffffff;
+}
+
+[data-theme="dark"] .chipPlayIcon {
+    color: #8ab4f8;
+    background: rgba(138, 180, 248, 0.15);
+}
+
+[data-theme="dark"] .chipPlayIconActive {
+    background: #8ab4f8;
+    color: #202124;
+}
+
+.chipLabel {
+    line-height: 1.2;
+}
+
+.chipDuration {
+    font-size: 0.58rem;
+    color: #5f6368;
+    opacity: 0.85;
+    margin-left: 2px;
+}
+
+[data-theme="dark"] .chipDuration {
+    color: #9aa0a6;
+}
+
+.chipCheck {
+    font-size: 0.65rem;
+    color: #1a73e8;
+    font-weight: 700;
+    margin-left: 2px;
+}
+
+[data-theme="dark"] .chipCheck {
+    color: #8ab4f8;
+}
+
+.artistConfirmPillBtn {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 12px;
+    border-radius: 9999px;
+    border: none;
+    background: #1a73e8;
+    color: #ffffff;
+    font-size: 0.68rem;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+    flex-shrink: 0;
+    box-shadow: 0 1px 2px rgba(60, 64, 67, 0.25);
+    transition: all 0.15s cubic-bezier(0.4, 0, 0.2, 1);
+    user-select: none;
+}
+
+.artistConfirmPillBtn:hover {
+    background: #1765cc;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 5px rgba(60, 64, 67, 0.35);
+}
+
+.artistConfirmPillBtn:active {
+    background: #1557b0;
+    transform: translateY(0);
+}
+
+[data-theme="dark"] .artistConfirmPillBtn {
+    background: #8ab4f8;
+    color: #202124;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme="dark"] .artistConfirmPillBtn:hover {
+    background: #aecbfa;
+}
+
+/* ===== AT-REFERENCING BUTTON AND BADGE ===== */
+
+.atButton {
+    background: none;
+    border: none;
+    color: #3797f0;
+    font-size: 17px;
+    font-weight: 700;
+    padding: 0 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: color 0.15s ease, transform 0.15s ease;
+    user-select: none;
+}
+
+.atButton:hover {
+    color: #2563eb;
+    transform: scale(1.18);
+}
+
+.atButton:active {
+    transform: scale(0.95);
+}
+
+.refBadge {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: rgba(55, 151, 240, 0.12);
+    border: 1px solid rgba(55, 151, 240, 0.35);
+    color: #1d4ed8;
+    padding: 3px 10px;
+    border-radius: 14px;
+    font-size: 0.76rem;
+    font-weight: 600;
+    margin-bottom: 6px;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.1s ease;
+    user-select: none;
+}
+
+.refBadge:hover {
+    background: rgba(55, 151, 240, 0.22);
+    transform: translateY(-1px);
+}
+
+[data-theme="dark"] .refBadge {
+    background: rgba(59, 130, 246, 0.18);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #93c5fd;
+}
+
+[data-theme="dark"] .refBadge:hover {
+    background: rgba(59, 130, 246, 0.28);
+}
+
+
 

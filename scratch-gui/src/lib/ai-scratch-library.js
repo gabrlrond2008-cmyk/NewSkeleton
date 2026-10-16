@@ -6,12 +6,13 @@
  */
 import spriteLibraryContent from './libraries/sprites.json';
 import backdropLibraryContent from './libraries/backdrops.json';
+import soundLibraryContent from './libraries/sounds.json';
 import {applySpriteLayout} from './ai-game-engine';
 import {addNewSpriteFromImage} from './sprite-from-image';
 
 const LOCAL_ASSET_URL = (typeof window !== 'undefined' && window.location && window.location.origin) ?
     `${window.location.origin}/static/library-assets/` : 'static/library-assets/';
-const CDN_ASSET_URL = 'https://assets.scratch.mit.edu/';
+const CDN_ASSET_URL = 'https://cdn.assets.scratch.mit.edu/internalapi/asset/';
 
 /**
  * Get local/bundled thumbnail URL for a sprite item
@@ -50,7 +51,7 @@ async function preloadAssetToStorage(storage, assetType, md5ext, dataFormat) {
     const urls = [
         `${LOCAL_ASSET_URL}${md5ext}`,
         `static/library-assets/${md5ext}`,
-        `http://localhost:8601/static/library-assets/${md5ext}`
+        `${CDN_ASSET_URL}${md5ext}/get/`
     ];
 
     for (const url of urls) {
@@ -481,6 +482,143 @@ function findBackdropOptions(query, count = 3, gameContext = '') {
 }
 
 /**
+ * Find best sound options from official Scratch sound library for a query/role
+ */
+function findSoundOptions(query, count = 3, gameContext = '', preferredType = 'all') {
+    const tokens = tokenize(query);
+    const theme = detectTheme(query, gameContext);
+    const extra = [];
+    tokens.forEach(tok => {
+        if (EN_ES_MAP[tok]) {
+            extra.push(...EN_ES_MAP[tok]);
+        }
+        if (tok === 'salto' || tok === 'saltar') extra.push('jump', 'boing', 'pop', 'hop');
+        if (tok === 'moneda' || tok === 'premio' || tok === 'puntos') extra.push('coin', 'bell', 'collect', 'chime');
+        if (tok === 'golpe' || tok === 'dano' || tok === 'daño' || tok === 'herir') extra.push('hit', 'bonk', 'crunch', 'bite', 'impact');
+        if (tok === 'disparo' || tok === 'disparar') extra.push('laser', 'laser1', 'laser2', 'pop');
+        if (tok === 'musica' || tok === 'fondo' || tok === 'cancion' || tok === 'soundtrack') extra.push('music', 'loop', 'dance', 'techno', 'beat');
+        if (tok === 'victoria' || tok === 'ganar') extra.push('cheer', 'tada', 'win', 'trumpet');
+        if (tok === 'derrota' || tok === 'perder' || tok === 'morir') extra.push('lose', 'wobble', 'oops');
+    });
+
+    const scored = soundLibraryContent.map(snd => {
+        let score = scoreItem(snd, tokens, extra, theme);
+        const tags = (snd.tags || []).map(t => String(t).toLowerCase());
+
+        if (preferredType === 'music') {
+            if (tags.includes('music') || tags.includes('loops') || snd.name.toLowerCase().includes('dance') || snd.name.toLowerCase().includes('beat')) {
+                score += 120;
+            } else {
+                score -= 40;
+            }
+        } else if (preferredType === 'sfx') {
+            if (tags.includes('effects') || tags.includes('human') || tags.includes('animals') || tags.includes('sports')) {
+                score += 80;
+            }
+            if (tags.includes('music') && !tags.includes('effects')) {
+                score -= 30;
+            }
+        }
+
+        return {
+            item: snd,
+            score: score
+        };
+    });
+
+    scored.sort((a, b) => b.score - a.score);
+
+    const results = [];
+    for (let i = 0; i < scored.length && results.length < count; i++) {
+        if (scored[i].score > 0) {
+            const snd = scored[i].item;
+            results.push({
+                id: snd.name,
+                name: snd.name,
+                type: 'sound',
+                data: snd,
+                assetUrl: `${LOCAL_ASSET_URL}${snd.md5ext}`,
+                rate: snd.rate,
+                sampleCount: snd.sampleCount,
+                duration: (snd.sampleCount && snd.rate) ? (snd.sampleCount / snd.rate).toFixed(1) + 's' : '0.5s',
+                tags: snd.tags || []
+            });
+        }
+    }
+
+    const soundFallbacks = preferredType === 'music' ?
+        ['Video Game 1', 'Dance Celebrate', 'Dance Chill', 'Bossa Nova', 'Cave'] :
+        ['Boing', 'Pop', 'Coin', 'Collect', 'Laser1', 'Hit', 'Bonk', 'Cheer'];
+
+    for (const fbName of soundFallbacks) {
+        if (results.length >= count) break;
+        if (!results.some(r => r.name.toLowerCase() === fbName.toLowerCase())) {
+            const found = soundLibraryContent.find(s => s.name.toLowerCase() === fbName.toLowerCase());
+            if (found) {
+                results.push({
+                    id: found.name,
+                    name: found.name,
+                    type: 'sound',
+                    data: found,
+                    assetUrl: `${LOCAL_ASSET_URL}${found.md5ext}`,
+                    rate: found.rate,
+                    sampleCount: found.sampleCount,
+                    duration: (found.sampleCount && found.rate) ? (found.sampleCount / found.rate).toFixed(1) + 's' : '0.5s',
+                    tags: found.tags || []
+                });
+            }
+        }
+    }
+
+    return results.slice(0, count);
+}
+
+/**
+ * Add an official Scratch library sound directly to a VM target (Stage or Sprite)
+ */
+async function addLibrarySoundToVM(soundData, vm, targetId, customName) {
+    if (!vm || !soundData) return null;
+    const storage = vm.runtime && vm.runtime.storage;
+
+    const md5ext = soundData.md5ext || (soundData.assetId + '.' + (soundData.dataFormat || 'wav'));
+    const parts = md5ext.split('.');
+    const assetId = soundData.assetId || parts[0];
+    const ext = (soundData.dataFormat || parts[1] || 'wav').toLowerCase();
+
+    if (storage) {
+        await preloadAssetToStorage(storage, storage.AssetType.Sound, md5ext, ext);
+    }
+
+    const soundName = customName || soundData.name;
+    const vmSound = {
+        name: soundName,
+        dataFormat: ext,
+        assetId: assetId,
+        md5: md5ext,
+        rate: soundData.rate || 44100,
+        sampleCount: soundData.sampleCount || 0
+    };
+
+    const target = targetId ? vm.runtime.getTargetById(targetId) : vm.editingTarget;
+    if (target && target.sprite && Array.isArray(target.sprite.sounds)) {
+        const existingIdx = target.sprite.sounds.findIndex(s => s.name === soundName);
+        if (existingIdx !== -1) {
+            target.sprite.sounds.splice(existingIdx, 1);
+        }
+    }
+
+    try {
+        await vm.addSound(vmSound, targetId);
+        if (vm.emitTargetsUpdate) vm.emitTargetsUpdate();
+        console.log('[AI ScratchLibrary] Sonido añadido con éxito a target:', soundName, targetId);
+        return vmSound;
+    } catch (err) {
+        console.warn('[AI ScratchLibrary] Error añadiendo sonido a VM:', soundName, err);
+        return null;
+    }
+}
+
+/**
  * Add or replace a sprite library item into the Scratch VM cleanly
  */
 function addLibrarySpriteToVM(spriteData, vm, customName, layoutDef) {
@@ -672,8 +810,10 @@ function addLibraryBackdropToVM(backdropData, vm) {
 export {
     findSpriteOptions,
     findBackdropOptions,
+    findSoundOptions,
     addLibrarySpriteToVM,
     addLibraryBackdropToVM,
+    addLibrarySoundToVM,
     getSpriteThumbnail,
     getBackdropThumbnail,
     detectTheme

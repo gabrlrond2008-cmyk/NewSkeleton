@@ -86,7 +86,7 @@ Inicia el servidor de desarrollo con recarga rápida (HMR):
 ```bash
 npm run start -w scratch-gui
 ```
-Abre tu navegador en: [http://localhost:8601](http://localhost:8601)
+Abre tu navegador en: [http://localhost:8602](http://localhost:8602)
 
 ### 2. Modo Aplicación de Escritorio (Tauri Dev)
 Ejecuta la aplicación de escritorio completa en modo de depuración:

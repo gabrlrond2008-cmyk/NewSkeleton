@@ -34,8 +34,10 @@ import {
 import {
     findSpriteOptions,
     findBackdropOptions,
+    findSoundOptions,
     addLibrarySpriteToVM,
-    addLibraryBackdropToVM
+    addLibraryBackdropToVM,
+    addLibrarySoundToVM
 } from './ai-scratch-library';
 import {
     lintAndNormalizeDescriptor
@@ -125,7 +127,7 @@ function runDirectorAgent(userPrompt, aiService, onProgress) {
     }
 
     var systemPrompt = [
-        'Eres el Director y Arquitecto Principal de Videojuegos en Scratch 3.0.',
+        'Tu nombre es Fist. Eres el Director y Arquitecto Principal de Videojuegos en Scratch 3.0.',
         'Tu misión es diseñar un juego creativo, divertido y completo en Scratch a partir de la idea del usuario.',
         '',
         'SISTEMA DE COORDENADAS Y PANTALLA (480x360 px):',
@@ -380,6 +382,21 @@ function runVisualAgent(blueprint, aiService, imageService, vm, onProgress) {
         }
 
         notifySelection();
+
+        timerId = setInterval(function () {
+            if (hasResolved) {
+                if (timerId) clearInterval(timerId);
+                return;
+            }
+            countdown--;
+            if (countdown <= 0) {
+                if (timerId) clearInterval(timerId);
+                timerId = null;
+                doResolve();
+            } else {
+                notifySelection();
+            }
+        }, 1000);
     }).then(function () {
         console.log('[AI VisualAgent] Verificando instanciación final de sprites en el VM...');
         var spriteChain = Promise.resolve();
@@ -478,109 +495,162 @@ function observeAndPositionSprites(blueprint, createdTargets, vm, onProgress) {
 // AGENT 3: Audio & Sound Designer
 // -------------------------------------------------------------
 function runAudioAgent(blueprint, aiService, audioService, vm, createdTargets, onProgress) {
+    var gameTheme = blueprint.theme || (blueprint.gameTitle + ' ' + (blueprint.stageConcept || ''));
+
     if (onProgress) {
         onProgress({
             agent: 'audio',
-            percent: 55,
-            details: '🎵 [Músico]: Generando banda sonora y efectos de sonido SFX...'
+            percent: 54,
+            details: '🎵 [Músico]: Buscando banda sonora y efectos en la biblioteca de Scratch...'
         });
     }
 
-    // Derive audio spec directly from blueprint to avoid redundant LLM calls and 429 rate limit collisions
-    var spriteSfx = {};
-    if (blueprint.sprites && Array.isArray(blueprint.sprites)) {
-        blueprint.sprites.forEach(function (spDef) {
-            if (spDef.sfxActions && spDef.sfxActions.length > 0) {
-                spriteSfx[spDef.name] = spDef.sfxActions.map(function (act) {
-                    return { trigger: act, prompt: act + ' retro 8-bit sound effect' };
-                });
-            } else {
-                var defaultTrigger = spDef.role === 'player' ? 'jump' : (spDef.role === 'enemy' ? 'hit' : 'coin');
-                spriteSfx[spDef.name] = [{ trigger: defaultTrigger, prompt: defaultTrigger + ' retro sound effect' }];
-            }
-        });
-    }
-
-    var audioSpec = {
-        stageMusicPrompt: '8-bit retro arcade upbeat background loop music for ' + (blueprint.gameTitle || 'game'),
-        spriteSfx: spriteSfx
-    };
-
-    function withTimeout(promise, ms) {
-        return Promise.race([
-            promise,
-            new Promise(function (resolve) {
-                setTimeout(function () {
-                    resolve(null);
-                }, ms);
-            })
-        ]);
-    }
-
-    var audioTasks = [];
     var stage = ensureStage(vm);
 
-    // Stage Music
-    if (stage && audioService && typeof audioService.generateMusic === 'function') {
-        var musicPrompt = audioSpec.stageMusicPrompt || '8-bit retro arcade background music';
-        audioTasks.push(
-            withTimeout(
-                audioService.generateMusic(musicPrompt).then(function (res) {
-                    if (res && res.blob) {
-                        return addSoundToTarget(res.blob, 'musica_fondo', stage.id, res.format, vm);
-                    }
-                }).catch(function (err) {
-                    console.warn('[AI AudioAgent] Music error:', err);
-                }),
-                4000
-            )
-        );
-    }
+    // 1. Find 3 background music options from Scratch sound library
+    var musicQuery = (blueprint.stageConcept || blueprint.gameTitle || 'game') + ' music loop dance';
+    var musicOptions = findSoundOptions(musicQuery, 3, gameTheme, 'music');
 
-    // Sprite SFX
-    if (audioService && typeof audioService.generateSfx === 'function') {
-        (blueprint.sprites || []).forEach(function (spDef) {
-            var target = createdTargets[spDef.name] || findTargetByName(vm, spDef.name, false);
-            if (!target) return;
+    var stageAudioTarget = {
+        key: '__stage_music__',
+        name: 'Música de fondo',
+        targetName: 'Escenario',
+        type: 'sound',
+        soundRole: 'music',
+        soundName: 'musica_fondo',
+        targetId: stage ? stage.id : null,
+        options: musicOptions,
+        selectedId: musicOptions[0] ? musicOptions[0].id : null
+    };
 
-            var sfxList = (audioSpec.spriteSfx && audioSpec.spriteSfx[spDef.name]) || [];
-            sfxList.forEach(function (sfxItem) {
-                audioTasks.push(
-                    withTimeout(
-                        audioService.generateSfx(sfxItem.prompt || (sfxItem.trigger + ' sound')).then(function (res) {
-                            if (res && res.blob) {
-                                return addSoundToTarget(res.blob, 'sfx_' + sfxItem.trigger, target.id, res.format, vm);
+    // 2. Find 3 sound effect options for each sprite
+    var spriteAudioTargets = (blueprint.sprites || []).map(function (spDef) {
+        var action = (spDef.sfxActions && spDef.sfxActions[0]) ||
+            (spDef.role === 'player' ? 'jump' : (spDef.role === 'enemy' ? 'hit' : 'coin'));
+        var sfxQuery = action + ' ' + (spDef.name || '') + ' effect';
+        var sfxOptions = findSoundOptions(sfxQuery, 3, gameTheme, 'sfx');
+
+        var target = createdTargets[spDef.name] || findTargetByName(vm, spDef.name, false);
+
+        return {
+            key: 'sfx_' + spDef.name,
+            name: spDef.name + ' (' + action + ')',
+            targetName: spDef.name,
+            type: 'sound',
+            soundRole: 'sfx',
+            soundName: 'sfx_' + action,
+            targetId: target ? target.id : null,
+            options: sfxOptions,
+            selectedId: sfxOptions[0] ? sfxOptions[0].id : null
+        };
+    });
+
+    var allAudioTargets = [stageAudioTarget, ...spriteAudioTargets];
+
+    // Sequentially apply initial default candidate for each sound target
+    var initAudioChain = Promise.resolve();
+    allAudioTargets.forEach(function (tgt) {
+        if (tgt.options[0] && tgt.targetId) {
+            initAudioChain = initAudioChain.then(function () {
+                return addLibrarySoundToVM(tgt.options[0].data, vm, tgt.targetId, tgt.soundName);
+            }).catch(function (err) {
+                console.warn('[AI AudioAgent] Error inicial sonido:', tgt.name, err);
+            });
+        }
+    });
+
+    return new Promise(function (resolve) {
+        var timerId = null;
+        var countdown = 10;
+        var hasResolved = false;
+
+        function doResolve() {
+            if (hasResolved) return;
+            hasResolved = true;
+            if (timerId) clearInterval(timerId);
+            console.log('[AI AudioAgent] Selección de audio finalizada.');
+            resolve();
+        }
+
+        function notifySelection() {
+            if (hasResolved) return;
+            if (onProgress) {
+                onProgress({
+                    agent: 'audio',
+                    percent: 58,
+                    details: '🎵 [Músico]: Selecciona los audios debajo (auto-continuar en ' + countdown + 's)...',
+                    librarySelection: {
+                        category: 'audio',
+                        targets: allAudioTargets,
+                        countdown: countdown,
+                        onSelectCandidate: function (targetKey, chosenOption) {
+                            console.log('[AI AudioAgent] Sonido seleccionado para ' + targetKey + ':', chosenOption ? chosenOption.name : null);
+                            var tgt = allAudioTargets.find(function (t) { return t.key === targetKey; });
+                            if (tgt && chosenOption && tgt.targetId) {
+                                tgt.selectedId = chosenOption.id;
+                                addLibrarySoundToVM(chosenOption.data, vm, tgt.targetId, tgt.soundName)
+                                    .then(function () {
+                                        console.log('[AI AudioAgent] Sonido actualizado en vivo en VM:', tgt.name, chosenOption.name);
+                                    })
+                                    .catch(function (e) {
+                                        console.warn('[AI AudioAgent] Error actualizando sonido:', tgt.name, e);
+                                    });
+                                notifySelection();
                             }
-                        }).catch(function (err) {
-                            console.warn('[AI AudioAgent] SFX error:', spDef.name, err);
-                        }),
-                        3500
-                    )
-                );
+                        },
+                        onConfirm: function () {
+                            console.log('[AI AudioAgent] Botón Confirmar Selección de audio pulsado.');
+                            doResolve();
+                        }
+                    }
+                });
+            }
+        }
+
+        notifySelection();
+
+        timerId = setInterval(function () {
+            if (hasResolved) {
+                if (timerId) clearInterval(timerId);
+                return;
+            }
+            countdown--;
+            if (countdown <= 0) {
+                if (timerId) clearInterval(timerId);
+                timerId = null;
+                doResolve();
+            } else {
+                notifySelection();
+            }
+        }, 1000);
+    }).then(function () {
+        // Final verification that sounds are present in VM
+        var verifyChain = Promise.resolve();
+        allAudioTargets.forEach(function (tgt) {
+            verifyChain = verifyChain.then(function () {
+                var chosen = tgt.options.find(function (o) { return o.id === tgt.selectedId; }) || tgt.options[0];
+                if (chosen && tgt.targetId) {
+                    return addLibrarySoundToVM(chosen.data, vm, tgt.targetId, tgt.soundName);
+                }
             });
         });
-    }
 
-    return Promise.all(audioTasks).then(function () {
-        if (vm.emitTargetsUpdate) vm.emitTargetsUpdate();
-        if (onProgress) {
-            onProgress({
-                agent: 'audio',
-                percent: 62,
-                details: '🎵 [Músico]: Banda sonora y efectos de sonido completados exitosamente.'
-            });
-        }
-        return audioSpec;
-    }).catch(function (audioErr) {
-        console.warn('[AI AudioAgent] Error general de audio:', audioErr);
-        if (onProgress) {
-            onProgress({
-                agent: 'audio',
-                percent: 62,
-                details: '🎵 [Músico]: Efectos de audio procesados.'
-            });
-        }
-        return audioSpec;
+        return verifyChain.then(function () {
+            if (vm.emitTargetsUpdate) vm.emitTargetsUpdate();
+            if (onProgress) {
+                onProgress({
+                    agent: 'audio',
+                    percent: 64,
+                    details: '🎵 [Músico]: Banda sonora y efectos de sonido de Scratch configurados exitosamente.'
+                });
+            }
+            return {
+                targets: allAudioTargets
+            };
+        });
+    }).catch(function (err) {
+        console.warn('[AI AudioAgent] Error en selección de audio:', err);
+        return { targets: allAudioTargets };
     });
 }
 

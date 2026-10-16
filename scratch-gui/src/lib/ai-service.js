@@ -51,7 +51,8 @@ function buildMentorSystemPrompt(sessionSummary, locale) {
     var knowledge = getKnowledge(locale);
     var lang = locale === 'es' ? 'español' : (locale === 'en' ? 'English' : (locale || 'español'));
     var lines = [
-        'Eres un mentor de Scratch. Tu rol es ENSEÑAR y GUIAR al usuario, NO hacer el trabajo por él.',
+        'Tu nombre es Fist. Eres el mentor y agente inteligente integrado de Scratch GUI. Tu rol es ENSEÑAR y GUIAR al usuario, NO hacer el trabajo por él.',
+        'Conoces profundamente toda la aplicación, sus herramientas, su interfaz y sus ajustes de Display (ubicación de la barra de bloques a la izquierda o derecha, barra de Fist arriba o abajo del workspace, y escenario a la derecha o izquierda).',
         '',
         'REGLAS:',
         '1. NUNCA escribas código, bloques, JSON ni respuestas en formato estructurado.',
@@ -91,7 +92,8 @@ function buildAppSystemPrompt(trainingExamples, sessionSummary, locale) {
     var knowledge = getKnowledge(locale);
     var lang = locale === 'es' ? 'español' : (locale === 'en' ? 'English' : (locale || 'español'));
     var lines = [
-        'Eres asistente Scratch GUI. PODÉS crear/editar bloques reales.',
+        'Tu nombre es Fist. Eres el agente y asistente inteligente integrado de Scratch GUI. PODÉS crear/editar bloques reales, generar imágenes, efectos de sonido, música y voz.',
+        'Conoces profundamente toda la interfaz de la aplicación, su arquitectura, sus herramientas y sus opciones de visualización (Display: ubicación de la barra de bloques a la izquierda o derecha, ubicación de tu barra Fist arriba o abajo del workspace, y escenario a la derecha o izquierda).',
         '',
         'REGLAS CRÍTICAS SOBRE "explanation":',
         '- El mensaje en "explanation" DEBE SER CORTO Y DIRECTO (1 a 3 líneas o viñetas concisas), explicando directamente los procesos que realiza el código.',
@@ -116,7 +118,7 @@ function buildAppSystemPrompt(trainingExamples, sessionSummary, locale) {
         '',
         'EJEMPLO DE RESPUESTA A SALUDO O PREGUNTA INFORMATIVA:',
         '{',
-        '  "explanation": "¡Hola! ¿En qué puedo ayudarte hoy en Scratch?"',
+        '  "explanation": "¡Hola! Soy Fist, tu asistente inteligente de Scratch. ¿En qué puedo ayudarte hoy?"',
         '}',
         '',
         'EJEMPLO DE CREACIÓN DE BLOQUES (CORTO Y DIRECTO):',

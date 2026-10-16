@@ -20,7 +20,7 @@ class Storage extends ScratchStorage {
         this.addOfficialScratchWebStores();
     }
     addOfficialScratchWebStores () {
-        // 1. Local bundled library assets take priority (instant load, 0 timeout, offline)
+        // 1. Local bundled library assets take priority (instant load, offline)
         this.addWebStore(
             [this.AssetType.ImageVector, this.AssetType.ImageBitmap, this.AssetType.Sound],
             asset => {
@@ -28,14 +28,6 @@ class Storage extends ScratchStorage {
                     window.location.origin : 'http://localhost:8601';
                 return `${origin}/static/library-assets/${asset.assetId}.${asset.dataFormat}`;
             }
-        );
-        this.addWebStore(
-            [this.AssetType.ImageVector, this.AssetType.ImageBitmap, this.AssetType.Sound],
-            asset => `http://localhost:8601/static/library-assets/${asset.assetId}.${asset.dataFormat}`
-        );
-        this.addWebStore(
-            [this.AssetType.ImageVector, this.AssetType.ImageBitmap, this.AssetType.Sound],
-            asset => `static/library-assets/${asset.assetId}.${asset.dataFormat}`
         );
         this.addWebStore(
             [this.AssetType.Project],
@@ -84,8 +76,8 @@ class Storage extends ScratchStorage {
         this.assetHost = assetHost;
     }
     getAssetGetConfig (asset) {
-        // Modern Scratch 3.0 asset CDN endpoint
-        return `https://assets.scratch.mit.edu/${asset.assetId}.${asset.dataFormat}`;
+        // Modern Scratch 3.0 asset CDN endpoint with CORS support
+        return `${this.assetHost}/internalapi/asset/${asset.assetId}.${asset.dataFormat}/get/`;
     }
     getAssetCreateConfig (asset) {
         return {

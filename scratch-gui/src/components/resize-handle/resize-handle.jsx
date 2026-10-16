@@ -61,6 +61,7 @@ const ResizeHandle = ({direction, containerRef, intl, onRatioChange, onSwap}) =>
             for (var si = 0; si < SNAP_POINTS.length; si++) {
                 if (Math.abs(ratio - SNAP_POINTS[si]) < SNAP_THRESHOLD) {
                     onRatioChange(SNAP_POINTS[si]);
+                    window.dispatchEvent(new Event('resize'));
                     return;
                 }
             }

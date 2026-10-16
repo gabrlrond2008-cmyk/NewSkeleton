@@ -112,8 +112,20 @@ class MenuBar extends React.Component {
             'handleClickSave',
             'handleClickSaveAsCopy',
             'handleKeyPress',
-            'handleSaveToComputer'
+            'handleSaveToComputer',
+            'handleCloseAllMenus'
         ]);
+    }
+    handleCloseAllMenus () {
+        if (this.props.settingsMenuOpen && this.props.onRequestCloseSettings) {
+            this.props.onRequestCloseSettings();
+        }
+        if (this.props.fileMenuOpen && this.props.onRequestCloseFile) {
+            this.props.onRequestCloseFile();
+        }
+        if (this.props.aboutMenuOpen && this.props.onRequestCloseAbout) {
+            this.props.onRequestCloseAbout();
+        }
     }
     componentDidMount () {
         document.addEventListener('keydown', this.handleKeyPress);
@@ -316,13 +328,25 @@ class MenuBar extends React.Component {
         );
         // Show the About button only if we have a handler for it (like in the desktop app)
         const aboutButton = this.buildAboutMenu(this.props.onClickAbout);
+        const isAnyMenuOpen = Boolean(
+            this.props.settingsMenuOpen ||
+            this.props.fileMenuOpen ||
+            this.props.aboutMenuOpen
+        );
         return (
             <Box
                 className={classNames(
                     this.props.className,
-                    styles.menuBar
+                    styles.menuBar,
+                    {[styles.hasOpenMenu]: isAnyMenuOpen}
                 )}
             >
+                {isAnyMenuOpen && (
+                    <div
+                        className={styles.menuBackdrop}
+                        onClick={this.handleCloseAllMenus}
+                    />
+                )}
                 <div className={styles.mainMenu}>
                     <div className={styles.fileGroup}>
                         {(this.props.canChangeTheme || this.props.canChangeLanguage) && (<SettingsMenu

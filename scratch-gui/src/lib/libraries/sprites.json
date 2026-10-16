@@ -17202,5 +17202,135 @@
             }
         ],
         "blocks": {}
+    },
+    {
+        "name": "Alien Green",
+        "tags": [
+            "space",
+            "alien",
+            "character",
+            "people",
+            "monster"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "1eab6b5f0e1874374f90607a00e75f9c",
+                "name": "alien-idle",
+                "bitmapResolution": 1,
+                "md5ext": "1eab6b5f0e1874374f90607a00e75f9c.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 50,
+                "rotationCenterY": 114
+            },
+            {
+                "assetId": "3b12509899526bd368bd4d9165dc5249",
+                "name": "alien-walk",
+                "bitmapResolution": 1,
+                "md5ext": "3b12509899526bd368bd4d9165dc5249.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 50,
+                "rotationCenterY": 114
+            }
+        ],
+        "sounds": [
+            {
+                "assetId": "83a9787d4cb6f3b7632b4ddfebf74367",
+                "name": "pop",
+                "dataFormat": "wav",
+                "format": "",
+                "rate": 44100,
+                "sampleCount": 1032,
+                "md5ext": "83a9787d4cb6f3b7632b4ddfebf74367.wav"
+            }
+        ],
+        "blocks": {}
+    },
+    {
+        "name": "Star Fighter",
+        "tags": [
+            "space",
+            "ship",
+            "vehicle",
+            "rocket"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "7cf201f0d56c5797d892a8fa26bf4a35",
+                "name": "fighter-idle",
+                "bitmapResolution": 1,
+                "md5ext": "7cf201f0d56c5797d892a8fa26bf4a35.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 60,
+                "rotationCenterY": 50
+            },
+            {
+                "assetId": "34804a8b98be5b3a09c8637fba62657e",
+                "name": "fighter-thrust",
+                "bitmapResolution": 1,
+                "md5ext": "34804a8b98be5b3a09c8637fba62657e.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 60,
+                "rotationCenterY": 60
+            }
+        ],
+        "sounds": [
+            {
+                "assetId": "83a9787d4cb6f3b7632b4ddfebf74367",
+                "name": "pop",
+                "dataFormat": "wav",
+                "format": "",
+                "rate": 44100,
+                "sampleCount": 1032,
+                "md5ext": "83a9787d4cb6f3b7632b4ddfebf74367.wav"
+            }
+        ],
+        "blocks": {}
+    },
+    {
+        "name": "Cyber Bot",
+        "tags": [
+            "people",
+            "robot",
+            "scifi",
+            "character"
+        ],
+        "isStage": false,
+        "variables": {},
+        "costumes": [
+            {
+                "assetId": "4e9fda4f51bc10220cd955fff2e6c4c3",
+                "name": "bot-idle",
+                "bitmapResolution": 1,
+                "md5ext": "4e9fda4f51bc10220cd955fff2e6c4c3.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 45,
+                "rotationCenterY": 105
+            },
+            {
+                "assetId": "bfafc8037fd969d0a9eedbe34369eade",
+                "name": "bot-wave",
+                "bitmapResolution": 1,
+                "md5ext": "bfafc8037fd969d0a9eedbe34369eade.svg",
+                "dataFormat": "svg",
+                "rotationCenterX": 45,
+                "rotationCenterY": 105
+            }
+        ],
+        "sounds": [
+            {
+                "assetId": "83a9787d4cb6f3b7632b4ddfebf74367",
+                "name": "pop",
+                "dataFormat": "wav",
+                "format": "",
+                "rate": 44100,
+                "sampleCount": 1032,
+                "md5ext": "83a9787d4cb6f3b7632b4ddfebf74367.wav"
+            }
+        ],
+        "blocks": {}
     }
 ]

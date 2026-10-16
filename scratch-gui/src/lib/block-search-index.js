@@ -16,31 +16,106 @@ const CATEGORY_META = {
     myBlocks:   {label: 'My Blocks',  color: '#FF6680'}
 };
 
+const MSG_KEY_MAP = {
+    sound_seteffectto: 'SOUND_SETEFFECTO',
+    control_if_else: 'CONTROL_IF',
+    control_wait_until: 'CONTROL_WAITUNTIL',
+    control_repeat_until: 'CONTROL_REPEATUNTIL',
+    control_create_clone_of: 'CONTROL_CREATECLONEOF',
+    control_start_as_clone: 'CONTROL_STARTASCLONE',
+    control_delete_this_clone: 'CONTROL_DELETETHISCLONE',
+    operator_letter_of: 'OPERATORS_LETTEROF'
+};
+
 function stripPlaceholders(msg) {
     if (!msg) return '';
     return msg.replace(/%\d+/g, '').replace(/%\{BKY_\w+\}/g, '').replace(/\s+/g, ' ').trim();
 }
 
 function blockTypeToMsgKey(type) {
+    if (MSG_KEY_MAP[type]) return MSG_KEY_MAP[type];
+    if (type.startsWith('operator_')) {
+        return 'OPERATORS_' + type.replace(/^operator_/, '').toUpperCase();
+    }
     return type.toUpperCase().replace(/-/g, '_');
 }
 
 function getBlockName(type, ScratchBlocks) {
     if (!ScratchBlocks) return type;
     const msgKey = blockTypeToMsgKey(type);
-    const msg = ScratchBlocks.Msg[msgKey];
+    let msg = ScratchBlocks.Msg && ScratchBlocks.Msg[msgKey];
+    if (!msg && ScratchBlocks.ScratchMsgs && typeof ScratchBlocks.ScratchMsgs.translate === 'function') {
+        msg = ScratchBlocks.ScratchMsgs.translate(msgKey, null);
+    }
     if (msg) return stripPlaceholders(msg);
     return type;
 }
 
-function extractBlockTypesFromXML(xml) {
-    const types = [];
-    const regex = /<block[^>]*\stype="([^"]+)"/g;
-    let m;
-    while ((m = regex.exec(xml)) !== null) {
-        if (!types.includes(m[1])) types.push(m[1]);
+function extractBlockMapFromXML(xml) {
+    const blockMap = new Map();
+    if (!xml) return blockMap;
+
+    try {
+        if (typeof DOMParser !== 'undefined') {
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(xml, 'text/xml');
+            if (!doc.querySelector('parsererror')) {
+                const serializer = (typeof XMLSerializer !== 'undefined') ? new XMLSerializer() : null;
+                const allBlocks = doc.querySelectorAll('block');
+                for (let i = 0; i < allBlocks.length; i++) {
+                    const b = allBlocks[i];
+                    const parentTag = b.parentNode ? b.parentNode.tagName.toLowerCase() : '';
+                    if (parentTag === 'category' || parentTag === 'xml') {
+                        const type = b.getAttribute('type');
+                        if (type && !blockMap.has(type)) {
+                            let blockXml = null;
+                            if (serializer) {
+                                const clone = b.cloneNode(true);
+                                clone.removeAttribute('id');
+                                blockXml = serializer.serializeToString(clone);
+                            } else if (b.outerHTML) {
+                                blockXml = b.outerHTML;
+                            }
+                            if (blockXml) {
+                                blockMap.set(type, blockXml);
+                            }
+                        }
+                    }
+                }
+                if (blockMap.size > 0) {
+                    return blockMap;
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('[BlockSearch] Error parsing toolbox XML with DOMParser:', e);
     }
-    return types;
+
+    // Fallback: regex extraction if DOMParser failed or returned empty
+    try {
+        const blockRegex = /<block\b([^>]*?)(?:\/>|>([\s\S]*?)<\/block>)/gi;
+        let match;
+        while ((match = blockRegex.exec(xml)) !== null) {
+            const attrs = match[1] || '';
+            const typeMatch = attrs.match(/\btype="([^"]+)"/);
+            if (typeMatch && !blockMap.has(typeMatch[1])) {
+                const type = typeMatch[1];
+                const cleanAttrs = attrs.replace(/\bid="[^"]*"/g, '').replace(/\s+/g, ' ').trim();
+                const inner = match[2];
+                let blockXml;
+                if (inner !== undefined) {
+                    blockXml = '<block ' + cleanAttrs + '>' + inner + '</block>';
+                } else {
+                    blockXml = '<block ' + cleanAttrs + '/>';
+                }
+                blockMap.set(type, blockXml);
+            }
+        }
+    } catch (e2) {
+        console.warn('[BlockSearch] Regex fallback error:', e2);
+    }
+
+    return blockMap;
 }
 
 function getVariableBlocks(workspace) {
@@ -75,6 +150,50 @@ function getVariableBlocks(workspace) {
         });
     }
 
+    return results;
+}
+
+function getDynamicDataCategoryBlocks(workspace, ScratchBlocks, seen) {
+    if (!workspace || !ScratchBlocks || typeof ScratchBlocks.DataCategory !== 'function') {
+        return [];
+    }
+    const results = [];
+    try {
+        const serializer = (typeof XMLSerializer !== 'undefined') ? new XMLSerializer() : null;
+        const domList = ScratchBlocks.DataCategory(workspace);
+        if (Array.isArray(domList)) {
+            for (let i = 0; i < domList.length; i++) {
+                const el = domList[i];
+                if (!el || !el.tagName || el.tagName.toLowerCase() !== 'block') continue;
+                const type = el.getAttribute('type');
+                if (!type || seen.has(type)) continue;
+                if (type === 'data_variable' || type === 'data_listcontents') continue;
+
+                seen.add(type);
+                const cat = type.includes('list') ? 'lists' : 'variables';
+                let rawXml = null;
+                if (serializer) {
+                    const clone = el.cloneNode(true);
+                    clone.removeAttribute('id');
+                    rawXml = serializer.serializeToString(clone);
+                } else if (el.outerHTML) {
+                    rawXml = el.outerHTML;
+                }
+
+                results.push({
+                    type: type,
+                    name: getBlockName(type, ScratchBlocks),
+                    category: cat,
+                    color: (CATEGORY_META[cat] || {}).color || '#FF8C1A',
+                    categoryLabel: (CATEGORY_META[cat] || {}).label || 'Variables',
+                    blockType: 'static',
+                    rawXml: rawXml
+                });
+            }
+        }
+    } catch (e) {
+        console.warn('[BlockSearch] DataCategory extraction error:', e);
+    }
     return results;
 }
 
@@ -127,8 +246,8 @@ export function buildSearchIndex(workspace, ScratchBlocks, toolboxXML) {
     const seen = new Set();
 
     if (toolboxXML) {
-        const types = extractBlockTypesFromXML(toolboxXML);
-        for (const type of types) {
+        const blockMap = extractBlockMapFromXML(toolboxXML);
+        for (const [type, rawXml] of blockMap.entries()) {
             if (seen.has(type)) continue;
             seen.add(type);
             const cat = categorizeType(type);
@@ -140,9 +259,15 @@ export function buildSearchIndex(workspace, ScratchBlocks, toolboxXML) {
                 category: cat,
                 color: (CATEGORY_META[cat] || {}).color || '#575E75',
                 categoryLabel: (CATEGORY_META[cat] || {}).label || cat,
-                blockType: 'static'
+                blockType: 'static',
+                rawXml: rawXml
             });
         }
+    }
+
+    const dynamicVarBlocks = getDynamicDataCategoryBlocks(workspace, ScratchBlocks, seen);
+    for (const b of dynamicVarBlocks) {
+        idx.blocks.push(b);
     }
 
     idx.variables = getVariableBlocks(workspace);
@@ -152,13 +277,13 @@ export function buildSearchIndex(workspace, ScratchBlocks, toolboxXML) {
 }
 
 export function searchBlocks(index, query, limit) {
-    if (!query || query.length < 2) return [];
-    const q = query.toLowerCase();
+    if (!query || query.trim().length === 0) return [];
+    const q = query.toLowerCase().trim();
     const results = [];
 
     const pushResult = (item, catOrder) => {
         const name = (item.name || '').toLowerCase();
-        const type = item.type.toLowerCase();
+        const type = (item.type || '').toLowerCase();
         const score = name.startsWith(q) ? 0 : type.startsWith(q) ? 1 :
             name.includes(q) ? 2 : type.includes(q) ? 3 : -1;
         if (score >= 0) {
@@ -193,13 +318,20 @@ export function buildSearchToolboxXML(results) {
     if (!results || results.length === 0) return null;
     const blockElements = results.map(function (r) {
         if (r.blockType === 'static') {
+            if (r.rawXml) {
+                return r.rawXml;
+            }
             return '<block type="' + xmlEscape(r.type) + '"/>';
         }
         if (r.blockType === 'variable') {
-            return '<block type="data_variable"><field name="VARIABLE">' + xmlEscape(r.name) + '</field></block>';
+            const varId = r.id ? ' id="' + xmlEscape(r.id) + '"' : '';
+            const fieldId = r.id ? ' id="' + xmlEscape(r.id) + '"' : '';
+            return '<block type="data_variable"' + varId + '><field name="VARIABLE"' + fieldId + ' variabletype="\'\'">' + xmlEscape(r.name) + '</field></block>';
         }
         if (r.blockType === 'list') {
-            return '<block type="data_listcontents"><field name="VARIABLE">' + xmlEscape(r.name) + '</field></block>';
+            const listId = r.id ? ' id="' + xmlEscape(r.id) + '"' : '';
+            const fieldId = r.id ? ' id="' + xmlEscape(r.id) + '"' : '';
+            return '<block type="data_listcontents"' + listId + '><field name="VARIABLE"' + fieldId + ' variabletype="list">' + xmlEscape(r.name) + '</field></block>';
         }
         if (r.blockType === 'procedure') {
             return '<block type="procedures_call">' + (r.mutationXml || '') + '</block>';
@@ -244,11 +376,18 @@ export function createBlockOnWorkspace(workspace, ScratchBlocks, item) {
         let block;
         if (item.blockType === 'variable' || item.blockType === 'list') {
             const blockType = item.blockType === 'variable' ? 'data_variable' : 'data_listcontents';
-            const xmlStr = `<xml><block type="${blockType}"><field name="VARIABLE">${item.name}</field></block></xml>`;
+            const varType = item.blockType === 'variable' ? "''" : 'list';
+            const varId = item.id ? ` id="${xmlEscape(item.id)}"` : '';
+            const fieldId = item.id ? ` id="${xmlEscape(item.id)}"` : '';
+            const xmlStr = `<xml><block type="${blockType}"${varId}><field name="VARIABLE"${fieldId} variabletype="${varType}">${xmlEscape(item.name)}</field></block></xml>`;
             const dom = ScratchBlocks.Xml.textToDom(xmlStr);
             block = ScratchBlocks.Xml.domToBlock(dom.firstChild, workspace);
         } else if (item.blockType === 'procedure') {
             const xmlStr = `<xml><block type="procedures_call">${item.mutationXml || ''}</block></xml>`;
+            const dom = ScratchBlocks.Xml.textToDom(xmlStr);
+            block = ScratchBlocks.Xml.domToBlock(dom.firstChild, workspace);
+        } else if (item.rawXml) {
+            const xmlStr = `<xml>${item.rawXml}</xml>`;
             const dom = ScratchBlocks.Xml.textToDom(xmlStr);
             block = ScratchBlocks.Xml.domToBlock(dom.firstChild, workspace);
         } else {

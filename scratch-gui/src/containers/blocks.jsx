@@ -139,19 +139,11 @@ class Blocks extends React.Component {
                 wrapper.appendChild(flyoutSvg);
                 this.toolboxHeader = headerEl;
                 this.flyoutWrapper = wrapper;
-                // Set wrapper width to match toolbox + flyout combined width
-                // so the search bar spans the full category + blocks area.
+                // Set initial stable width so search bar and wrapper are never unstyled or corrupted
+                wrapper.style.width = '308px';
+                headerEl.style.width = '308px';
                 requestAnimationFrame(() => {
-                    const tbRect = toolboxDiv.getBoundingClientRect();
-                    const flyRect = flyoutSvg.getBoundingClientRect();
-                    const wrapperRect = wrapper.getBoundingClientRect();
-                    const combinedWidth = Math.max(
-                        flyRect.right - wrapperRect.left,
-                        tbRect.right - wrapperRect.left
-                    );
-                    if (combinedWidth > 0) {
-                        wrapper.style.width = combinedWidth + 'px';
-                    }
+                    this.recalcWrapperWidth();
                 });
             }
         }
@@ -497,24 +489,36 @@ class Blocks extends React.Component {
     }
 
     recalcWrapperWidth () {
-        if (!this.flyoutWrapper) return;
+        if (!this.flyoutWrapper || !this.blocks) return;
+        // Never recalculate if palette is currently collapsed or in transition!
+        const blocksWrapper = this.blocks.closest ?
+            this.blocks.closest('[class*="palette-collapsed"], [class*="paletteCollapsed"], [class*="blocksExiting"], [class*="blocksEntering"]') :
+            null;
+        if (blocksWrapper) return;
+
         const injectionDiv = this.blocks.querySelector('.injectionDiv');
         if (!injectionDiv) return;
         const toolboxDiv = injectionDiv.querySelector('.blocklyToolboxDiv');
         const flyoutSvg = injectionDiv.querySelector('.blocklyFlyout');
         if (!toolboxDiv || !flyoutSvg) return;
-        const tbRect = toolboxDiv.getBoundingClientRect();
-        const flyRect = flyoutSvg.getBoundingClientRect();
-        const wrapperRect = this.flyoutWrapper.getBoundingClientRect();
-        const combinedWidth = Math.max(
-            flyRect.right - wrapperRect.left,
-            tbRect.right - wrapperRect.left
-        );
-        if (combinedWidth > 0) {
-            this.flyoutWrapper.style.width = combinedWidth + 'px';
-            if (this.toolboxHeader) {
-                this.toolboxHeader.style.width = '';
+
+        let tbWidth = toolboxDiv.offsetWidth || 0;
+        let flyoutWidth = 0;
+        try {
+            if (this.workspace && this.workspace.getFlyout()) {
+                flyoutWidth = this.workspace.getFlyout().getWidth();
             }
+        } catch (_) {}
+        if (!flyoutWidth && flyoutSvg.clientWidth) {
+            flyoutWidth = flyoutSvg.clientWidth;
+        }
+        if (!tbWidth) tbWidth = 56;
+        if (!flyoutWidth) flyoutWidth = 250;
+
+        const combinedWidth = Math.max(308, Math.round(tbWidth + flyoutWidth + 2));
+        this.flyoutWrapper.style.width = combinedWidth + 'px';
+        if (this.toolboxHeader) {
+            this.toolboxHeader.style.width = combinedWidth + 'px';
         }
     }
 
@@ -972,7 +976,7 @@ class Blocks extends React.Component {
         });
     }
     handleSearch (query, results) {
-        if (query.length < 2) {
+        if (!query || query.trim().length === 0) {
             this.overrideToolboxXML = null;
         } else {
             this.overrideToolboxXML = buildSearchToolboxXML(results);

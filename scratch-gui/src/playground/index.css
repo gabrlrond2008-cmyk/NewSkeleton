@@ -1,18 +1,17 @@
 html,
 body,
 .app {
-    /* probably unecessary, transitional until layout is refactored */
-    width: 100%; 
+    width: 100%;
     height: 100%;
     margin: 0;
-
-    /* Setting min height/width makes the UI scroll below those sizes.
-       Keep these below the Tauri window minimums (1024x640) to account
-       for OS window chrome (title bar), so the stage does not get
-       clipped by body scrollbars. */
-    min-width: 1024px;
-    min-height: 560px;
+    padding: 0;
+    overflow: hidden !important;
+    overscroll-behavior: none !important;
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
 }
 
-/* @todo: move globally? Safe / side FX, for blocks particularly? */
 * { box-sizing: border-box; }

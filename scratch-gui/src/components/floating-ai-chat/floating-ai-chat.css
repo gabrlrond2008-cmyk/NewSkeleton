@@ -2,33 +2,35 @@
 
 .floatingContainer {
     position: fixed;
-    z-index: 101;
+    z-index: 90; /* Debajo del panel de chat (z-index: 150) para no superponerse */
 }
 
 .face {
-    width: 48px;
-    height: 48px;
+    width: 42px;
+    height: 42px;
     border-radius: 50%;
-    background: transparent;
-    border: 2px solid rgba(37, 73, 121, 0.25);
+    background: #ffffff;
+    border: 1.5px solid rgba(0, 0, 0, 0.12);
     display: flex;
     align-items: center;
     justify-content: center;
     overflow: hidden;
-    cursor: grab;
-    transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease;
-    box-shadow: 0 3px 12px rgba(37, 73, 121, 0.2);
+    cursor: pointer;
+    box-shadow: none !important; /* Sin sombras para integrarse naturalmente */
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease, background 0.2s ease;
     user-select: none;
 }
 
 .face:hover {
-    transform: scale(1.12);
-    box-shadow: 0 6px 20px rgba(37, 73, 121, 0.32);
+    transform: scale(1.08);
+    border-color: #0071e3;
+    background: #f8fafc;
+    box-shadow: none !important;
 }
 
 .face:active {
-    cursor: grabbing;
     transform: scale(0.95);
+    background: #f1f5f9;
 }
 
 .catFace {
@@ -62,12 +64,15 @@
 }
 
 [data-theme="dark"] .face {
-    border-color: rgba(255, 255, 255, 0.25);
-    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.45);
+    background: #1e293b;
+    border-color: rgba(255, 255, 255, 0.15);
+    box-shadow: none !important;
 }
 
 [data-theme="dark"] .face:hover {
-    box-shadow: 0 6px 20px rgba(0, 0, 0, 0.55);
+    border-color: #60a5fa;
+    background: #24344d;
+    box-shadow: none !important;
 }
 
 /* ===== PANEL ===== */
@@ -77,37 +82,38 @@
     flex-direction: column;
     position: fixed;
     background: var(--bg-white, #fff);
-    border-radius: 16px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.18);
+    border-radius: 18px;
+    border: 1px solid rgba(0, 0, 0, 0.08);
+    box-shadow: none !important;
     overflow: hidden;
-    z-index: 100;
+    z-index: 150; /* Superior al launcher button */
     min-width: 360px;
     min-height: 420px;
     opacity: 0;
     visibility: hidden;
     pointer-events: none;
-    transform: scale(0.88);
+    transform: scale(0.92) translateY(14px);
     transition:
-        opacity 0.2s ease,
-        transform 0.2s ease,
-        visibility 0s 0.25s;
+        opacity 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.28s cubic-bezier(0.16, 1, 0.3, 1),
+        visibility 0s 0.28s;
 }
 
 .panelOpen {
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
-    transform: scale(1);
+    transform: scale(1) translateY(0);
     transition:
-        opacity 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
-        transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1),
+        opacity 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+        transform 0.35s cubic-bezier(0.16, 1, 0.3, 1),
         visibility 0s 0s;
 }
 
 [data-theme="dark"] .panel {
-    background: #1a1a1a;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    background: #111827;
+    box-shadow: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* ===== HEADER ===== */
@@ -116,15 +122,26 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 14px;
+    height: 38px;
+    padding: 0 14px;
     background: #3797f0;
     cursor: grab;
     flex-shrink: 0;
     user-select: none;
+    box-sizing: border-box;
 }
 
 .header:active {
     cursor: grabbing;
+}
+
+.headerCenterHandle {
+    opacity: 0;
+    pointer-events: none;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: opacity 0.12s ease;
 }
 
 .headerTitle {
@@ -383,3 +400,662 @@
 [data-theme="dark"] .handleBottomRight::after {
     border-color: rgba(255, 255, 255, 0.3);
 }
+
+/* ============================================================
+   ACCORDION DOCK BAR & GRAVITY DROP PHYSICS (CODE / BLOCKS VIEW)
+   ============================================================ */
+
+/* ============================================================
+   ACCORDION DOCK BAR & GRAVITY DROP PHYSICS (CODE / BLOCKS VIEW)
+   ============================================================ */
+
+.dockBarContainer {
+    position: fixed;
+    bottom: 0;
+    z-index: 120;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    background: #3797f0;
+    border-radius: 0 !important; /* Esquinas cuadradas en el dock */
+    border-top: 1px solid rgba(255, 255, 255, 0.25);
+    border-left: none;
+    border-right: none;
+    box-shadow: none !important;
+    transition: left 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                width 0.3s cubic-bezier(0.16, 1, 0.3, 1),
+                height 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+                opacity 0.2s ease,
+                background-color 0.25s ease;
+    will-change: left, width, height, transform;
+}
+
+.dockBarContainer.dockExpanded {
+    height: min(52vh, 480px) !important;
+    background: var(--bg-white, #fff);
+    border-radius: 0 !important;
+    box-shadow: none !important;
+}
+
+.dockBeingDragged {
+    opacity: 0.25 !important;
+    pointer-events: none !important;
+}
+
+[data-theme="dark"] .dockBarContainer {
+    background: #1d4ed8;
+    border-top-color: rgba(255, 255, 255, 0.2);
+    border-left: none;
+    border-right: none;
+    box-shadow: none !important;
+}
+
+[data-theme="dark"] .dockBarContainer.dockExpanded {
+    background: #111827;
+    box-shadow: none !important;
+}
+
+/* ===== DOCK AT TOP POSITION (WORKSPACE TOP) ===== */
+.dockBarContainer.dockTop {
+    bottom: auto !important;
+    border-top: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.25) !important;
+}
+
+[data-theme="dark"] .dockBarContainer.dockTop {
+    border-top: none !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.2) !important;
+}
+
+.dockBarContainer.dockTop.dockLanding {
+    transform-origin: top center !important;
+}
+
+.dockBarHeader {
+    height: 38px;
+    min-height: 38px;
+    padding: 0 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: grab;
+    user-select: none;
+    gap: 8px;
+    background: #3797f0;
+    color: #ffffff;
+    border-radius: 0 !important; /* Esquinas cuadradas en el dock */
+    transition: background 0.15s ease;
+}
+
+.dockBarHeader:active {
+    cursor: grabbing;
+}
+
+[data-theme="dark"] .dockBarHeader {
+    background: #1d4ed8;
+}
+
+.dockLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.dockCatIcon {
+    width: 20px;
+    height: 20px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.dockCatIcon svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.dockTitle {
+    font-size: 0.84rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: -0.01em;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+}
+
+.dockCenter {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+}
+
+/* ===== MICRO-ANIMATED MORPHING HANDLE ===== */
+
+.dockCenterHandle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    height: 24px;
+    cursor: grab;
+    padding: 0 12px;
+}
+
+.dockCenterHandle:active {
+    cursor: grabbing;
+}
+
+.dockHandleSegment {
+    width: 17px;
+    height: 3.5px;
+    border-radius: 9999px;
+    background: rgba(255, 255, 255, 0.7);
+    transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1),
+                height 0.18s ease,
+                background-color 0.18s ease,
+                width 0.18s ease;
+    transform-origin: center;
+}
+
+.dockHandleLeft {
+    transform: rotate(0deg) translateX(1px);
+}
+
+.dockHandleRight {
+    transform: rotate(0deg) translateX(-1px);
+}
+
+/* Hover when docked: Morphs into upward chevron ^ */
+.dockBarContainer:not(.dockExpanded) .dockBarHeader:hover .dockHandleLeft {
+    transform: rotate(-26deg) translateX(1.5px);
+    background: #ffffff;
+}
+
+.dockBarContainer:not(.dockExpanded) .dockBarHeader:hover .dockHandleRight {
+    transform: rotate(26deg) translateX(-1.5px);
+    background: #ffffff;
+}
+
+/* Hover when open in accordion: Morphs into downward chevron v */
+.dockBarContainer.dockExpanded .dockBarHeader:hover .dockHandleLeft {
+    transform: rotate(26deg) translateX(1.5px);
+    background: #ffffff;
+}
+
+.dockBarContainer.dockExpanded .dockBarHeader:hover .dockHandleRight {
+    transform: rotate(-26deg) translateX(-1.5px);
+    background: #ffffff;
+}
+
+/* Hover when docked at TOP: Morphs into downward chevron v to pull down */
+.dockBarContainer.dockTop:not(.dockExpanded) .dockBarHeader:hover .dockHandleLeft {
+    transform: rotate(26deg) translateX(1.5px);
+    background: #ffffff;
+}
+
+.dockBarContainer.dockTop:not(.dockExpanded) .dockBarHeader:hover .dockHandleRight {
+    transform: rotate(-26deg) translateX(-1.5px);
+    background: #ffffff;
+}
+
+/* Hover when open in accordion at TOP: Morphs into upward chevron ^ to push up */
+.dockBarContainer.dockTop.dockExpanded .dockBarHeader:hover .dockHandleLeft {
+    transform: rotate(-26deg) translateX(1.5px);
+    background: #ffffff;
+}
+
+.dockBarContainer.dockTop.dockExpanded .dockBarHeader:hover .dockHandleRight {
+    transform: rotate(26deg) translateX(-1.5px);
+    background: #ffffff;
+}
+
+/* Inverted swipe order (up close, down open) */
+.dockBarContainer.swipeOrderInverted:not(.dockExpanded) .dockBarHeader:hover .dockHandleLeft {
+    transform: rotate(26deg) translateX(1.5px);
+    background: #ffffff;
+}
+
+.dockBarContainer.swipeOrderInverted:not(.dockExpanded) .dockBarHeader:hover .dockHandleRight {
+    transform: rotate(-26deg) translateX(-1.5px);
+    background: #ffffff;
+}
+
+.dockBarContainer.swipeOrderInverted.dockExpanded .dockBarHeader:hover .dockHandleLeft {
+    transform: rotate(-26deg) translateX(1.5px);
+    background: #ffffff;
+}
+
+.dockBarContainer.swipeOrderInverted.dockExpanded .dockBarHeader:hover .dockHandleRight {
+    transform: rotate(26deg) translateX(-1.5px);
+    background: #ffffff;
+}
+
+/* Pressed down / held to drag: Thicker line with tactile physical feedback */
+.dockBarHeader:active .dockHandleSegment,
+.dockCenterHandle.isHolding .dockHandleSegment,
+.dockHandleSegment.isThick {
+    transform: rotate(0deg) !important;
+    height: 5.5px !important;
+    width: 19px !important;
+    background: #ffffff !important;
+}
+
+.dockRight {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+    min-width: 24px;
+    justify-content: flex-end;
+}
+
+.dockRightSpacer {
+    min-width: 24px;
+    width: 24px;
+    flex-shrink: 0;
+}
+
+.dockBody {
+    flex: 1;
+    min-height: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-white, #fff);
+}
+
+[data-theme="dark"] .dockBody {
+    background: #111827;
+}
+
+/* ===== LIVE DRAG PILL (when pulling upwards from dock) ===== */
+
+.dockDragPill {
+    position: fixed;
+    width: 240px;
+    height: 38px;
+    background: #3797f0;
+    border-radius: 19px; /* Esquinas redondeadas al arrastrar */
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    color: #ffffff;
+    box-shadow: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    z-index: 10000;
+    pointer-events: none;
+    user-select: none;
+    cursor: grabbing;
+    animation: pillContract 0.16s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+    will-change: transform, left, top;
+}
+
+@keyframes pillContract {
+    0% {
+        transform: scale(1.12);
+        opacity: 0.85;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+/* ===== PANEL EXPANDING FROM PILL (upon drop) ===== */
+
+@keyframes expandFromPill {
+    0% {
+        transform: scale(0.60) translateY(12px);
+        opacity: 0.7;
+    }
+    70% {
+        transform: scale(1.02) translateY(-2px);
+        opacity: 1;
+    }
+    100% {
+        transform: scale(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.panelExpandingFromPill {
+    animation: expandFromPill 0.26s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+    transform-origin: center top !important;
+}
+
+/* ===== CLOSE TRANSITION: CONTRACTING BEFORE FALL ===== */
+
+.panelContracting {
+    min-width: 0 !important;
+    min-height: 0 !important;
+    max-width: none !important;
+    max-height: none !important;
+    width: 240px !important;
+    height: 38px !important;
+    border-radius: 19px !important;
+    overflow: hidden !important;
+    pointer-events: none !important;
+    opacity: 1 !important;
+    visibility: visible !important;
+    transform: none !important;
+    transition:
+        width 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+        height 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+        left 0.18s cubic-bezier(0.16, 1, 0.3, 1),
+        border-radius 0.18s ease;
+    box-shadow: none !important;
+    background: #3797f0 !important;
+}
+
+.panelContracting .chatBody {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.12s ease !important;
+}
+
+.panelContracting .headerCloseBtn {
+    opacity: 0 !important;
+    pointer-events: none !important;
+    transition: opacity 0.1s ease !important;
+}
+
+.panelContracting .headerCenterHandle {
+    opacity: 1 !important;
+}
+
+.panelContracting .resizeHandle {
+    opacity: 0 !important;
+    pointer-events: none !important;
+}
+
+/* ===== DEDICATED FALLING BAR ===== */
+
+.fallingBar {
+    position: fixed !important;
+    z-index: 250 !important;
+    pointer-events: none !important;
+    width: 240px;
+    height: 38px;
+    background: #3797f0;
+    color: #ffffff;
+    padding: 0 14px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-radius: 19px;
+    box-shadow: none !important;
+    animation: gravityFall var(--fall-duration, 320ms) cubic-bezier(0.55, 0.055, 0.675, 0.19) forwards;
+    will-change: transform, left, top, border-radius;
+}
+
+.fallingBar.flyUp {
+    animation: gravityFlyUp var(--fall-duration, 320ms) cubic-bezier(0.2, 0.9, 0.3, 1) forwards !important;
+}
+
+@keyframes gravityFall {
+    0% {
+        left: var(--fall-start-x, 0px);
+        top: var(--fall-start-y, 0px);
+        transform: scale(1);
+        border-radius: 19px;
+    }
+    60% {
+        transform: scale(0.96) scaleY(1.08); /* Aceleración gravitacional hacia abajo */
+        border-radius: 10px 10px 0 0;
+    }
+    100% {
+        left: var(--fall-target-x, 0px);
+        top: var(--fall-target-y, 0px);
+        transform: scale(1);
+        border-radius: 0 !important; /* Esquinas cuadradas al llegar al dock */
+    }
+}
+
+@keyframes gravityFlyUp {
+    0% {
+        left: var(--fall-start-x, 0px);
+        top: var(--fall-start-y, 0px);
+        transform: scale(1);
+        border-radius: 19px;
+    }
+    60% {
+        transform: scale(0.96) scaleY(1.08); /* Despegue dinámico hacia arriba */
+        border-radius: 0 0 10px 10px;
+    }
+    100% {
+        left: var(--fall-target-x, 0px);
+        top: var(--fall-target-y, 0px);
+        transform: scale(1);
+        border-radius: 0 !important; /* Esquinas cuadradas al llegar al dock */
+    }
+}
+
+/* ===== DOCK POSITION SWITCH TRAVEL PILL ===== */
+
+.dockTravelPill {
+    position: fixed !important;
+    z-index: 250 !important;
+    width: 240px;
+    height: 38px;
+    background: #3797f0;
+    border-radius: 19px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 14px;
+    color: #ffffff;
+    box-shadow: none !important;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+    pointer-events: none;
+    user-select: none;
+    will-change: transform, left, top;
+}
+
+[data-theme="dark"] .dockTravelPill {
+    background: #1d4ed8;
+    border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dockTravelPill.travelUp {
+    animation: pillMoveUp 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+.dockTravelPill.travelDown {
+    animation: pillMoveDown 0.34s cubic-bezier(0.2, 0.9, 0.3, 1) forwards;
+}
+
+@keyframes pillMoveUp {
+    0% {
+        left: var(--travel-start-x, 0px);
+        top: var(--travel-start-y, 0px);
+        transform: scale(1.05);
+        border-radius: 19px;
+    }
+    35% {
+        transform: scaleX(0.94) scaleY(1.10); /* Estiramiento vertical aerodinámico */
+    }
+    100% {
+        left: var(--travel-target-x, 0px);
+        top: var(--travel-target-y, 0px);
+        transform: scale(1);
+        border-radius: 19px;
+    }
+}
+
+@keyframes pillMoveDown {
+    0% {
+        left: var(--travel-start-x, 0px);
+        top: var(--travel-start-y, 0px);
+        transform: scale(1.05);
+        border-radius: 19px;
+    }
+    35% {
+        transform: scaleX(0.94) scaleY(1.10); /* Estiramiento vertical aerodinámico */
+    }
+    100% {
+        left: var(--travel-target-x, 0px);
+        top: var(--travel-target-y, 0px);
+        transform: scale(1);
+        border-radius: 19px;
+    }
+}
+
+/* ===== SINGLE UNIFIED DOCK LANDING & SETTLE ANIMATION ===== */
+
+@keyframes dockLandingSettle {
+    0% {
+        transform: scaleX(0.40) scaleY(0.80);
+        opacity: 0.95;
+    }
+    25% {
+        transform: scaleX(0.65) scaleY(1.08) translateY(-6px);
+    }
+    50% {
+        transform: scaleX(0.85) scaleY(0.97) translateY(2px);
+    }
+    75% {
+        transform: scaleX(0.98) scaleY(1.01) translateY(-1px);
+    }
+    100% {
+        transform: scaleX(1) scaleY(1) translateY(0);
+        opacity: 1;
+    }
+}
+
+.dockLanding {
+    animation: dockLandingSettle 0.40s cubic-bezier(0.34, 1.56, 0.64, 1) forwards !important;
+    transform-origin: bottom center !important;
+}
+
+/* ===== DOCK-AWARE BLOCKLY ZOOM CONTROLS (+, -, center) ===== */
+
+:root {
+    --blockly-zoom-offset: 0px;
+}
+
+:global(.blocklyZoom) {
+    translate: 0 var(--blockly-zoom-offset, 0px);
+    transition: translate 0.32s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+/* ===== BLOCK SELECTION MODE IN DOCK BAR ===== */
+
+.dockSelectingMode {
+    background: linear-gradient(90deg, #1d4ed8, #2563eb, #3b82f6) !important;
+    box-shadow: 0 -2px 14px rgba(37, 99, 235, 0.45) !important;
+}
+
+.dockSelectingBar {
+    cursor: default !important;
+}
+
+.dockSelectingHeader {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 0 4px;
+    user-select: none;
+}
+
+.dockSelectingLeft {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow: hidden;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+}
+
+.dockSelectingIcon {
+    font-size: 16px;
+    display: inline-block;
+    animation: pulseTarget 1.5s infinite ease-in-out;
+}
+
+@keyframes pulseTarget {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.22); }
+}
+
+.dockSelectingTitle {
+    font-size: 0.88rem;
+    font-weight: 700;
+    color: #ffffff;
+    letter-spacing: 0.2px;
+}
+
+.dockSelectingCountBadge {
+    font-size: 0.75rem;
+    background: rgba(255, 255, 255, 0.25);
+    color: #ffffff;
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-weight: 600;
+}
+
+.dockSelectingHint {
+    font-size: 0.74rem;
+    color: rgba(255, 255, 255, 0.82);
+    font-weight: 500;
+}
+
+.dockSelectingActions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-shrink: 0;
+}
+
+.dockSelectingConfirmBtn {
+    background: #10b981;
+    color: #ffffff;
+    border: none;
+    padding: 5px 14px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 700;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    transition: background 0.15s ease, transform 0.1s ease;
+}
+
+.dockSelectingConfirmBtn:hover:not(:disabled) {
+    background: #059669;
+    transform: translateY(-1px);
+}
+
+.dockSelectingConfirmBtn:disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+}
+
+.dockSelectingCancelBtn {
+    background: rgba(255, 255, 255, 0.18);
+    color: #ffffff;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.82rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease;
+}
+
+.dockSelectingCancelBtn:hover {
+    background: rgba(255, 255, 255, 0.3);
+}
+
+
+

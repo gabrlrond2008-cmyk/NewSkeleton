@@ -61,3 +61,12 @@
         display: none;
     }
 }
+
+.display-submenu,
+.display-submenu > ul {
+    overflow: visible !important;
+}
+
+.nested-submenu-item {
+    position: relative;
+}

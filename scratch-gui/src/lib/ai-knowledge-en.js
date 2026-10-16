@@ -50,17 +50,26 @@ export default {
             ]
         },
         {
-            area: 'AI Assistant',
+            area: 'Fist (AI Assistant & Agent)',
             items: [
-                'The AI tab is the fourth tab in the editor. It\'s like having an assistant by your side.',
-                'It\'s a chat where you can ask how to do things in Scratch: how a block works, what a tool is for, how to fix something.',
-                'The AI can read your blocks, create new blocks, and modify your project based on your requests.',
-                'To use it you need to configure an API Key in Settings > AI. Choose a provider and enter your key.',
-                'Each response has a "Verify" button that checks if what it said is correct, using the app\'s information.',
-                'The assistant uses special formatting for responses: headings, bullet lists, code, tables, bold and italic.',
-                'It can read the blocks in your workspace and create new blocks for you. It gives instructions and can help you build projects.',
-                'If it asks you to do something other than questions about the app, tell it it cannot. If it doesn\'t know something, it says so.',
-                'If you need to change provider or model, everything is configured from Settings > AI and saves automatically.'
+                'Fist is the integrated intelligent assistant and autonomous agent of Scratch GUI.',
+                'In code view, Fist lives in an interactive dock bar attached directly to the workspace. It can expand as an accordion (by clicking or mouse wheel) or detach into a floating draggable window.',
+                'Fist has tools to inspect the current blocks workspace, create new block stacks, edit existing scripts, and build complete games and projects.',
+                'Image generation: Fist can create character sprites and stage backdrops using AI.',
+                'Audio generation: Fist can synthesize speech (TTS with Azure Neural voices), real sound effects (SFX via Freesound/procedural synthesis), and instrumental music.',
+                'Multi-scene game orchestration: Fist can generate complete game structures, sprites, backdrops, and coordinated scripts from scratch.',
+                'To configure Fist, go to Settings > AI to choose a provider (OpenAI, Gemini, Groq, Sambanova, OpenRouter, OpenCodeZen) and enter an API key.'
+            ]
+        },
+        {
+            area: 'Display & Layout Settings',
+            items: [
+                'From the Settings > Display menu, you can fully customize the editor layout with 3 options:',
+                '1. Blocks Palette Position: Left (default) or Right. When toggled, the palette smoothly slides down and re-enters on the selected side. The extension button and collapse toggle adapt accordingly.',
+                '2. Fist AI Bar Position: Bottom (default) or Top (at the top of the workspace, directly below tabs). The bar expands as an accordion, and animates with an aerodynamic pill effect when switching positions or detaching.',
+                '3. Stage / Simulation Position: Right (default) or Left. Moves the stage and sprite list to the left or right, automatically adapting the resize handle direction.',
+                'The blocks palette also features a collapse toggle and supports touch/mouse horizontal swipe gestures to quickly collapse or reveal blocks.',
+                'All Display preferences are saved automatically in localStorage to persist across sessions.'
             ]
         },
         {

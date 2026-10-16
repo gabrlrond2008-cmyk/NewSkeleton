@@ -10,6 +10,8 @@ const MENU_LANGUAGE = 'languageMenu';
 const MENU_LOGIN = 'loginMenu';
 const MENU_SETTINGS = 'settingsMenu';
 const MENU_THEME = 'themeMenu';
+const MENU_DISPLAY = 'displayMenu';
+const MENU_SWIPES = 'swipesMenu';
 
 class Menu {
     constructor (id) {
@@ -52,6 +54,10 @@ const rootMenu = new Menu('root')
         new Menu(MENU_SETTINGS)
             .addChild(new Menu(MENU_LANGUAGE))
             .addChild(new Menu(MENU_THEME))
+            .addChild(
+                new Menu(MENU_DISPLAY)
+                    .addChild(new Menu(MENU_SWIPES))
+            )
             .addChild(new Menu(MENU_AI))
     )
     .addChild(new Menu(MENU_FILE))
@@ -70,7 +76,9 @@ const initialState = {
     [MENU_LANGUAGE]: false,
     [MENU_LOGIN]: false,
     [MENU_SETTINGS]: false,
-    [MENU_THEME]: false
+    [MENU_THEME]: false,
+    [MENU_DISPLAY]: false,
+    [MENU_SWIPES]: false
 };
 
 const reducer = function (state, action) {
@@ -146,6 +154,14 @@ const openThemeMenu = () => openMenu(MENU_THEME);
 const closeThemeMenu = () => closeMenu(MENU_THEME);
 const themeMenuOpen = state => state.scratchGui.menus[MENU_THEME];
 
+const openDisplayMenu = () => openMenu(MENU_DISPLAY);
+const closeDisplayMenu = () => closeMenu(MENU_DISPLAY);
+const displayMenuOpen = state => state.scratchGui.menus[MENU_DISPLAY];
+
+const openSwipesMenu = () => openMenu(MENU_SWIPES);
+const closeSwipesMenu = () => closeMenu(MENU_SWIPES);
+const swipesMenuOpen = state => state.scratchGui.menus[MENU_SWIPES];
+
 export {
     reducer as default,
     initialState as menuInitialState,
@@ -175,5 +191,11 @@ export {
     settingsMenuOpen,
     openThemeMenu,
     closeThemeMenu,
-    themeMenuOpen
+    themeMenuOpen,
+    openDisplayMenu,
+    closeDisplayMenu,
+    displayMenuOpen,
+    openSwipesMenu,
+    closeSwipesMenu,
+    swipesMenuOpen
 };

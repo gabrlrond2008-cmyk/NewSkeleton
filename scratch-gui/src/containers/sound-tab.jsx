@@ -22,6 +22,7 @@ import {handleFileUpload, soundUpload} from '../lib/file-uploader.js';
 import errorBoundaryHOC from '../lib/error-boundary-hoc.jsx';
 import DragConstants from '../lib/drag-constants';
 import downloadBlob from '../lib/download-blob';
+import {addProceduralSoundToVM} from '../lib/audio/procedural-sfx';
 
 import {connect} from 'react-redux';
 
@@ -111,6 +112,19 @@ class SoundTab extends React.Component {
     }
 
     handleSurpriseSound () {
+        const randChoice = Math.random();
+        if (randChoice > 0.4 && this.props.vm && this.props.vm.editingTarget) {
+            // Instant 8-bit procedural sound effect (jump, laser, coin, hit, explosion, powerup)
+            const sfxTypes = ['jump', 'laser', 'coin', 'explosion', 'hit', 'powerup'];
+            const chosen = sfxTypes[Math.floor(Math.random() * sfxTypes.length)];
+            return addProceduralSoundToVM(this.props.vm, this.props.vm.editingTarget.id, `${chosen}_8bit`, chosen)
+                .then(() => {
+                    this.handleNewSound();
+                })
+                .catch(err => {
+                    console.warn('[SoundTab] Procedural sound fallback to library:', err);
+                });
+        }
         const soundItem = soundLibraryContent[Math.floor(Math.random() * soundLibraryContent.length)];
         const vmSound = {
             format: soundItem.dataFormat,
@@ -121,6 +135,8 @@ class SoundTab extends React.Component {
         };
         this.props.vm.addSound(vmSound).then(() => {
             this.handleNewSound();
+        }).catch(err => {
+            console.warn('[SoundTab] Error adding library sound:', err);
         });
     }
 
